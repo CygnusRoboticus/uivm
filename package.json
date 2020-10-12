@@ -6,7 +6,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -c tsconfig.json",
-    "dev": "yarn start-storybook -p 6006"
+    "dev": "yarn start-storybook -p 6006",
+    "test": "jest"
   },
   "dependencies": {
     "fp-ts": "^2.8.3",
@@ -20,8 +21,11 @@
     "@storybook/addon-links": "^6.0.26",
     "@storybook/html": "^6.0.26",
     "@storybook/react": "^6.0.26",
+    "@types/jest": "^26.0.14",
     "babel-loader": "^8.1.0",
+    "jest": "^26.5.2",
     "prettier": "^2.1.2",
-    "react-is": "^16.13.1"
+    "react-is": "^16.13.1",
+    "ts-jest": "^26.4.1"
   }
 }

@@ -23,8 +23,8 @@ export type AnyConfig<TFormItem extends FormItemConfig = FormItemConfig> =
   | TFormItem
   | FormItemConfig
   | FieldConfig
-  | GroupConfig
-  | ArrayConfig;
+  | GroupConfig<TFormItem>
+  | ArrayConfig<TFormItem>;
 
 export type FormConfig<TFormItem extends FormItemConfig = FormItemConfig> = readonly AnyConfig<TFormItem>[];
 
@@ -81,9 +81,9 @@ export interface DependentValueDefinition<T = unknown> {
 export function isFieldConfig(config: FormItemConfig): config is FieldConfig {
   return config && !!(config as any).name;
 }
-export function isGroupConfig(config: FormItemConfig): config is GroupConfig {
+export function isGroupConfig<TConfig extends FormItemConfig>(config: FormItemConfig): config is GroupConfig<TConfig> {
   return config && !!(config as any).fields;
 }
-export function isArrayConfig(config: FormItemConfig): config is ArrayConfig {
-  return isGroupConfig(config) && (config as any).array;
+export function isArrayConfig<TConfig extends FormItemConfig>(config: FormItemConfig): config is ArrayConfig<TConfig> {
+  return isGroupConfig<TConfig>(config) && (config as any).array;
 }
