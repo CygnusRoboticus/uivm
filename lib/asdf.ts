@@ -1,7 +1,7 @@
 import { range } from "fp-ts/lib/ReadonlyArray";
-import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription } from "rxjs";
-import { map, scan, switchMap, take, throwIfEmpty } from "rxjs/operators";
-import { FieldConfig, FormItemConfig, GroupConfig } from "./configs";
+import { BehaviorSubject, combineLatest, from, Observable, of, Subscription } from "rxjs";
+import { map, take } from "rxjs/operators";
+import { FieldConfig, FormItemConfig } from "./configs";
 
 export type ValidationErrors = {
   [key: string]: any;
@@ -53,7 +53,7 @@ export function vectorize<T>(value: T | T[] | null | undefined) {
   return value === null || value === undefined ? [] : Array.isArray(value) ? value : [value];
 }
 
-function itemsToControls<TValue, TStatus extends AbstractStatus>(items: ItemControl<TStatus>[]) {
+function itemsToControls<TValue, TStatus extends AbstractStatus>(items: ItemControl<TConfig, TStatus>[]) {
   return items.reduce((acc, control) => {
     if (control instanceof FieldControl && !acc[control.name as keyof TValue]) {
       acc[control.name as keyof TValue] = control;
@@ -114,20 +114,20 @@ interface AbstractStatus {
   [key: string]: boolean;
 }
 
-export class ItemControl<TStatus extends AbstractStatus> {
+export class ItemControl<TConfig extends FormItemConfig, TStatus extends AbstractStatus> {
   status: TStatus;
   status$: BehaviorSubject<TStatus>;
-  protected _parent: ItemControl<TStatus> | null = null;
+  protected _parent: ItemControl<TConfig, TStatus> | null = null;
 
   get children() {
-    return <ItemControl<TStatus>[]>[];
+    return <ItemControl<TConfig, TStatus>[]>[];
   }
 
   get parent() {
     return this._parent;
   }
 
-  constructor(opts: { status?: Partial<TStatus> } = { status: {} }) {
+  constructor(public config: TConfig, opts: { status?: Partial<TStatus> } = { status: {} }) {
     this.status = {
       valid: true,
       disabled: false,
@@ -159,12 +159,15 @@ export class ItemControl<TStatus extends AbstractStatus> {
     }
   };
 
-  setParent(parent: ItemControl<TStatus>) {
+  setParent(parent: ItemControl<TConfig, TStatus>) {
     this._parent = parent;
   }
 }
 
-export class FieldControl<TValue, TStatus extends AbstractStatus> extends ItemControl<TStatus> {
+export class FieldControl<TValue, TConfig extends FieldConfig, TStatus extends AbstractStatus> extends ItemControl<
+  TConfig,
+  TStatus
+> {
   name: string;
   value: TValue;
   initialValue: TValue;
@@ -266,10 +269,10 @@ type FieldControlMap<TValue, TStatus extends AbstractStatus> = {
 };
 
 export class GroupControl<TValue, TStatus extends AbstractStatus> extends FieldControl<TValue, TStatus> {
-  public items: ItemControl<TStatus>[];
+  public items: ItemControl<TConfig, TStatus>[];
   public controls: FieldControlMap<TValue, TStatus>;
 
-  constructor(name: string, items: ItemControl<TStatus>[], opts: FieldControlOptions<TValue, TStatus> = {}) {
+  constructor(name: string, items: ItemControl<TConfig, TStatus>[], opts: FieldControlOptions<TValue, TStatus> = {}) {
     const controls = itemsToControls<TValue, TStatus>(items);
     super(name, reduceControls<TValue, TStatus>(controls, opts.status?.disabled ?? false), opts);
     this.items = items;
@@ -332,14 +335,14 @@ export class GroupControl<TValue, TStatus extends AbstractStatus> extends FieldC
     super.update();
   }
 
-  protected registerControl(control: ItemControl<TStatus>) {
+  protected registerControl(control: ItemControl<TConfig, TStatus>) {
     control.setParent(this);
   }
 }
 
 export class ArrayControl<
   TValue,
-  TControls extends ItemControl<TStatus>[],
+  TControls extends ItemControl<TConfig, TStatus>[],
   TStatus extends AbstractStatus
 > extends FieldControl<TValue[], TStatus> {
   public items: TControls[];
@@ -361,7 +364,7 @@ export class ArrayControl<
     return this.items.reduce((acc, items) => {
       acc.push(...items);
       return acc;
-    }, <ItemControl<TStatus>[]>[]);
+    }, <ItemControl<TConfig, TStatus>[]>[]);
   }
 
   get length(): number {
@@ -450,7 +453,7 @@ export class ArrayControl<
     this.push(...controls);
   }
 
-  protected registerControl(control: ItemControl<TStatus>) {
+  protected registerControl(control: ItemControl<TConfig, TStatus>) {
     control.setParent(this);
   }
 }

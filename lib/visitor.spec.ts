@@ -25,18 +25,18 @@ describe("bundleConfig", () => {
         field3: "shorts",
       },
     });
-    asdf.patchValue({ field1: "pants1" });
+    asdf.patchValue({ field1: "pants1", field2: "skirts2" });
 
     expect(asdf.value).toEqual({
       field1: "pants1",
-      field2: "skirts",
+      field2: "skirts2",
       group1: {
         field3: "shorts",
       },
     });
     expect(asdf.value$.getValue()).toEqual({
       field1: "pants1",
-      field2: "skirts",
+      field2: "skirts2",
       group1: {
         field3: "shorts",
       },

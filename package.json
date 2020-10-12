@@ -5,7 +5,7 @@
   "license": "MIT",
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -c tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "dev": "yarn start-storybook -p 6006",
     "test": "jest"
   },
