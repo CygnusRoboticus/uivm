@@ -1,32 +1,30 @@
 import { FieldDataTypeDefinition } from "./typing";
 
-export interface FormItemConfig {
+export interface ItemConfig {
   type: string;
 }
 
-export interface FieldConfig extends FormItemConfig {
+export interface FieldConfig extends ItemConfig {
   name: string;
   dataType?: FieldDataTypeDefinition;
 }
 
-export interface GroupConfig<TFormItem extends FormItemConfig = FormItemConfig> extends FormItemConfig {
+export interface GroupConfig<TFormItem extends ItemConfig = ItemConfig> extends ItemConfig {
   fields: readonly AnyConfig<TFormItem>[];
 }
 
-export interface ArrayConfig<TFormItem extends FormItemConfig = FormItemConfig>
-  extends FieldConfig,
-    GroupConfig<TFormItem> {
+export interface ArrayConfig<TFormItem extends ItemConfig = ItemConfig> extends FieldConfig, GroupConfig<TFormItem> {
   array: true;
 }
 
-export type AnyConfig<TFormItem extends FormItemConfig = FormItemConfig> =
+export type AnyConfig<TFormItem extends ItemConfig = ItemConfig> =
   | TFormItem
-  | FormItemConfig
+  | ItemConfig
   | FieldConfig
   | GroupConfig<TFormItem>
   | ArrayConfig<TFormItem>;
 
-export type FormConfig<TFormItem extends FormItemConfig = FormItemConfig> = readonly AnyConfig<TFormItem>[];
+export type FormConfig<TFormItem extends ItemConfig = ItemConfig> = readonly AnyConfig<TFormItem>[];
 
 export interface DynaOptionSingle<T = unknown> {
   label: string;
@@ -78,12 +76,12 @@ export interface DependentValueDefinition<T = unknown> {
   value: T;
 }
 
-export function isFieldConfig(config: FormItemConfig): config is FieldConfig {
+export function isFieldConfig(config: ItemConfig): config is FieldConfig {
   return config && !!(config as any).name;
 }
-export function isGroupConfig<TConfig extends FormItemConfig>(config: FormItemConfig): config is GroupConfig<TConfig> {
+export function isGroupConfig<TConfig extends ItemConfig>(config: ItemConfig): config is GroupConfig<TConfig> {
   return config && !!(config as any).fields;
 }
-export function isArrayConfig<TConfig extends FormItemConfig>(config: FormItemConfig): config is ArrayConfig<TConfig> {
+export function isArrayConfig<TConfig extends ItemConfig>(config: ItemConfig): config is ArrayConfig<TConfig> {
   return isGroupConfig<TConfig>(config) && (config as any).array;
 }

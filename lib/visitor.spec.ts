@@ -1,4 +1,4 @@
-import { FieldControl, GroupControl } from "./asdf";
+import { ArrayControl, FieldControl, GroupControl } from "./controls";
 
 describe("bundleConfig", () => {
   // it("happy path", () => {
@@ -13,12 +13,21 @@ describe("bundleConfig", () => {
   // });
 
   it("testing", () => {
-    const asdf = new GroupControl("form", [
-      new FieldControl("field1", "pants"),
-      new FieldControl("field2", "skirts"),
-      new GroupControl("group1", [new FieldControl("field3", "shorts")]),
-    ]);
+    const asdf = new GroupControl({
+      field1: new FieldControl("pants"),
+      field2: new FieldControl("skirts"),
+      group1: new GroupControl({
+        field3: new FieldControl("shorts"),
+      }),
+      array1: new ArrayControl(
+        (v: { groupField1: string | null } | null) =>
+          new GroupControl({
+            groupField1: new FieldControl(v?.groupField1 ?? null),
+          }),
+      ),
+    });
     expect(asdf.value).toEqual({
+      array1: [],
       field1: "pants",
       field2: "skirts",
       group1: {
@@ -28,6 +37,7 @@ describe("bundleConfig", () => {
     asdf.patchValue({ field1: "pants1", field2: "skirts2" });
 
     expect(asdf.value).toEqual({
+      array1: [],
       field1: "pants1",
       field2: "skirts2",
       group1: {
@@ -35,6 +45,7 @@ describe("bundleConfig", () => {
       },
     });
     expect(asdf.value$.getValue()).toEqual({
+      array1: [],
       field1: "pants1",
       field2: "skirts2",
       group1: {

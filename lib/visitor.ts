@@ -1,29 +1,26 @@
 // @ts-nocheck
 
-import { BehaviorSubject, combineLatest, Observable } from "rxjs";
+import { Observable } from "rxjs";
 import {
   AnyConfig,
   ArrayConfig,
   FieldConfig,
-  FormItemConfig,
   GroupConfig,
   isArrayConfig,
   isFieldConfig,
   isGroupConfig,
+  ItemConfig,
 } from "./configs";
-import { map, tap } from "rxjs/operators";
+import { AbstractStatus, ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 
-interface Visitor<TConfig extends FormItemConfig> {
-  item: (config: TConfig) => ItemBundle<TConfig>;
-  field: <TValue>(config: FieldConfig) => FieldBundle<FieldConfig, TValue>;
-  group: <TValue>(
-    config: GroupConfig<TConfig>,
-    bundled: ConfigBundle<TConfig, TValue[keyof TValue]>,
-  ) => GroupBundle<GroupConfig, TValue>;
+interface Visitor<TConfig extends ItemConfig, TStatus extends AbstractStatus> {
+  item: (config: TConfig) => ItemControl<TStatus>;
+  field: <TValue>(config: FieldConfig) => FieldControl<TValue, TStatus>;
+  group: <TValue>(config: GroupConfig<TConfig>, bundled: any) => GroupControl<TValue, TStatus>;
   array: <TValue>(
     config: ArrayConfig<TConfig>,
-    bundled: ConfigBundle<TConfig, TValue[keyof TValue]>,
-  ) => ArrayBundle<ArrayConfig, TValue>;
+    bundled: any,
+  ) => ArrayControl<TValue, GroupControl<TValue, TStatus>, TStatus>;
 }
 
 function recurseFieldItems<TBundle extends AnyBundle<TConfig>, TConfig extends AnyConfig, TValue>(
@@ -38,121 +35,25 @@ function recurseFieldItems<TBundle extends AnyBundle<TConfig>, TConfig extends A
   }, <Observable<TValue | null>[]>[]);
 }
 
-class DefaultVisitor<TConfig extends FormItemConfig> implements Visitor<TConfig> {
+class DefaultVisitor<TConfig extends ItemConfig, TStatus extends AbstractStatus> implements Visitor<TConfig, TStatus> {
   item<T>(config: TConfig) {
-    return { config };
+    return new ItemControl<TStatus>();
   }
-
   field<T>(config: FieldConfig) {
-    const value$ = new BehaviorSubject<T | null>(null);
-    const status$ = new BehaviorSubject({ valid: false, pending: false });
-    return {
-      config,
-      value$,
-      status$,
-      get value() {
-        return value$.getValue();
-      },
-      get status() {
-        return status$.getValue();
-      },
-      set(value: T | null) {
-        value$.next(value);
-        return value$.getValue();
-      },
-    };
+    return new FieldControl(null);
   }
-
   group<TConfig extends AnyConfig, TValue>(
     config: GroupConfig<TConfig>,
     bundled: ConfigBundle<TConfig, TValue[keyof TValue]>,
   ) {
-    const valueObs = Object.entries(bundled.fields).map(([k, b]) =>
-      b.value$.pipe(map(v => ({ k: k as keyof TValue, v }))),
-    );
-    let value: TValue = ({} as unknown) as TValue;
-    const value$ = combineLatest(valueObs).pipe(
-      map(kvp =>
-        kvp.reduce((acc, { k, v }) => {
-          acc[k] = v as any;
-          return acc;
-        }, ({} as unknown) as TValue),
-      ),
-      map(v => v),
-      tap(v => (value = v as any)),
-    );
-    const status$ = new BehaviorSubject({ valid: false, pending: false });
-    return {
-      config,
-      value$,
-      status$,
-      fields: bundled.fields as any,
-      items: bundled.items as any[],
-      get value() {
-        return value;
-      },
-      get status() {
-        return status$.getValue();
-      },
-      set(value: TValue | null) {
-        return value;
-      },
-    };
+    return GroupControl(null);
   }
-
   array<TConfig extends AnyConfig, TValue>(config: ArrayConfig, bundled: ConfigBundle<TConfig, TValue[keyof TValue]>) {
-    const value$ = new BehaviorSubject<TValue | null>(null);
-    const status$ = new BehaviorSubject({ valid: false, pending: false });
-    return {
-      config,
-      value$,
-      status$,
-      fields: bundled.fields as any,
-      items: bundled.items as any[],
-      get value() {
-        return value$.getValue();
-      },
-      get status() {
-        return status$.getValue();
-      },
-      set(value: TValue | null) {
-        value$.next(value);
-        return value$.getValue();
-      },
-    };
+    new ArrayControl();
   }
 }
 
-type AnyBundle<TConfig extends FormItemConfig, TValue = unknown> =
-  | ItemBundle<TConfig>
-  | (TConfig extends FieldConfig ? FieldBundle<TConfig> : never)
-  | (TConfig extends GroupConfig ? GroupBundle<TConfig, TValue> : never)
-  | (TConfig extends ArrayConfig ? ArrayBundle<TConfig, TValue> : never);
-
-interface ItemBundle<TConfig extends FormItemConfig> {
-  config: TConfig;
-}
-
-interface FieldBundle<TConfig extends FieldConfig, TValue = unknown> extends ItemBundle<TConfig> {
-  value$: Observable<TValue | null>;
-  value: TValue | null;
-  status$: Observable<{ valid: boolean; pending: boolean }>;
-  status: { valid: boolean; pending: boolean };
-
-  set(value: TValue | null): TValue | null;
-}
-
-interface GroupBundle<TConfig extends GroupConfig, TValue = unknown> extends FieldBundle<TConfig, TValue> {
-  fields: FieldBundle<TConfig, TValue>;
-  items: ItemBundle<TConfig>[];
-}
-
-interface ArrayBundle<TConfig extends ArrayConfig, TValue = unknown> extends FieldBundle<TConfig, TValue> {
-  fields: GroupBundle<TConfig, TValue[]>;
-  items: ItemBundle<TConfig>[];
-}
-
-export function bundleConfig<TConfig extends FormItemConfig, TValue = unknown>(
+export function bundleConfig<TConfig extends ItemConfig, TValue = unknown>(
   config: TConfig,
   visitor: Visitor<TConfig> = new DefaultVisitor<TConfig>(),
 ): AnyBundle<AnyConfig<TConfig>, TValue> {
