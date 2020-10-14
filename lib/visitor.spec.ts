@@ -12,8 +12,8 @@ describe("bundleConfig", () => {
   //   const bundle = bundleConfig(fields);
   // });
 
-  it("testing", () => {
-    const asdf = new GroupControl({
+  const createForm = () =>
+    new GroupControl({
       field1: new FieldControl("pants"),
       field2: new FieldControl("skirts"),
       group1: new GroupControl({
@@ -24,33 +24,42 @@ describe("bundleConfig", () => {
           new GroupControl({
             groupField1: new FieldControl(v?.groupField1 ?? null),
           }),
+        [{ groupField1: <string | null>"shirts" }],
       ),
     });
-    expect(asdf.value).toEqual({
-      array1: [],
+
+  let form: ReturnType<typeof createForm>;
+
+  beforeEach(() => {
+    form = createForm();
+  });
+
+  test("value is updated", () => {
+    expect(form.value).toEqual({
+      array1: [{ groupField1: "shirts" }],
       field1: "pants",
       field2: "skirts",
       group1: {
         field3: "shorts",
       },
     });
-    asdf.patchValue({ field1: "pants1", field2: "skirts2" });
+    form.patchValue({ field1: "pants1", field2: "skirts2" });
 
-    expect(asdf.value).toEqual({
-      array1: [],
+    expect(form.value).toEqual({
+      array1: [{ groupField1: "shirts" }],
       field1: "pants1",
       field2: "skirts2",
       group1: {
         field3: "shorts",
       },
     });
-    expect(asdf.value$.getValue()).toEqual({
-      array1: [],
-      field1: "pants1",
-      field2: "skirts2",
-      group1: {
-        field3: "shorts",
-      },
-    });
+  });
+
+  test("status bubbles upwards", () => {
+    expect(form.status.dirty).toBeFalsy();
+    form.controls.field1.setValue("pants3");
+    expect(form.controls.field1.status.dirty).toBeTruthy();
+    expect(form.status.dirty).toBeTruthy();
+    expect(form.controls.array1.controls[0].status.dirty).toBeFalsy();
   });
 });
