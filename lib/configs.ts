@@ -17,7 +17,7 @@ export interface ArrayConfig<TFormItem extends ItemConfig = ItemConfig> extends 
   array: true;
 }
 
-export type AnyConfig<TFormItem extends ItemConfig = ItemConfig> =
+export type AnyConfig<TFormItem extends ItemConfig = AnyConfig<ItemConfig>> =
   | TFormItem
   | ItemConfig
   | FieldConfig
