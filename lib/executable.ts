@@ -2,8 +2,8 @@ import { Observable } from "rxjs";
 import { AnyConfig, DynaOption } from "./configs";
 
 export interface SearchResolver<TValue, TParams extends object> {
-  search(source: Observable<{ search: string; params: TParams }>): Observable<DynaOption<TValue>[]>;
-  resolve(value: TValue[]): Observable<DynaOption<TValue>[]>;
+  search(subject: Observable<{ search: string; params: TParams }>): Observable<DynaOption<TValue>[]>;
+  resolve(value: TValue[], params: TParams): Promise<DynaOption<TValue>[]>;
 }
 
 export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
