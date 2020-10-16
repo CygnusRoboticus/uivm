@@ -1,11 +1,9 @@
-import { array as AR } from "fp-ts";
-import { groupBy } from "fp-ts/lib/NonEmptyArray";
-import { range } from "fp-ts/lib/ReadonlyArray";
-import { BehaviorSubject, combineLatest, from, Observable, of, Subject, Subscription } from "rxjs";
+import { array as AR, nonEmptyArray as NEA, readonlyArray as RAR } from "fp-ts";
+import { BehaviorSubject, combineLatest, from, Observable, of, Subscription } from "rxjs";
 import { map, switchMap, take } from "rxjs/operators";
 
 export type ValidationErrors = {
-  [key: string]: { message: string; [k: string]: unknown };
+  [key: string]: { message: string; html?: boolean; [k: string]: unknown };
 };
 
 export interface ValidatorFn<TValue, TFlags extends AbstractFlags> {
@@ -114,7 +112,7 @@ export class ItemControl<TFlags extends AbstractFlags> {
   protected _flagExecutors$ = new BehaviorSubject<Observable<[keyof TFlags, boolean]>[]>([]);
   flags$: Observable<TFlags> = this._flagExecutors$.pipe(
     switchMap(obs => combineLatest(obs)),
-    map(groupBy(([k]) => k as string)),
+    map(NEA.groupBy(([k]) => k as string)),
     map<{}, [keyof TFlags, TFlags[keyof TFlags]][]>(Object.entries),
     map(
       AR.reduce({} as TFlags, (acc, [k, v]) => {
@@ -123,6 +121,7 @@ export class ItemControl<TFlags extends AbstractFlags> {
       }),
     ),
   );
+
   protected _parent: ItemControl<TFlags> | null = null;
 
   get parent() {
@@ -309,18 +308,18 @@ export class FieldControl<TValue, TFlags extends AbstractFlags> extends ItemCont
   }
 }
 
-type FieldControlMap<TValue, TFlags extends AbstractFlags> = {
+export type FieldControlMap<TValue, TFlags extends AbstractFlags> = {
   [key in keyof TValue]: FieldControl<TValue[key], TFlags>;
 };
 
-type GroupValue<TValue, TFlags extends AbstractFlags, TControls extends FieldControlMap<TValue, TFlags>> = {
+export type GroupValue<TValue, TControls extends FieldControlMap<TValue, TFlags>, TFlags extends AbstractFlags> = {
   [key in keyof TControls]: TControls[key]["value"];
 };
 
 export class GroupControl<
-  TValue extends GroupValue<TValue, TFlags, TControls>,
-  TFlags extends AbstractFlags,
-  TControls extends FieldControlMap<TValue, TFlags>
+  TValue extends GroupValue<TValue, TControls, TFlags>,
+  TControls extends FieldControlMap<TValue, TFlags>,
+  TFlags extends AbstractFlags
 > extends FieldControl<TValue, TFlags> {
   public controls: TControls;
 
@@ -391,8 +390,8 @@ export class GroupControl<
 }
 
 export class ArrayControl<
-  TValue extends GroupValue<TValue, TFlags, TControls>,
-  TItem extends GroupControl<TValue, TFlags, TControls>,
+  TValue extends GroupValue<TValue, TControls, TFlags>,
+  TItem extends GroupControl<TValue, TControls, TFlags>,
   TFlags extends AbstractFlags,
   TControls extends FieldControlMap<TValue, TFlags>
 > extends FieldControl<TValue[], TFlags> {
@@ -478,7 +477,7 @@ export class ArrayControl<
 
   protected resize(length: number) {
     this.clear();
-    const controls = range(0, length).map((_, i) => this.itemFactory(this.value[i] ?? null));
+    const controls = RAR.range(0, length).map((_, i) => this.itemFactory(this.value[i] ?? null));
     this.push(...controls);
   }
 

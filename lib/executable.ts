@@ -1,10 +1,9 @@
-import { taskEither as TE } from "fp-ts";
 import { Observable } from "rxjs";
-import { AnyConfig, DynaOption, DynaOptionSingle } from "./configs";
+import { AnyConfig, DynaOption } from "./configs";
 
-export interface SearchResolver<T = unknown, U extends any = any> {
-  search: (search: string, opts: { selected?: U[] }) => TE.TaskEither<Error, DynaOption<T>[]>;
-  resolve: (value: T[]) => TE.TaskEither<Error, DynaOptionSingle<T>[]>;
+export interface SearchResolver<TValue, TParams extends object> {
+  search(source: Observable<{ search: string; params: TParams }>): Observable<DynaOption<TValue>[]>;
+  resolve(value: TValue[]): Observable<DynaOption<TValue>[]>;
 }
 
 export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
@@ -15,7 +14,7 @@ export interface ExecutableRegistry<
   TTriggers extends ExecutableTriggerService<TTriggers, Observable<void>> = {},
   TValidators extends ExecutableService<TValidators, Validator> = {},
   TAsyncValidators extends ExecutableService<TValidators, AsyncValidator> = {},
-  TSearches extends ExecutableService<TSearches, SearchResolver> = {}
+  TSearches extends ExecutableService<TSearches, SearchResolver<unknown, {}>> = {}
 > {
   flags: TFlags;
   triggers: TTriggers;

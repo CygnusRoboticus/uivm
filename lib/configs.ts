@@ -4,27 +4,31 @@ export interface ItemConfig {
   type: string;
 }
 
-export interface FieldConfig extends ItemConfig {
+export interface FieldConfig<TValue> extends ItemConfig {
   name: string;
+  defaultValue?: TValue;
   dataType?: FieldDataTypeDefinition;
 }
 
-export interface GroupConfig<TFormItem extends ItemConfig = ItemConfig> extends ItemConfig {
-  fields: readonly AnyConfig<TFormItem>[];
+export interface GroupConfig<TConfig extends ItemConfig = ItemConfig> extends ItemConfig {
+  fields: readonly AnyConfig<TConfig>[];
 }
 
-export interface ArrayConfig<TFormItem extends ItemConfig = ItemConfig> extends FieldConfig, GroupConfig<TFormItem> {
+export interface ArrayConfig<TValue, TConfig extends ItemConfig = ItemConfig> extends GroupConfig<TConfig> {
   array: true;
+  name: string;
+  defaultValye?: TValue[];
+  dataType?: FieldDataTypeDefinition;
 }
 
-export type AnyConfig<TFormItem extends ItemConfig = ItemConfig> =
-  | TFormItem
+export type AnyConfig<TConfig extends ItemConfig = ItemConfig> =
+  | TConfig
   | ItemConfig
-  | FieldConfig
-  | GroupConfig<TFormItem>
-  | ArrayConfig<TFormItem>;
+  | FieldConfig<unknown>
+  | GroupConfig<TConfig>
+  | ArrayConfig<TConfig>;
 
-export type FormConfig<TFormItem extends ItemConfig = ItemConfig> = readonly AnyConfig<TFormItem>[];
+export type FormConfig<TConfig extends ItemConfig = ItemConfig> = readonly AnyConfig<TConfig>[];
 
 export interface DynaOptionSingle<T = unknown> {
   label: string;
@@ -76,12 +80,14 @@ export interface DependentValueDefinition<T = unknown> {
   value: T;
 }
 
-export function isFieldConfig(config: ItemConfig): config is FieldConfig {
+export function isFieldConfig<TValue = unknown>(config: ItemConfig): config is FieldConfig<TValue> {
   return config && !!(config as any).name;
 }
 export function isGroupConfig<TConfig extends ItemConfig>(config: ItemConfig): config is GroupConfig<TConfig> {
   return config && !!(config as any).fields;
 }
-export function isArrayConfig<TConfig extends ItemConfig>(config: ItemConfig): config is ArrayConfig<TConfig> {
+export function isArrayConfig<TConfig extends ItemConfig, TValue = unknown>(
+  config: ItemConfig,
+): config is ArrayConfig<TValue, TConfig> {
   return isGroupConfig<TConfig>(config) && (config as any).array;
 }
