@@ -1,4 +1,5 @@
-import { AnyConfig, ArrayConfig, FieldConfig, FormConfig, GroupConfig, ItemConfig } from "./configs";
+import { AbstractFlags, ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { AnyConfig, BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export enum FieldDataType {
   StringType = "string",
@@ -13,12 +14,12 @@ export interface FieldDataTypeDefinition {
 }
 
 export interface FieldTypeMap<
-  TFormItem extends AnyConfig,
-  TS extends Partial<TFormItem>,
-  TN extends Partial<TFormItem>,
-  TB extends Partial<TFormItem>,
-  TArray extends Partial<TFormItem>,
-  TNull extends Partial<TFormItem>
+  TConfig extends BaseItemConfig,
+  TS extends Partial<TConfig>,
+  TN extends Partial<TConfig>,
+  TB extends Partial<TConfig>,
+  TArray extends Partial<TConfig>,
+  TNull extends Partial<TConfig>
 > {
   string: TS;
   number: TN;
@@ -38,18 +39,18 @@ type DTK = "dataType";
 type FK = "fields";
 
 type FieldTypeType<
-  T extends AnyConfig<TFormItem>,
-  TMap extends FieldTypeMap<TFormItem, TS, TN, TB, TArray, TNull>,
-  TFormItem extends ItemConfig = ItemConfig,
+  T extends AnyConfig<TConfig>,
+  TMap extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TConfig extends BaseItemConfig = BaseItemConfig,
   TS = unknown,
   TN = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
-> = T extends ArrayConfig
-  ? FormValue<T[FK], TMap, TFormItem, TS, TN, TB, TArray, TNull>[]
-  : T extends GroupConfig
-  ? FormValue<T[FK], TMap, TFormItem, TS, TN, TB, TArray, TNull>
+> = T extends BaseArrayConfig<TConfig>
+  ? FormValue<T[FK], TMap, TConfig, TS, TN, TB, TArray, TNull>[]
+  : T extends BaseGroupConfig<TConfig>
+  ? FormValue<T[FK], TMap, TConfig, TS, TN, TB, TArray, TNull>
   : T extends TMap["string"]
   ? FieldTypeNullable<T, TMap["null"], FieldTypeArrayable<T, TMap["array"], string>>
   : T extends TMap["number"]
@@ -58,7 +59,7 @@ type FieldTypeType<
   ? FieldTypeNullable<T, TMap["null"], FieldTypeArrayable<T, TMap["array"], boolean>>
   : unknown;
 
-type FieldDataTypeType<T extends FieldConfig[DTK]> = T extends { type: FieldDataType.StringType }
+type FieldDataTypeType<T extends BaseFieldConfig[DTK]> = T extends { type: FieldDataType.StringType }
   ? FieldTypeNullable<T, { null: true }, FieldTypeArrayable<T, { array: true }, string>>
   : T extends { type: FieldDataType.NumberType }
   ? FieldTypeNullable<T, { null: true }, FieldTypeArrayable<T, { array: true }, number>>
@@ -69,10 +70,32 @@ type FieldDataTypeType<T extends FieldConfig[DTK]> = T extends { type: FieldData
 type FieldTypeNullable<T, U, V> = T extends U ? V | null : V;
 type FieldTypeArrayable<T, U, V> = T extends U ? V[] : V;
 
+type FieldControlType<
+  T extends BaseItemConfig,
+  TValue extends { [key: string]: TValue[keyof TValue] },
+  TConfig extends BaseItemConfig = BaseItemConfig,
+  TFlags extends AbstractFlags = AbstractFlags
+> = T extends BaseArrayConfig<TConfig>
+  ? ArrayControl<
+      // @ts-ignore
+      TValue[T[NK]][number],
+      // @ts-ignore
+      GroupControl<TValue[T[NK]][number], FormControls<T[FK], TValue[T[NK]][number]>, TFlags>,
+      // @ts-ignore
+      FormControls<T[FK], TValue[T[NK]][number], TConfig, TFlags>,
+      TFlags
+    >
+  : T extends BaseFieldConfig
+  ? T extends BaseGroupConfig<TConfig>
+    ? // @ts-ignore
+      GroupControl<TValue[T[NK]], FormControls<T[FK], TValue[T[NK]], TConfig, TFlags>, TFlags>
+    : FieldControl<TValue[T[NK]], TFlags>
+  : ItemControl<TFlags>;
+
 type MappedFields<
-  T extends readonly ItemConfig[],
-  TMap extends FieldTypeMap<TFormItem, TS, TN, TB, TArray, TNull>,
-  TFormItem extends ItemConfig = ItemConfig,
+  T extends readonly TConfig[],
+  TMap extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TConfig extends BaseItemConfig = BaseItemConfig,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -81,9 +104,26 @@ type MappedFields<
 > = Mutable<
   {
     [i in keyof T]: {
-      [j in T[i] extends FieldConfig ? T[i][NK] : EK]: T[i] extends { [k in DTK]: any }
-        ? FieldDataTypeType<Extract<T[i], FieldConfig>[DTK]>
-        : FieldTypeType<Extract<T[i], AnyConfig<TFormItem>>, TMap, TFormItem, TS, TN, TB, TArray, TNull>;
+      [j in T[i] extends BaseFieldConfig ? T[i][NK] : EK]: T[i] extends { [k in DTK]: any }
+        ? FieldDataTypeType<Extract<T[i], BaseFieldConfig>[DTK]>
+        : FieldTypeType<Extract<T[i], AnyConfig<TConfig>>, TMap, TConfig, TS, TN, TB, TArray, TNull>;
+    };
+  }
+>;
+
+type MappedControls<
+  T extends readonly TConfig[],
+  TValue extends { [key: string]: TValue[keyof TValue] },
+  TConfig extends BaseItemConfig = BaseItemConfig,
+  TFlags extends AbstractFlags = AbstractFlags
+> = Mutable<
+  {
+    [i in keyof T]: {
+      [j in T[i] extends BaseFieldConfig ? T[i][NK] : EK]: T[i] extends BaseFieldConfig
+        ? FieldControlType<T[i], TValue, TConfig, TFlags>
+        : T[i] extends BaseGroupConfig<TConfig>
+        ? FormControls<T[i][FK], TValue, TConfig, TFlags>
+        : never;
     };
   }
 >;
@@ -106,17 +146,35 @@ type DF8<T> = T extends any ? DFBase<T, DF9<EmptyObjectValues<T>>> : never;
 type DF9<T> = T extends any ? DFBase<T, EmptyObjectValues<T>> : never;
 
 export type FormValue<
-  T extends FormConfig<TFormItem>,
-  TMap extends FieldTypeMap<TFormItem, TS, TN, TB, TArray, TNull>,
-  TFormItem extends ItemConfig = ItemConfig,
+  T extends readonly TConfig[],
+  TMap extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TConfig extends BaseItemConfig = BaseItemConfig,
   TS = unknown,
   TN = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
 > = UnionToIntersection<
-  | Exclude<MappedFields<T, TMap, TFormItem, TS, TN, TB, TArray, TNull>[number], { [k in EK]: unknown }>
-  | DeepEmptyFlatten<MappedFields<T, TMap, TFormItem, TS, TN, TB, TArray, TNull>[number]>
+  | Exclude<MappedFields<T, TMap, TConfig, TS, TN, TB, TArray, TNull>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedFields<T, TMap, TConfig, TS, TN, TB, TArray, TNull>[number]>
+>;
+
+export type FormControl<
+  T extends readonly TConfig[],
+  TValue,
+  TConfig extends BaseItemConfig = BaseItemConfig,
+  TFlags extends AbstractFlags = AbstractFlags
+  // @ts-ignore
+> = GroupControl<TValue, FormControls<T, TValue>, TFlags>;
+
+type FormControls<
+  T extends readonly TConfig[],
+  TValue extends { [key: string]: TValue[keyof TValue] },
+  TConfig extends BaseItemConfig = BaseItemConfig,
+  TFlags extends AbstractFlags = AbstractFlags
+> = UnionToIntersection<
+  | Exclude<MappedControls<T, TValue, TConfig, TFlags>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedControls<T, TValue, TConfig, TFlags>[number]>
 >;
 
 // test types for the monstrosity above
@@ -191,15 +249,48 @@ const testConfig = [
 ] as const;
 
 // for testing purposes
-interface DynaFieldTypeMap
-  extends FieldTypeMap<
-    AnyConfig,
-    { type: "text" | "code" | "radiobutton" },
-    { type: "number" | "date" },
-    { type: "checkbox" },
-    never,
-    { type: "text" }
-  > {}
+type DynaFieldTypeMap = FieldTypeMap<
+  AnyConfig,
+  { type: "text" | "code" | "radiobutton" },
+  { type: "number" | "date" },
+  { type: "checkbox" },
+  never,
+  { type: "text" }
+>;
+
+const testControl: FormControl<typeof testConfig, FormValue<typeof testConfig, DynaFieldTypeMap>> = new GroupControl({
+  checkbox: new FieldControl<boolean>(false),
+  code: new FieldControl<string>(""),
+  date: new FieldControl<number>(0),
+  rowText: new FieldControl<string | null>(""),
+  fieldsetText: new FieldControl<string | null>(""),
+  fieldsetSelect: new FieldControl<string>(""),
+  fieldsetFieldsetText: new FieldControl<string | null>(""),
+  group: new GroupControl({
+    groupText: new FieldControl(<string | null>""),
+    groupGroup: new GroupControl({
+      groupGroupNumber: new FieldControl<number>(0),
+      groupGroupRowCheckbox: new FieldControl<boolean>(true),
+    }),
+  }),
+  repeatable: new ArrayControl(
+    v =>
+      new GroupControl({
+        repeatableText: new FieldControl(v?.repeatableText ?? null),
+        repeatableNumber: new FieldControl(v?.repeatableNumber ?? 0),
+        repeatableFieldsetGroup: new GroupControl({
+          repeatableFieldsetGroupText: new FieldControl(v?.repeatableFieldsetGroup.repeatableFieldsetGroupText ?? null),
+        }),
+      }),
+  ),
+  number: new FieldControl<number>(0),
+  numberType: new FieldControl<number>(0),
+  radiobutton: new FieldControl<string>(""),
+  select: new FieldControl<string[]>([]),
+  slider: new FieldControl<number[]>([]),
+  tabsTabsText: new FieldControl(<string | null>""),
+  text: new FieldControl<string | null>(null),
+});
 
 const testValue: FormValue<typeof testConfig, DynaFieldTypeMap> = {
   checkbox: true,
@@ -231,4 +322,7 @@ const testValue: FormValue<typeof testConfig, DynaFieldTypeMap> = {
   tabsTabsText: "",
   text: "",
 };
-type nolintplease = typeof testValue;
+
+testControl.setValue(testValue);
+
+type nolintplease = typeof testValue & typeof testControl;

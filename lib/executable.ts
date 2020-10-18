@@ -1,9 +1,9 @@
 import { Observable } from "rxjs";
-import { AnyConfig, DynaOption } from "./configs";
+import { Option } from "./configs";
 
 export interface SearchResolver<TValue, TParams extends object> {
-  search(subject: Observable<{ search: string; params: TParams }>): Observable<DynaOption<TValue>[]>;
-  resolve(value: TValue[], params: TParams): Promise<DynaOption<TValue>[]>;
+  search(subject: Observable<{ search: string; params: TParams }>): Observable<Option<TValue>[]>;
+  resolve(value: TValue[], params: TParams): Promise<Option<TValue>[]>;
 }
 
 export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
@@ -12,14 +12,14 @@ export type AsyncValidator<TValue = unknown, TErrors = unknown> = (value: TValue
 export interface ExecutableRegistry<
   TFlags extends ExecutableService<TFlags, Observable<boolean>> = {},
   TTriggers extends ExecutableTriggerService<TTriggers, Observable<void>> = {},
-  TValidators extends ExecutableService<TValidators, Validator> = {},
-  TAsyncValidators extends ExecutableService<TValidators, AsyncValidator> = {},
+  TMessagers extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
+  TValidators extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
   TSearches extends ExecutableService<TSearches, SearchResolver<unknown, {}>> = {}
 > {
   flags: TFlags;
   triggers: TTriggers;
+  messagers: TMessagers;
   validators: TValidators;
-  asyncValidators: TAsyncValidators;
   search: TSearches;
 }
 
@@ -49,7 +49,7 @@ export type ExecutableRegistryOverride<
 /**
  * Dynaform Executable type. This does not need to be implemented, it is exported for reference.
  */
-export type Executable<TConfig = AnyConfig, TParams = undefined, TValue = unknown> = (
+export type Executable<TConfig, TParams = undefined, TValue = unknown> = (
   config: TConfig,
   params: TParams,
   ...args: any[]
@@ -58,7 +58,7 @@ export type Executable<TConfig = AnyConfig, TParams = undefined, TValue = unknow
 /**
  * Dynaform ExecutableTrigger type. This does not need to be implemented, it is exported for reference.
  */
-export type ExecutableTrigger<TConfig = AnyConfig, TParams = undefined, TValue = unknown> = (
+export type ExecutableTrigger<TConfig, TParams = undefined, TValue = unknown> = (
   config: TConfig,
   params: TParams,
   subject: Observable<void>,

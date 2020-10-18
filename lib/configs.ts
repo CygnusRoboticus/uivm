@@ -1,36 +1,60 @@
+import { Observable } from "rxjs";
+import { AbstractFlags } from "./controls";
+import { ExecutableDefinition, ExecutableRegistry } from "./executable";
+import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldDataTypeDefinition } from "./typing";
 
-export interface ItemConfig {
-  type: string;
+export interface ItemConfig<
+  TRegistry extends ExecutableRegistry = ExecutableRegistry,
+  TFlags extends AbstractFlags = AbstractFlags
+> extends BaseItemConfig {
+  flags?: {
+    [flag in keyof TFlags]: readonly ExecutableDefinition<TRegistry["flags"], Observable<boolean>>[];
+  };
+  triggers?: readonly ExecutableDefinition<TRegistry["triggers"], Observable<void>>[];
+  messagers?: readonly ExecutableDefinition<TRegistry["messagers"], Observable<{ message: string }>>[];
 }
 
-export interface FieldConfig<TValue> extends ItemConfig {
-  name: string;
-  defaultValue?: TValue;
+export interface FieldConfig<
+  TRegistry extends ExecutableRegistry = ExecutableRegistry,
+  TFlags extends AbstractFlags = AbstractFlags
+> extends ItemConfig<TRegistry, TFlags>,
+    BaseFieldConfig {
+  validators?: readonly ExecutableDefinition<TRegistry["validators"], Observable<{ message: string }>>[];
+  disablers?: readonly ExecutableDefinition<TRegistry["flags"], Observable<boolean>>[];
   dataType?: FieldDataTypeDefinition;
 }
 
-export interface GroupConfig<TConfig extends ItemConfig = ItemConfig> extends ItemConfig {
-  fields: readonly AnyConfig<TConfig>[];
-}
+export type GroupConfig<
+  TConfig extends ItemConfig<TRegistry, TFlags>,
+  TRegistry extends ExecutableRegistry = ExecutableRegistry,
+  TFlags extends AbstractFlags = AbstractFlags
+> = ItemConfig<TRegistry, TFlags> & BaseGroupConfig<TConfig>;
 
-export interface ArrayConfig<TValue, TConfig extends ItemConfig = ItemConfig> extends GroupConfig<TConfig> {
-  array: true;
-  name: string;
-  defaultValye?: TValue[];
-  dataType?: FieldDataTypeDefinition;
-}
+export type ArrayConfig<
+  TConfig extends ItemConfig<TRegistry, TFlags>,
+  TRegistry extends ExecutableRegistry = ExecutableRegistry,
+  TFlags extends AbstractFlags = AbstractFlags
+> = FieldConfig<TRegistry, TFlags> & BaseArrayConfig<TConfig>;
 
-export type AnyConfig<TConfig extends ItemConfig = ItemConfig> =
+export type AnyConfig<
+  TConfig extends ItemConfig<TRegistry, TFlags> = never,
+  TRegistry extends ExecutableRegistry = ExecutableRegistry,
+  TFlags extends AbstractFlags = AbstractFlags
+> =
   | TConfig
-  | ItemConfig
-  | FieldConfig<unknown>
-  | GroupConfig<TConfig>
-  | ArrayConfig<TConfig>;
+  | ItemConfig<TRegistry, TFlags>
+  | FieldConfig<TRegistry, TFlags>
+  | GroupConfig<TConfig, TRegistry, TFlags>
+  | ArrayConfig<TConfig, TRegistry, TFlags>;
 
-export type FormConfig<TConfig extends ItemConfig = ItemConfig> = readonly AnyConfig<TConfig>[];
+export type FormConfig<
+  TConfig extends ItemConfig<TRegistry, TFlags>,
+  TRegistry extends ExecutableRegistry,
+  TFlags extends AbstractFlags
+> = readonly TConfig[];
 
-export interface DynaOptionSingle<T = unknown> {
+export interface OptionSingle<T = unknown> {
   label: string;
   value: T;
   disabled?: boolean;
@@ -39,55 +63,14 @@ export interface DynaOptionSingle<T = unknown> {
   help?: string;
 }
 
-export interface DynaOptionMulti<T = unknown, U = unknown> {
+export interface OptionMulti<T = unknown, U = unknown> {
   label: string;
   /**
    * Value to uniquely identify group; not used in selection.
    */
   value: U;
   icon?: string;
-  options: (DynaOption<T> | string)[];
+  options: (Option<T> | string)[];
 }
 
-export type DynaOption<T = unknown> = DynaOptionSingle<T> | DynaOptionMulti<T>;
-
-/**
- * A reference that is dependent on another field in the same dyna-form config.
- */
-export interface DependentValueDefinition<T = unknown> {
-  /**
-   * Name of another field in the same dyna-form, this is an absolute path
-   * from the root FormGroup.
-   *
-   * e.g. with a form like
-   * {
-   *   rootField,
-   *   nested: {
-   *     nested1,
-   *     nested2,
-   *     nested3
-   *   }
-   * }
-   *
-   * The field `rootField` can reference a nested field by setting this to
-   * `nested.nested1`.
-   */
-  field: string;
-  /**
-   * A value for `field`. Depending on context, this can be used as a truthy
-   * comparison.
-   */
-  value: T;
-}
-
-export function isFieldConfig<TValue = unknown>(config: ItemConfig): config is FieldConfig<TValue> {
-  return config && !!(config as any).name;
-}
-export function isGroupConfig<TConfig extends ItemConfig>(config: ItemConfig): config is GroupConfig<TConfig> {
-  return config && !!(config as any).fields;
-}
-export function isArrayConfig<TConfig extends ItemConfig, TValue = unknown>(
-  config: ItemConfig,
-): config is ArrayConfig<TValue, TConfig> {
-  return isGroupConfig<TConfig>(config) && (config as any).array;
-}
+export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;

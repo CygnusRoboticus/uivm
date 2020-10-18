@@ -1,20 +1,20 @@
 import { array as AR, nonEmptyArray as NEA, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, from, Observable, of, Subscription } from "rxjs";
+import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription } from "rxjs";
 import { map, switchMap, take } from "rxjs/operators";
+import { isPromise, notNullish } from "./utils";
 
-export type ValidationErrors = {
-  [key: string]: { message: string; html?: boolean; [k: string]: unknown };
-};
-
-export interface ValidatorFn<TValue, TFlags extends AbstractFlags> {
-  (control: FieldControl<TValue, TFlags>): ValidationErrors | null;
+export interface Messages {
+  [key: string]: {
+    message: string;
+    [key: string]: unknown;
+  };
 }
 
-export interface AsyncValidatorFn<TValue, TFlags extends AbstractFlags> {
-  (control: FieldControl<TValue, TFlags>): Promise<ValidationErrors | null> | Observable<ValidationErrors | null>;
+export interface Validator<TValue, TFlags extends AbstractFlags = AbstractFlags> {
+  (control: FieldControl<TValue, TFlags>): Messages | null | Promise<Messages | null> | Observable<Messages | null>;
 }
 
-function findControl<TValue, TFlags extends AbstractFlags>(
+function findControl<TValue, TFlags extends AbstractFlags = AbstractFlags>(
   control: FieldControl<TValue, TFlags>,
   path: (string | number)[] | string,
   delimiter = ".",
@@ -38,22 +38,20 @@ function findControl<TValue, TFlags extends AbstractFlags>(
   return found;
 }
 
-export interface ItemControlOptions<TFlags extends AbstractFlags> {
-  status?: Partial<TFlags>;
+export interface ItemControlOptions<TFlags extends AbstractFlags = AbstractFlags> {
+  status?: Partial<AbstractStatus>;
   flags?: Partial<TFlags>;
   flagExecutors?: Observable<[keyof TFlags, boolean]>[];
+  messages?: Messages;
+  messageExecutors?: Observable<Messages>;
 }
 
-export interface FieldControlOptions<TValue, TFlags extends AbstractFlags> extends ItemControlOptions<TFlags> {
-  validators?: ValidatorFn<TValue, TFlags>[] | null;
-  asyncValidators?: AsyncValidatorFn<TValue, TFlags>[] | null;
+export interface FieldControlOptions<TValue, TFlags extends AbstractFlags = AbstractFlags>
+  extends ItemControlOptions<TFlags> {
+  validators?: Validator<TValue, TFlags>[];
 }
 
-export function vectorize<T>(value: T | T[] | null | undefined) {
-  return value === null || value === undefined ? [] : Array.isArray(value) ? value : [value];
-}
-
-function reduceControls<TValue, TFlags extends AbstractFlags>(
+function reduceControls<TValue, TFlags extends AbstractFlags = AbstractFlags>(
   controls: FieldControlMap<TValue, TFlags>,
   disabled: boolean,
 ) {
@@ -69,7 +67,7 @@ function reduceControls<TValue, TFlags extends AbstractFlags>(
   );
 }
 
-function reduceChildren<T, TValue, TFlags extends AbstractFlags>(
+function reduceChildren<T, TValue, TFlags extends AbstractFlags = AbstractFlags>(
   controls: FieldControlMap<TValue, TFlags>,
   initValue: T,
   predicate: Function,
@@ -81,7 +79,7 @@ function reduceChildren<T, TValue, TFlags extends AbstractFlags>(
   return res;
 }
 
-function forEachChild<TValue, TFlags extends AbstractFlags>(
+function forEachChild<TValue, TFlags extends AbstractFlags = AbstractFlags>(
   controls: FieldControlMap<TValue, TFlags>,
   predicate: (v: FieldControl<TValue[keyof TValue], TFlags>, k: keyof TValue) => void,
 ) {
@@ -89,10 +87,6 @@ function forEachChild<TValue, TFlags extends AbstractFlags>(
     const key = k as keyof TValue;
     predicate(controls[key], key);
   });
-}
-
-function notNullish<T>(value: T | null | undefined): value is T {
-  return !!value;
 }
 
 export interface AbstractStatus {
@@ -108,7 +102,23 @@ export interface AbstractFlags {
   [key: string]: boolean;
 }
 
-export class ItemControl<TFlags extends AbstractFlags> {
+export abstract class BaseControl {
+  protected _parent: BaseControl | null = null;
+
+  get parent() {
+    return this._parent;
+  }
+
+  setParent(parent: BaseControl) {
+    this._parent = parent;
+  }
+
+  abstract children: BaseControl[];
+  abstract update(): void;
+  abstract dispose(): void;
+}
+
+export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends BaseControl {
   protected _flagExecutors$ = new BehaviorSubject<Observable<[keyof TFlags, boolean]>[]>([]);
   flags$: Observable<TFlags> = this._flagExecutors$.pipe(
     switchMap(obs => combineLatest(obs)),
@@ -122,17 +132,12 @@ export class ItemControl<TFlags extends AbstractFlags> {
     ),
   );
 
-  protected _parent: ItemControl<TFlags> | null = null;
-
-  get parent() {
-    return this._parent;
-  }
-
   get children() {
     return <ItemControl<TFlags>[]>[];
   }
 
-  constructor(opts: ItemControlOptions<TFlags> = { flags: {} }) {
+  constructor(opts: ItemControlOptions<TFlags> = {}) {
+    super();
     if (opts.flagExecutors) {
       this.setFlagExecutors([new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", true]), ...opts.flagExecutors]);
     } else if (opts.flags) {
@@ -157,27 +162,22 @@ export class ItemControl<TFlags extends AbstractFlags> {
     this._flagExecutors$.next(observables);
   }
 
-  setParent(parent: ItemControl<TFlags>) {
-    this._parent = parent;
-  }
-
   dispose() {
     // noop
   }
 }
 
-export class FieldControl<TValue, TFlags extends AbstractFlags> extends ItemControl<TFlags> {
+export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> extends ItemControl<TFlags> {
   value: TValue;
   initialValue: TValue;
   status: AbstractStatus;
-  errors: ValidationErrors | null;
+  errors: Messages | null;
 
   protected _value$: BehaviorSubject<TValue>;
   protected _status$: BehaviorSubject<AbstractStatus>;
-  protected _errors$: BehaviorSubject<ValidationErrors | null>;
+  protected _errors$: BehaviorSubject<Messages | null>;
 
-  protected validators: ValidatorFn<TValue, TFlags>[];
-  protected asyncValidators: AsyncValidatorFn<TValue, TFlags>[];
+  protected validators: Validator<TValue, TFlags>[];
   protected validationSub?: Subscription;
 
   get value$() {
@@ -201,37 +201,38 @@ export class FieldControl<TValue, TFlags extends AbstractFlags> extends ItemCont
       dirty: false,
       touched: false,
     };
-    this.errors = <ValidationErrors | null>null;
+    this.errors = <Messages | null>null;
 
     this.validators = opts.validators ?? [];
-    this.asyncValidators = opts.asyncValidators ?? [];
 
     this._value$ = new BehaviorSubject(this.value);
     this._status$ = new BehaviorSubject(this.status);
     this._errors$ = new BehaviorSubject(this.errors);
+
+    this.validate();
   }
 
-  setValidators = (validators: ValidatorFn<TValue, TFlags>[]) => {
+  setValidators = (validators: Validator<TValue, TFlags>[]) => {
     this.validators = validators;
     this.validate();
   };
 
-  setAsyncValidators = (validators: AsyncValidatorFn<TValue, TFlags>[]) => {
-    this.asyncValidators = validators;
-    this.validate();
-  };
-
   validate() {
-    const results = this.validators.map(v => v(this)).filter(notNullish);
-    const asyncObs = combineLatest(this.asyncValidators.map(v => from(v(this)).pipe(take(1)))).pipe(
-      map(results => results.filter(notNullish)),
-    );
+    const asyncObs = combineLatest(
+      this.validators.map(v => {
+        const result = v(this);
+        if (isPromise(result) || isObservable(result)) {
+          return from(result).pipe(take(1));
+        }
+        return of(result);
+      }),
+    ).pipe(map(AR.filter(notNullish)));
+
     if (this.validationSub) {
       this.validationSub.unsubscribe();
     }
-    this.validationSub = combineLatest([of(results), asyncObs])
+    this.validationSub = asyncObs
       .pipe(
-        map(([results, asyncResults]) => [...results, ...asyncResults]),
         map(results => (results.length ? results.reduce((acc, r) => ({ ...acc, ...r }), {}) : null)),
         take(1),
       )
@@ -308,18 +309,14 @@ export class FieldControl<TValue, TFlags extends AbstractFlags> extends ItemCont
   }
 }
 
-export type FieldControlMap<TValue, TFlags extends AbstractFlags> = {
+export type FieldControlMap<TValue, TFlags extends AbstractFlags = AbstractFlags> = {
   [key in keyof TValue]: FieldControl<TValue[key], TFlags>;
 };
 
-export type GroupValue<TValue, TControls extends FieldControlMap<TValue, TFlags>, TFlags extends AbstractFlags> = {
-  [key in keyof TControls]: TControls[key]["value"];
-};
-
 export class GroupControl<
-  TValue extends GroupValue<TValue, TControls, TFlags>,
+  TValue extends { [key in keyof TControls]: TControls[key]["value"] },
   TControls extends FieldControlMap<TValue, TFlags>,
-  TFlags extends AbstractFlags
+  TFlags extends AbstractFlags = AbstractFlags
 > extends FieldControl<TValue, TFlags> {
   public controls: TControls;
 
@@ -390,10 +387,10 @@ export class GroupControl<
 }
 
 export class ArrayControl<
-  TValue extends GroupValue<TValue, TControls, TFlags>,
+  TValue extends { [key in keyof TControls]: TControls[key]["value"] },
   TItem extends GroupControl<TValue, TControls, TFlags>,
-  TFlags extends AbstractFlags,
-  TControls extends FieldControlMap<TValue, TFlags>
+  TControls extends FieldControlMap<TValue, TFlags>,
+  TFlags extends AbstractFlags = AbstractFlags
 > extends FieldControl<TValue[], TFlags> {
   controls: TItem[];
 
