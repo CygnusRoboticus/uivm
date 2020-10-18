@@ -1,8 +1,18 @@
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
-import { AbstractFlags, ArrayControl, FieldControl, FieldControlMap, GroupControl, ItemControl } from "./controls";
+import {
+  AbstractFlags,
+  ArrayControl,
+  FieldControl,
+  FieldControlMap,
+  GroupControl,
+  ItemControl,
+  Messages,
+} from "./controls";
 import { isArrayConfig, isFieldConfig, isGroupConfig } from "./utils";
 import { ExecutableRegistry } from "./executable";
 import { FieldTypeMap, FormValue } from "./typing";
+import { combineLatest, Observable } from "rxjs";
+import { map } from "rxjs/operators";
 
 type VK = "value";
 
@@ -30,18 +40,21 @@ export interface Visitor<
 
   itemComplete: <TRootValue>(
     control: ItemControl<TFlags>,
-    config: TConfig,
+    config: ItemConfig,
     root: GroupControl<TRootValue, any, TFlags>,
+    registry: TRegistry,
   ) => void;
   fieldComplete: <TValue, TRootValue>(
     control: FieldControl<TValue | null, TFlags>,
     config: FieldConfig<TRegistry, TFlags>,
     root: GroupControl<TRootValue, any, TFlags>,
+    registry: TRegistry,
   ) => void;
   groupComplete: <TValue, TRootValue>(
     control: GroupControl<TValue, any, TFlags>,
     config: GroupConfig<TConfig, TRegistry, TFlags>,
     root: GroupControl<TRootValue, any, TFlags>,
+    registry: TRegistry,
   ) => void;
   arrayComplete: <
     TValue extends { [key in keyof TControls]: TControls[key]["value"] },
@@ -51,6 +64,7 @@ export interface Visitor<
     control: ArrayControl<TValue, GroupControl<TValue, TControls, TFlags>, TControls, TFlags>,
     config: ArrayConfig<TConfig, TRegistry, TFlags>,
     root: GroupControl<TRootValue, any, TFlags>,
+    registry: TRegistry,
   ) => void;
 }
 
@@ -84,22 +98,80 @@ class DefaultVisitor<
     );
   }
 
-  itemComplete(control: ItemControl<TFlags>, config: TConfig) {
-    const executors = config;
-    // control.setFlagExecutors();
+  itemComplete(
+    control: ItemControl<TFlags>,
+    config: ItemConfig,
+    _: GroupControl<any, any, TFlags>,
+    registry: TRegistry,
+  ) {
+    this.initItem(control, config, registry);
   }
-  fieldComplete<TValue>(control: FieldControl<TValue | null, TFlags>) {}
+  fieldComplete<TValue>(
+    control: FieldControl<TValue | null, TFlags>,
+    config: FieldConfig<TRegistry, TFlags>,
+    _: GroupControl<any, any, TFlags>,
+    registry: TRegistry,
+  ) {
+    this.initItem(control, config as any, registry);
+  }
   groupComplete<
     TConfig extends ItemConfig<TRegistry, TFlags>,
     TValue extends { [key in keyof TControls]: TControls[key]["value"] },
     TControls extends FieldControlMap<TValue, TFlags>
-  >(control: GroupControl<TValue, TControls, TFlags>) {}
+  >(
+    control: GroupControl<TValue, TControls, TFlags>,
+    config: GroupConfig<TConfig, TRegistry, TFlags>,
+    _: GroupControl<any, any, TFlags>,
+    registry: TRegistry,
+  ) {
+    this.initItem(control, config as any, registry);
+  }
   arrayComplete<
     TValue extends { [key in keyof TControls]: TControls[key]["value"] },
     TItem extends GroupControl<TValue, TControls, TFlags>,
     TFlags extends AbstractFlags,
     TControls extends FieldControlMap<TValue, TFlags>
-  >(control: ArrayControl<TValue, TItem, TControls, TFlags>) {}
+  >(
+    control: ArrayControl<TValue, TItem, TControls, TFlags>,
+    // TODO: as above, this type is complaining for mysterious reasons
+    config: ArrayConfig<TConfig & ItemConfig<TRegistry, TFlags>, TRegistry, TFlags>,
+    _: GroupControl<any, any, TFlags>,
+    registry: TRegistry,
+  ) {
+    this.initItem(control as any, config as any, registry);
+  }
+
+  initItem(control: ItemControl<TFlags>, config: ItemConfig, registry: TRegistry) {
+    const flags = Object.entries(config.flags ?? {}).map(([key, value]) => {
+      const sources = value.map(f => {
+        // @ts-ignore
+        const method = registry.flags[f.name]?.bind(registry.flags);
+        // @ts-ignore
+        return method(control, f.params, config) as Observable<boolean>;
+      });
+      return combineLatest(sources).pipe(map(f => <[keyof TFlags, boolean]>[key, f.some(Boolean)]));
+    });
+    const messages = (config.messagers ?? []).map(m => {
+      // @ts-ignore
+      const method = registry.messagers[m.name]?.bind(registry.messagers);
+      // @ts-ignore
+      return method(control, m.params, config) as Observable<Messages | null>;
+    });
+
+    control.setFlagExecutors(flags);
+    control.setMessageExecutors(messages);
+  }
+
+  initField<TValue>(control: FieldControl<TValue, TFlags>, config: FieldConfig, registry: TRegistry) {
+    const disablers = (config.disablers ?? []).map(f => {
+      // @ts-ignore
+      const method = registry.disablers[f.name]?.bind(registry.messagers);
+      // @ts-ignore
+      return method(control, f.params, config) as Observable<boolean>;
+    });
+
+    control.setDisableExecutors(disablers);
+  }
 }
 
 export function bundleConfig<

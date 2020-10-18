@@ -1,6 +1,6 @@
 import { array as AR, nonEmptyArray as NEA, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription } from "rxjs";
-import { map, switchMap, take } from "rxjs/operators";
+import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subject, Subscription } from "rxjs";
+import { catchError, filter, first, map, switchMap, take, tap } from "rxjs/operators";
 import { isPromise, notNullish } from "./utils";
 
 export interface Messages {
@@ -43,12 +43,14 @@ export interface ItemControlOptions<TFlags extends AbstractFlags = AbstractFlags
   flags?: Partial<TFlags>;
   flagExecutors?: Observable<[keyof TFlags, boolean]>[];
   messages?: Messages;
-  messageExecutors?: Observable<Messages>;
+  messageExecutors?: Observable<Messages | null>[];
 }
 
 export interface FieldControlOptions<TValue, TFlags extends AbstractFlags = AbstractFlags>
   extends ItemControlOptions<TFlags> {
   validators?: Validator<TValue, TFlags>[];
+  disabled?: boolean;
+  disableExecutors?: Observable<boolean>[];
 }
 
 function reduceControls<TValue, TFlags extends AbstractFlags = AbstractFlags>(
@@ -119,17 +121,30 @@ export abstract class BaseControl {
 }
 
 export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends BaseControl {
-  protected _flagExecutors$ = new BehaviorSubject<Observable<[keyof TFlags, boolean]>[]>([]);
+  protected _flagExecutors$ = new BehaviorSubject<Observable<[keyof TFlags, boolean]>[]>([
+    new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]),
+  ]);
+  protected _messageExecutors$ = new BehaviorSubject<Observable<Messages | null>[]>([]);
+
   flags$: Observable<TFlags> = this._flagExecutors$.pipe(
-    switchMap(obs => combineLatest(obs)),
-    map(NEA.groupBy(([k]) => k as string)),
-    map<{}, [keyof TFlags, TFlags[keyof TFlags]][]>(Object.entries),
+    switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
     map(
       AR.reduce({} as TFlags, (acc, [k, v]) => {
-        acc[k] = acc[k] && v;
+        acc[k] = (!!acc[k] || v) as TFlags[typeof k];
         return acc;
       }),
     ),
+  );
+
+  messages$: Observable<Messages | null> = this._messageExecutors$.pipe(
+    switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
+    map(AR.filter(notNullish)),
+    map(msgs => {
+      if (msgs.length) {
+        return msgs.reduce((acc, m) => ({ ...acc, ...m }), {});
+      }
+      return null;
+    }),
   );
 
   get children() {
@@ -139,9 +154,14 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
   constructor(opts: ItemControlOptions<TFlags> = {}) {
     super();
     if (opts.flagExecutors) {
-      this.setFlagExecutors([new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", true]), ...opts.flagExecutors]);
+      this.setFlagExecutors(opts.flagExecutors);
     } else if (opts.flags) {
-      this.setFlags({ hidden: true, ...opts.flags } as TFlags);
+      this.setFlags(opts.flags);
+    }
+    if (opts.messageExecutors) {
+      this.setMessageExecutors(opts.messageExecutors);
+    } else if (opts.messages) {
+      this.setMessages(opts.messages);
     }
   }
 
@@ -155,11 +175,18 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
         k => new BehaviorSubject<[keyof TFlags, boolean]>([k, !!flags[k]]),
       ),
     );
-    this.update();
+  };
+
+  setMessages = (messages: Messages | null) => {
+    this.setMessageExecutors(messages ? [new BehaviorSubject(messages)] : []);
   };
 
   setFlagExecutors(observables: Observable<[keyof TFlags, boolean]>[]) {
-    this._flagExecutors$.next(observables);
+    this._flagExecutors$.next([new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]), ...observables]);
+  }
+
+  setMessageExecutors(observables: Observable<Messages | null>[]) {
+    this._messageExecutors$.next(observables);
   }
 
   dispose() {
@@ -176,6 +203,8 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   protected _value$: BehaviorSubject<TValue>;
   protected _status$: BehaviorSubject<AbstractStatus>;
   protected _errors$: BehaviorSubject<Messages | null>;
+  protected _disabledExecutors$: BehaviorSubject<Observable<boolean>[]>;
+  protected _initialized$: BehaviorSubject<boolean>;
 
   protected validators: Validator<TValue, TFlags>[];
   protected validationSub?: Subscription;
@@ -188,6 +217,9 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   }
   get errors$() {
     return this._errors$.asObservable();
+  }
+  protected get initialized() {
+    return this._initialized$.getValue();
   }
 
   constructor(value: TValue, opts: FieldControlOptions<TValue, TFlags> = {}) {
@@ -208,8 +240,17 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     this._value$ = new BehaviorSubject(this.value);
     this._status$ = new BehaviorSubject(this.status);
     this._errors$ = new BehaviorSubject(this.errors);
+    this._disabledExecutors$ = new BehaviorSubject<Observable<boolean>[]>([]);
+    this._initialized$ = new BehaviorSubject<boolean>(false);
+
+    if (opts.disableExecutors) {
+      this.setDisableExecutors(opts.disableExecutors);
+    } else if (opts.disabled !== undefined) {
+      this.setDisabled(opts.disabled);
+    }
 
     this.validate();
+    this.fieldReady();
   }
 
   setValidators = (validators: Validator<TValue, TFlags>[]) => {
@@ -217,24 +258,35 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     this.validate();
   };
 
+  setDisabled(disabled: boolean) {
+    this.setDisableExecutors([new BehaviorSubject(disabled)]);
+  }
+
+  setDisableExecutors(observables: Observable<boolean>[]) {
+    this._disabledExecutors$.next(observables);
+  }
+
   validate() {
-    const asyncObs = combineLatest(
-      this.validators.map(v => {
-        const result = v(this);
-        if (isPromise(result) || isObservable(result)) {
-          return from(result).pipe(take(1));
-        }
-        return of(result);
-      }),
-    ).pipe(map(AR.filter(notNullish)));
+    const sources = this.validators.length
+      ? combineLatest(
+          this.validators.map(v => {
+            const result = v(this);
+            if (isPromise(result) || isObservable(result)) {
+              return from(result).pipe(first());
+            }
+            return of(result);
+          }),
+        ).pipe(map(AR.filter(notNullish)))
+      : of([]);
 
     if (this.validationSub) {
       this.validationSub.unsubscribe();
     }
-    this.validationSub = asyncObs
+    this.validationSub = combineLatest([this._initialized$.pipe(filter(Boolean)), sources])
       .pipe(
+        map(([, v]) => v),
         map(results => (results.length ? results.reduce((acc, r) => ({ ...acc, ...r }), {}) : null)),
-        take(1),
+        first(),
       )
       .subscribe(errors => {
         this.errors = errors;
@@ -272,6 +324,10 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   }
 
   update() {
+    if (!this.initialized) {
+      return;
+    }
+
     this.status = this.children.reduce(
       (acc, c) => ({
         valid: acc.valid || c.status.valid,
@@ -307,6 +363,10 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     this._errors$.complete();
     super.dispose();
   }
+
+  protected fieldReady() {
+    this._initialized$.next(true);
+  }
 }
 
 export type FieldControlMap<TValue, TFlags extends AbstractFlags = AbstractFlags> = {
@@ -341,6 +401,7 @@ export class GroupControl<
     this.reset = () => {
       this.children.forEach(control => control.reset());
     };
+    this.groupReady();
   }
 
   get children() {
@@ -375,6 +436,10 @@ export class GroupControl<
   }
 
   update() {
+    if (!this.initialized) {
+      return;
+    }
+
     const value = reduceControls<TValue, TFlags>(this.controls, this.status.disabled);
     this.value = value;
     this._value$.next(value);
@@ -383,6 +448,11 @@ export class GroupControl<
 
   protected registerControl(control: ItemControl<TFlags>) {
     control.setParent(this);
+  }
+
+  protected fieldReady() {}
+  protected groupReady() {
+    this._initialized$.next(true);
   }
 }
 
@@ -402,6 +472,7 @@ export class ArrayControl<
     super(value, opts);
     this.controls = value.map(v => itemFactory(v));
     this.children.forEach(control => this.registerControl(control));
+    this.arrayReady();
   }
 
   get children() {
@@ -466,6 +537,10 @@ export class ArrayControl<
   }
 
   update() {
+    if (!this.initialized) {
+      return;
+    }
+
     const value = this.controls.map(control => control.value);
     this.value = value;
     this._value$.next(value);
@@ -474,11 +549,16 @@ export class ArrayControl<
 
   protected resize(length: number) {
     this.clear();
-    const controls = RAR.range(0, length).map((_, i) => this.itemFactory(this.value[i] ?? null));
+    const controls = RAR.range(0, length - 1).map((_, i) => this.itemFactory(this.value[i] ?? null));
     this.push(...controls);
   }
 
   protected registerControl(control: ItemControl<TFlags>) {
     control.setParent(this);
+  }
+
+  protected fieldReady() {}
+  protected arrayReady() {
+    this._initialized$.next(true);
   }
 }

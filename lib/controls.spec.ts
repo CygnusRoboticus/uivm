@@ -1,4 +1,6 @@
-import { ArrayControl, FieldControl, GroupControl } from "./controls";
+import { BehaviorSubject } from "rxjs";
+import { first, take } from "rxjs/operators";
+import { ArrayControl, FieldControl, GroupControl, Messages } from "./controls";
 
 describe("bundleConfig", () => {
   // it("happy path", () => {
@@ -61,5 +63,19 @@ describe("bundleConfig", () => {
     expect(form.controls.field1.status.dirty).toBeTruthy();
     expect(form.status.dirty).toBeTruthy();
     expect(form.controls.array1.controls[0].status.dirty).toBeFalsy();
+  });
+
+  test("flags are set from executors", async () => {
+    expect(await form.controls.field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
+    form.controls.field1.setFlagExecutors([new BehaviorSubject<[string, boolean]>(["hidden", true])]);
+    expect(await form.controls.field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: true });
+    expect(await form.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
+  });
+
+  test("messages are set from executors", async () => {
+    expect(await form.controls.field1.messages$.pipe(first()).toPromise()).toEqual(null);
+    form.controls.field1.setMessageExecutors([new BehaviorSubject<Messages | null>({ pants: { message: "skirts" } })]);
+    expect(await form.controls.field1.messages$.pipe(first()).toPromise()).toEqual({ pants: { message: "skirts" } });
+    expect(await form.messages$.pipe(first()).toPromise()).toEqual(null);
   });
 });
