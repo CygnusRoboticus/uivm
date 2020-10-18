@@ -24,7 +24,7 @@ describe("#bundleConfig", () => {
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);
     expect(bundle.children[0].children.length).toEqual(0);
-    expect(bundle.value).toEqual({ text: null });
+    expect(bundle.control.value).toEqual({ text: null });
   });
 
   test("group config", () => {
@@ -36,7 +36,7 @@ describe("#bundleConfig", () => {
     const bundle = bundleConfig(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
-    expect(bundle.value).toEqual({ text: null });
+    expect(bundle.control.value).toEqual({ text: null });
   });
 
   test("group & field config", () => {
@@ -48,7 +48,7 @@ describe("#bundleConfig", () => {
     const bundle = bundleConfig(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
-    expect(bundle.value).toEqual({ text: null });
+    expect(bundle.control.value).toEqual({ text: null });
   });
 
   test("nested group configs", () => {
@@ -73,7 +73,7 @@ describe("#bundleConfig", () => {
     expect(bundle.children.length).toEqual(3);
     expect(bundle.children[2].children.length).toEqual(3);
     expect(bundle.children[2].children[2].children.length).toEqual(1);
-    expect(bundle.value).toEqual({
+    expect(bundle.control.value).toEqual({
       text: null,
       checkbox: null,
       group: { select: null },

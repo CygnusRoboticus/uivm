@@ -401,7 +401,7 @@ export class GroupControl<
   TControls extends FieldControlMap<TValue, TFlags>,
   TFlags extends AbstractFlags = AbstractFlags
 > extends FieldControl<TValue, TFlags> {
-  public controls: TControls;
+  controls: TControls;
   protected _children: ItemControl<TFlags>[];
 
   get children() {

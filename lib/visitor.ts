@@ -177,17 +177,31 @@ class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInf
   }
 }
 
+export interface ConfigBundle<
+  TControl extends ItemControl<TFormInfo["flags"]>,
+  TConfig extends TFormInfo["config"],
+  TFormInfo extends FormInfoBase
+> {
+  control: TControl;
+  config: TConfig;
+  children: ConfigBundle<TControl, TConfig, TFormInfo>[];
+}
+
 export function bundleConfig<
   TFormInfo extends FormInfoBase,
   TValue = FormValue<TFormInfo["config"][], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
 >(
   config: GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
   visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>(),
-): GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]> {
-  const bundle = bundleConfig2<TFormInfo, TValue>(config, visitor) as GroupControl<
-    TValue,
-    FieldControlMap<TValue, TFormInfo["flags"]>,
-    TFormInfo["flags"]
+): ConfigBundle<
+  GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+  typeof config,
+  TFormInfo
+> {
+  const bundle = bundleConfig2<TFormInfo, TValue>(config, visitor) as ConfigBundle<
+    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+    typeof config,
+    TFormInfo
   >;
   completeConfig2(bundle, visitor);
   return bundle;
@@ -197,31 +211,39 @@ function completeConfig2<
   TFormInfo extends FormInfoBase,
   TValue = FormValue<TFormInfo["config"][], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
 >(
-  bundle: GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+  bundle: ConfigBundle<
+    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+    TFormInfo["config"],
+    TFormInfo
+  >,
   visitor: Visitor<TFormInfo>,
 ) {
   // noop right now
+  // if (isGroupConfig<TFormInfo["config"]>())
 }
 
 function bundleConfig2<TFormInfo extends FormInfoBase, TValue>(
   config: TFormInfo["config"],
   visitor: Visitor<TFormInfo>,
-): ItemControl<TFormInfo["flags"]> {
+): ConfigBundle<ItemControl<TFormInfo["flags"]>, typeof config, TFormInfo> {
   if (isGroupConfig<TFormInfo["config"]>(config)) {
     const items = config.fields.map(f => {
       if (isFieldConfig<TFormInfo["config"]>(f)) {
         const bundle = bundleConfig2<TFormInfo, TValue[keyof TValue]>(f, visitor);
-        return { controls: { [f.name]: bundle }, items: [bundle] };
+        return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
       } else if (isGroupConfig<TFormInfo["config"]>(f)) {
-        const bundle = bundleConfig2<TFormInfo, TValue>({ ...f, name: "group" }, visitor) as GroupControl<
-          TValue,
-          FieldControlMap<TValue, TFormInfo["flags"]>,
-          TFormInfo["flags"]
-        >;
-        return { controls: { ...bundle.controls }, items: [bundle] };
+        const bundle = bundleConfig2<TFormInfo, TValue>({ ...f, name: "group" }, visitor);
+        return {
+          controls: {
+            ...(bundle.control as GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>)
+              .controls,
+          },
+          config: f,
+          items: [bundle],
+        };
       }
       const bundle = bundleConfig2<TFormInfo, TValue>(f, visitor);
-      return { controls: {}, items: [bundle] };
+      return { controls: {}, config: f, items: [bundle] };
     });
 
     const controls = items.reduce(
@@ -231,15 +253,27 @@ function bundleConfig2<TFormInfo extends FormInfoBase, TValue>(
     const children = items.reduce((acc, f) => [...acc, ...f.items], <typeof items[0]["items"]>[]);
 
     if (isArrayConfig<TFormInfo["config"]>(config)) {
-      return visitor.arrayInit(config as any, controls);
-    } else if (isFieldConfig(config)) {
-      return visitor.groupInit(config as any, controls, children);
+      const control = visitor.arrayInit(config as any, controls);
+      return { config, control, children };
+    } else if (isFieldConfig<TFormInfo["config"]>(config)) {
+      const control = visitor.groupInit(
+        config as any,
+        controls,
+        children.map(c => c.control),
+      );
+      return { config, control, children };
     } else {
-      return visitor.itemInit(config as any, children);
+      const control = visitor.itemInit(
+        config as any,
+        children.map(c => c.control),
+      );
+      return { config, control, children };
     }
-  } else if (isFieldConfig(config)) {
-    return visitor.fieldInit(config as any);
+  } else if (isFieldConfig<TFormInfo["config"]>(config)) {
+    const control = visitor.fieldInit(config as any);
+    return { config, control, children: [] };
   }
 
-  return visitor.itemInit(config as any, []);
+  const control = visitor.itemInit(config as any, []);
+  return { config, control, children: [] };
 }
