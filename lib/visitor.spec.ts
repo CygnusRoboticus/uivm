@@ -1,30 +1,42 @@
+import { AnyConfig, FormConfig } from "./configs";
 import { bundleConfig } from "./visitor";
 
 describe("#bundleConfig", () => {
   test("item config", () => {
-    const config = { type: "message", message: "i have no values" };
+    const config = {
+      type: "group",
+      name: "group",
+      fields: [{ type: "message" }],
+    };
     const bundle = bundleConfig(config);
-    expect(bundle.control).toBeTruthy();
-    expect(bundle.items.length).toEqual(1);
+    expect(bundle).toBeTruthy();
+    expect(bundle.children.length).toEqual(1);
+    expect(bundle.children[0].children.length).toEqual(0);
   });
 
-  test("field config", () => {
-    const config = { type: "text", name: "text" };
+  test("basic field config", () => {
+    const config = {
+      type: "group",
+      name: "group",
+      fields: [{ type: "text", name: "text" }],
+    };
     const bundle = bundleConfig(config);
-    expect(bundle.control).toBeTruthy();
-    expect(bundle.items).toEqual([]);
-    expect(bundle.control.value).toEqual({ text: null });
+    expect(bundle).toBeTruthy();
+    expect(bundle.children.length).toEqual(1);
+    expect(bundle.children[0].children.length).toEqual(0);
+    expect(bundle.value).toEqual({ text: null });
   });
 
   test("group config", () => {
     const config = {
       type: "group",
+      name: "group",
       fields: [{ type: "text", name: "text" }, { type: "message" }],
     };
     const bundle = bundleConfig(config);
-    expect(bundle.control).toBeTruthy();
-    expect(bundle.items.length).toEqual(1);
-    expect(bundle.control.value).toEqual({ text: null });
+    expect(bundle).toBeTruthy();
+    expect(bundle.children.length).toEqual(2);
+    expect(bundle.value).toEqual({ text: null });
   });
 
   test("group & field config", () => {
@@ -34,14 +46,15 @@ describe("#bundleConfig", () => {
       fields: [{ type: "text", name: "text" }, { type: "message" }],
     };
     const bundle = bundleConfig(config);
-    expect(bundle.control).toBeTruthy();
-    expect(bundle.items.length).toEqual(1);
-    expect(bundle.control.value).toEqual({ group: { text: null } });
+    expect(bundle).toBeTruthy();
+    expect(bundle.children.length).toEqual(2);
+    expect(bundle.value).toEqual({ text: null });
   });
 
   test("nested group configs", () => {
     const config = {
       type: "group",
+      name: "group",
       fields: [
         { type: "text", name: "text" },
         { type: "message" },
@@ -56,9 +69,11 @@ describe("#bundleConfig", () => {
       ],
     };
     const bundle = bundleConfig(config);
-    expect(bundle.control).toBeTruthy();
-    expect(bundle.items.length).toEqual(2);
-    expect(bundle.control.value).toEqual({
+    expect(bundle).toBeTruthy();
+    expect(bundle.children.length).toEqual(3);
+    expect(bundle.children[2].children.length).toEqual(3);
+    expect(bundle.children[2].children[2].children.length).toEqual(1);
+    expect(bundle.value).toEqual({
       text: null,
       checkbox: null,
       group: { select: null },

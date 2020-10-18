@@ -3,17 +3,6 @@ import { first, take } from "rxjs/operators";
 import { ArrayControl, FieldControl, GroupControl, Messages } from "./controls";
 
 describe("bundleConfig", () => {
-  // it("happy path", () => {
-  //   const fields = {
-  //     type: "form",
-  //     fields: [
-  //       { type: "text", name: "text1" },
-  //       { type: "group", name: "group", fields: [{ type: "text", name: "text2" }] },
-  //     ],
-  //   };
-  //   const bundle = bundleConfig(fields);
-  // });
-
   const createForm = () =>
     new GroupControl({
       field1: new FieldControl("pants"),

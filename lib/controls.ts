@@ -115,9 +115,15 @@ export abstract class BaseControl {
     this._parent = parent;
   }
 
-  abstract children: BaseControl[];
   abstract update(): void;
   abstract dispose(): void;
+
+  toJSON() {
+    return {
+      parent: this.parent,
+      name: "BaseControl",
+    };
+  }
 }
 
 export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends BaseControl {
@@ -125,6 +131,7 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
     new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]),
   ]);
   protected _messageExecutors$ = new BehaviorSubject<Observable<Messages | null>[]>([]);
+  protected _children: ItemControl<TFlags>[];
 
   flags$: Observable<TFlags> = this._flagExecutors$.pipe(
     switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
@@ -148,11 +155,13 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
   );
 
   get children() {
-    return <ItemControl<TFlags>[]>[];
+    return this._children;
   }
 
-  constructor(opts: ItemControlOptions<TFlags> = {}) {
+  constructor(children: ItemControl<TFlags>[] = [], opts: ItemControlOptions<TFlags> = {}) {
     super();
+    this._children = children;
+
     if (opts.flagExecutors) {
       this.setFlagExecutors(opts.flagExecutors);
     } else if (opts.flags) {
@@ -192,6 +201,13 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
   dispose() {
     // noop
   }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      name: "ItemControl",
+    };
+  }
 }
 
 export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> extends ItemControl<TFlags> {
@@ -223,7 +239,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   }
 
   constructor(value: TValue, opts: FieldControlOptions<TValue, TFlags> = {}) {
-    super(opts);
+    super([], opts);
     this.value = value;
     this.initialValue = value;
     this.status = {
@@ -328,7 +344,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
       return;
     }
 
-    this.status = this.children.reduce(
+    this.status = this.childFields.reduce(
       (acc, c) => ({
         valid: acc.valid || c.status.valid,
         disabled: acc.disabled || c.status.disabled,
@@ -354,7 +370,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     return x;
   }
 
-  get children() {
+  get childFields() {
     return <FieldControl<unknown, TFlags>[]>[];
   }
 
@@ -366,6 +382,13 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
 
   protected fieldReady() {
     this._initialized$.next(true);
+  }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      name: "FieldControl",
+    };
   }
 }
 
@@ -379,11 +402,21 @@ export class GroupControl<
   TFlags extends AbstractFlags = AbstractFlags
 > extends FieldControl<TValue, TFlags> {
   public controls: TControls;
+  protected _children: ItemControl<TFlags>[];
 
-  constructor(controls: TControls, opts: FieldControlOptions<TValue, TFlags> = {}) {
+  get children() {
+    return this._children;
+  }
+
+  constructor(
+    controls: TControls,
+    children: ItemControl<TFlags>[] = [],
+    opts: FieldControlOptions<TValue, TFlags> = {},
+  ) {
     super(reduceControls<TValue, TFlags>(controls, opts.status?.disabled ?? false), opts);
     this.controls = controls;
-    this.children.forEach(control => this.registerControl(control));
+    this._children = children;
+    this.childFields.forEach(control => this.registerControl(control));
 
     this.setValue = (value: TValue) => {
       Object.keys(value).forEach(name => {
@@ -398,13 +431,11 @@ export class GroupControl<
         }
       });
     };
-    this.reset = () => {
-      this.children.forEach(control => control.reset());
-    };
+    this.reset = () => this.childFields.forEach(control => control.reset());
     this.groupReady();
   }
 
-  get children() {
+  get childFields() {
     return Object.keys(this.controls).map(k => {
       const key = k as keyof TControls;
       return this.controls[key] as FieldControl<unknown, TFlags>;
@@ -454,6 +485,13 @@ export class GroupControl<
   protected groupReady() {
     this._initialized$.next(true);
   }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      name: "GroupControl",
+    };
+  }
 }
 
 export class ArrayControl<
@@ -476,7 +514,7 @@ export class ArrayControl<
   }
 
   get children() {
-    return this.controls as FieldControl<unknown, TFlags>[];
+    return this.controls;
   }
 
   get length() {
@@ -560,5 +598,12 @@ export class ArrayControl<
   protected fieldReady() {}
   protected arrayReady() {
     this._initialized$.next(true);
+  }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      name: "ArrayControl",
+    };
   }
 }

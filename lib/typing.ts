@@ -70,7 +70,7 @@ type FieldDataTypeType<T extends BaseFieldConfig[DTK]> = T extends { type: Field
 type FieldTypeNullable<T, U, V> = T extends U ? V | null : V;
 type FieldTypeArrayable<T, U, V> = T extends U ? V[] : V;
 
-type FieldControlType<
+export type FieldControlType<
   T extends BaseItemConfig,
   TValue extends { [key: string]: TValue[keyof TValue] },
   TConfig extends BaseItemConfig = BaseItemConfig,
