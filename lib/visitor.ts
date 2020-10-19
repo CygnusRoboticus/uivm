@@ -1,18 +1,9 @@
-import { AnyConfig, ArrayConfig, FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "./configs";
-import {
-  AbstractFlags,
-  ArrayControl,
-  FieldControl,
-  FieldControlMap,
-  GroupControl,
-  ItemControl,
-  Messages,
-} from "./controls";
-import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish } from "./utils";
-import { ExecutableRegistry } from "./executable";
-import { FieldControlType, FieldTypeMap, FormValue } from "./typing";
 import { combineLatest, Observable } from "rxjs";
 import { map } from "rxjs/operators";
+import { ArrayConfig, FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "./configs";
+import { ArrayControl, FieldControl, FieldControlMap, GroupControl, ItemControl, Messages } from "./controls";
+import { FieldTypeMap, FormValue } from "./typing";
+import { isArrayConfig, isFieldConfig, isGroupConfig } from "./utils";
 
 type VK = "value";
 
@@ -194,7 +185,11 @@ export function bundleConfig<
   TFormInfo extends FormInfoBase,
   TConfig extends GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
   TValue = never
->(config: TConfig, registry: TFormInfo["registry"], visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>()) {
+>(
+  config: TConfig,
+  registry: TFormInfo["registry"] = {},
+  visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>(),
+) {
   type TValue2 = [TValue] extends [never]
     ? FormValue<TConfig["fields"], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
     : TValue;
