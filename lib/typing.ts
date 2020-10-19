@@ -164,7 +164,6 @@ export type FormControl<
   TValue,
   TConfig extends BaseItemConfig = BaseItemConfig,
   TFlags extends AbstractFlags = AbstractFlags
-  // @ts-ignore
 > = GroupControl<TValue, FormControls<T, TValue>, TFlags>;
 
 type FormControls<

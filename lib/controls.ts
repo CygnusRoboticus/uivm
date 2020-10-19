@@ -44,6 +44,7 @@ export interface ItemControlOptions<TFlags extends AbstractFlags = AbstractFlags
   flagExecutors?: Observable<[keyof TFlags, boolean]>[];
   messages?: Messages;
   messageExecutors?: Observable<Messages | null>[];
+  triggerExecutors?: Observable<void>[];
 }
 
 export interface FieldControlOptions<TValue, TFlags extends AbstractFlags = AbstractFlags>
@@ -131,6 +132,7 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
     new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]),
   ]);
   protected _messageExecutors$ = new BehaviorSubject<Observable<Messages | null>[]>([]);
+  protected _triggerExecutors$ = new BehaviorSubject<Observable<void>[]>([]);
   protected _children: ItemControl<TFlags>[];
 
   flags$: Observable<TFlags> = this._flagExecutors$.pipe(
@@ -172,6 +174,9 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
     } else if (opts.messages) {
       this.setMessages(opts.messages);
     }
+    if (opts.triggerExecutors) {
+      this.setTriggerExecutors(opts.triggerExecutors);
+    }
   }
 
   update() {
@@ -196,6 +201,10 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
 
   setMessageExecutors(observables: Observable<Messages | null>[]) {
     this._messageExecutors$.next(observables);
+  }
+
+  setTriggerExecutors(observables: Observable<void>[]) {
+    this._triggerExecutors$.next(observables);
   }
 
   dispose() {
@@ -420,7 +429,10 @@ export class GroupControl<
 
     this.setValue = (value: TValue) => {
       Object.keys(value).forEach(name => {
-        this.controls[name as keyof TValue].setValue(value[name as keyof TValue] as any);
+        const control = this.controls[name as keyof TValue];
+        if (control) {
+          control.setValue(value[name as keyof TValue] as any);
+        }
       });
     };
     this.patchValue = (value: Partial<TValue>) => {

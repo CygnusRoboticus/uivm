@@ -1,5 +1,6 @@
 import { Observable } from "rxjs";
 import { Option } from "./configs";
+import { ItemControl, Messages } from "./controls";
 
 export interface SearchResolver<TValue, TParams extends object> {
   search(subject: Observable<{ search: string; params: TParams }>): Observable<Option<TValue>[]>;
@@ -9,18 +10,12 @@ export interface SearchResolver<TValue, TParams extends object> {
 export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
 export type AsyncValidator<TValue = unknown, TErrors = unknown> = (value: TValue) => Observable<TErrors | null>;
 
-export interface ExecutableRegistry<
-  TFlags extends ExecutableService<TFlags, Observable<boolean>> = {},
-  TTriggers extends ExecutableTriggerService<TTriggers, Observable<void>> = {},
-  TMessagers extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
-  TValidators extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
-  TSearches extends ExecutableService<TSearches, SearchResolver<unknown, {}>> = {}
-> {
-  flags: TFlags;
-  triggers: TTriggers;
-  messagers: TMessagers;
-  validators: TValidators;
-  search: TSearches;
+export interface ExecutableRegistry {
+  flags?: ExecutableService<this["flags"], Observable<boolean>>;
+  triggers?: ExecutableService<this["triggers"], Observable<void>>;
+  messagers?: ExecutableService<this["messagers"], Observable<Messages | null>>;
+  validators?: ExecutableService<this["validators"], Observable<Messages | null>>;
+  search?: ExecutableService<this["search"], Observable<SearchResolver<unknown, {}>>>;
 }
 
 type KeysOfType<T, U> = { [K in keyof T]: T[K] extends U ? K : never }[keyof T];
@@ -49,19 +44,10 @@ export type ExecutableRegistryOverride<
 /**
  * Dynaform Executable type. This does not need to be implemented, it is exported for reference.
  */
-export type Executable<TConfig, TParams = undefined, TValue = unknown> = (
+export type Executable<TConfig, TParams = undefined, TControl = ItemControl, TValue = unknown> = (
   config: TConfig,
   params: TParams,
-  ...args: any[]
-) => TValue;
-
-/**
- * Dynaform ExecutableTrigger type. This does not need to be implemented, it is exported for reference.
- */
-export type ExecutableTrigger<TConfig, TParams = undefined, TValue = unknown> = (
-  config: TConfig,
-  params: TParams,
-  subject: Observable<void>,
+  control: TControl,
   ...args: any[]
 ) => TValue;
 
@@ -69,19 +55,6 @@ type ExecutableService<TService = {}, TValue = unknown> =
   | {
       [k in keyof TService]: TService[k] extends (config: infer T, params: infer U, ...args: any[]) => TValue
         ? Executable<T, U, TValue>
-        : never;
-    }
-  | {};
-
-type ExecutableTriggerService<TService = {}, TValue = unknown> =
-  | {
-      [k in keyof TService]: TService[k] extends (
-        config: infer T,
-        params: infer U,
-        subject: Observable<void>,
-        ...args: any[]
-      ) => TValue
-        ? ExecutableTrigger<T, U, TValue>
         : never;
     }
   | {};

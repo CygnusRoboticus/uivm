@@ -143,22 +143,25 @@ class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInf
   initItem(control: ItemControl<TFormInfo["flags"]>, config: ItemConfig<TFormInfo>, registry: TFormInfo["registry"]) {
     const flags = Object.entries(config.flags ?? {}).map(([key, value]) => {
       const sources = value.map(f => {
-        // @ts-ignore
-        const method = registry.flags[f.name]?.bind(registry.flags);
-        // @ts-ignore
-        return method(control, f.params, config) as Observable<boolean>;
+        const method = (registry.flags as any)?.[f.name]?.bind(registry.flags);
+        return method(control, (f as any).params, config) as Observable<boolean>;
       });
       return combineLatest(sources).pipe(map(f => <[keyof TFormInfo["flags"], boolean]>[key, f.some(Boolean)]));
     });
+
     const messages = (config.messagers ?? []).map(m => {
-      // @ts-ignore
-      const method = registry.messagers[m.name]?.bind(registry.messagers);
-      // @ts-ignore
-      return method(control, m.params, config) as Observable<Messages | null>;
+      const method = (registry.messagers as any)?.[m.name]?.bind(registry.messagers);
+      return method(control, (m as any).params, config) as Observable<Messages | null>;
+    });
+
+    const triggers = (config.triggers ?? []).map(t => {
+      const method = (registry.triggers as any)?.[t.name]?.bind(registry.triggers);
+      return method(control, (t as any).params, config) as Observable<void>;
     });
 
     control.setFlagExecutors(flags);
     control.setMessageExecutors(messages);
+    control.setTriggerExecutors(triggers);
   }
 
   initField<TValue>(
@@ -168,7 +171,7 @@ class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInf
   ) {
     const disablers = (config.disablers ?? []).map(f => {
       // @ts-ignore
-      const method = registry.disablers[f.name]?.bind(registry.messagers);
+      const method = registry.disablers?.[f.name]?.bind(registry.messagers);
       // @ts-ignore
       return method(control, f.params, config) as Observable<boolean>;
     });
@@ -189,21 +192,19 @@ export interface ConfigBundle<
 
 export function bundleConfig<
   TFormInfo extends FormInfoBase,
-  TValue = FormValue<TFormInfo["config"][], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
->(
-  config: GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
-  visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>(),
-): ConfigBundle<
-  GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
-  typeof config,
-  TFormInfo
-> {
-  const bundle = bundleConfig2<TFormInfo, TValue>(config, visitor) as ConfigBundle<
-    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+  TConfig extends GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
+  TValue = never
+>(config: TConfig, registry: TFormInfo["registry"], visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>()) {
+  type TValue2 = [TValue] extends [never]
+    ? FormValue<TConfig["fields"], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
+    : TValue;
+
+  const bundle = bundleConfig2<TFormInfo, TValue2>(config, visitor) as ConfigBundle<
+    GroupControl<TValue2, FieldControlMap<TValue2, TFormInfo["flags"]>, TFormInfo["flags"]>,
     typeof config,
     TFormInfo
   >;
-  completeConfig2(bundle, visitor);
+  completeConfig2(bundle, registry, bundle, visitor);
   return bundle;
 }
 
@@ -216,10 +217,26 @@ function completeConfig2<
     TFormInfo["config"],
     TFormInfo
   >,
+  registry: TFormInfo["registry"],
+  rootBundle: ConfigBundle<
+    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
+    TFormInfo["config"],
+    TFormInfo
+  >,
   visitor: Visitor<TFormInfo>,
 ) {
-  // noop right now
-  // if (isGroupConfig<TFormInfo["config"]>())
+  const { config, control, children } = bundle;
+  children.forEach(c => completeConfig2(c, registry, rootBundle, visitor));
+
+  if (isFieldConfig<TFormInfo["config"]>(config)) {
+    if (isArrayConfig<TFormInfo["config"]>(config)) {
+      visitor.arrayComplete(control as any, config as any, rootBundle.control, registry);
+    } else if (isGroupConfig<TFormInfo["config"]>(config)) {
+      visitor.groupComplete(control, config as any, rootBundle.control, registry);
+    }
+    visitor.fieldComplete(control as any, config as any, rootBundle.control, registry);
+  }
+  visitor.itemComplete(control, config as any, rootBundle.control, registry);
 }
 
 function bundleConfig2<TFormInfo extends FormInfoBase, TValue>(
