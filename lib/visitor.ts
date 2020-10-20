@@ -1,91 +1,65 @@
 import { combineLatest, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { ArrayConfig, FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "./configs";
-import { ArrayControl, FieldControl, FieldControlMap, GroupControl, ItemControl, Messages } from "./controls";
-import { FieldTypeMap, FormValue } from "./typing";
+import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls, Messages } from "./controls";
+import { FieldTypeMap, FormControl, Obj } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig } from "./utils";
-
-type VK = "value";
 
 export interface Visitor<TFormInfo extends FormInfoBase> {
   itemInit: (
     config: ItemConfig<TFormInfo> & TFormInfo["config"],
     children: ItemControl<TFormInfo["flags"]>[],
   ) => ItemControl<TFormInfo["flags"]>;
-  fieldInit: <TValue>(
-    config: FieldConfig<TFormInfo> & TFormInfo["config"],
-  ) => FieldControl<TValue | null, TFormInfo["flags"]>;
-  groupInit: <
-    TValue extends { [key in keyof TControls]: TControls[key][VK] },
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
+  fieldInit: (config: FieldConfig<TFormInfo> & TFormInfo["config"]) => FieldControl<any, TFormInfo["flags"]>;
+  groupInit: (
     config: GroupConfig<TFormInfo> & TFormInfo["config"],
-    bundled: TControls,
+    bundled: KeyValueControls<any, TFormInfo["flags"]>,
     children: ItemControl<TFormInfo["flags"]>[],
-  ) => GroupControl<TValue, typeof bundled, TFormInfo["flags"]>;
-  arrayInit: <
-    TValue extends { [key in keyof TControls]: TControls[key][VK] },
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
+  ) => GroupControl<any, any, TFormInfo["flags"]>;
+  arrayInit: (
     config: ArrayConfig<TFormInfo> & TFormInfo["config"],
-    bundled: TControls,
-  ) => ArrayControl<TValue, GroupControl<TValue, TControls, TFormInfo["flags"]>, TControls, TFormInfo["flags"]>;
+    bundled: KeyValueControls<any, TFormInfo["flags"]>,
+  ) => ArrayControl<any, any, TFormInfo["flags"]>;
 
-  itemComplete: <TRootValue>(
+  itemComplete: (
     control: ItemControl<TFormInfo["flags"]>,
     config: ItemConfig<TFormInfo> & TFormInfo["config"],
-    root: GroupControl<TRootValue, any, TFormInfo["flags"]>,
+    root: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) => void;
-  fieldComplete: <TValue, TRootValue>(
-    control: FieldControl<TValue | null, TFormInfo["flags"]>,
+  fieldComplete: (
+    control: FieldControl<any, TFormInfo["flags"]>,
     config: FieldConfig<TFormInfo> & TFormInfo["config"],
-    root: GroupControl<TRootValue, any, TFormInfo["flags"]>,
+    root: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) => void;
-  groupComplete: <TValue, TRootValue>(
-    control: GroupControl<TValue, any, TFormInfo["flags"]>,
+  groupComplete: (
+    control: GroupControl<any, any, TFormInfo["flags"]>,
     config: GroupConfig<TFormInfo>,
-    root: GroupControl<TRootValue, any, TFormInfo["flags"]>,
+    root: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) => void;
-  arrayComplete: <
-    TValue extends { [key in keyof TControls]: TControls[key]["value"] },
-    TRootValue,
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
-    control: ArrayControl<TValue, GroupControl<TValue, TControls, TFormInfo["flags"]>, TControls, TFormInfo["flags"]>,
+  arrayComplete: (
+    control: ArrayControl<any, any, TFormInfo["flags"]>,
     config: ArrayConfig<TFormInfo>,
-    root: GroupControl<TRootValue, any, TFormInfo["flags"]>,
+    root: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) => void;
 }
 
 class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInfo> {
-  itemInit(config: ItemConfig<TFormInfo> & TFormInfo["config"], children: ItemControl<TFormInfo["flags"]>[]) {
-    return new ItemControl<TFormInfo["flags"]>(children);
+  itemInit(config: ItemConfig<TFormInfo> & TFormInfo["config"]) {
+    return new ItemControl<TFormInfo["flags"]>();
   }
-  fieldInit<TValue>(config: FieldConfig<TFormInfo> & TFormInfo["config"]) {
-    return new FieldControl<TValue | null, TFormInfo["flags"]>(null);
+  fieldInit(config: FieldConfig<TFormInfo> & TFormInfo["config"]) {
+    return new FieldControl<any, TFormInfo["flags"]>(null);
   }
-  groupInit<
-    TValue extends { [key in keyof TControls]: TControls[key][VK] },
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
-    config: GroupConfig<TFormInfo> & TFormInfo["config"],
-    bundled: TControls,
-    children: ItemControl<TFormInfo["flags"]>[],
-  ) {
-    return new GroupControl<TValue, TControls, TFormInfo["flags"]>(bundled, children);
+  groupInit(config: GroupConfig<TFormInfo> & TFormInfo["config"], bundled: KeyValueControls<any, TFormInfo["flags"]>) {
+    return new GroupControl<any, any, TFormInfo["flags"]>(bundled);
   }
-  arrayInit<
-    TValue extends { [key in keyof TControls]: TControls[key][VK] },
-    TItem extends GroupControl<TValue, TControls, TFormInfo["flags"]>,
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-    // TODO: unsure what this type is actually complaining about
-  >(config: ArrayConfig<TFormInfo> & TFormInfo["config"], bundled: TControls) {
-    return new ArrayControl<TValue, TItem, TControls, TFormInfo["flags"]>(
-      () => new GroupControl<TValue, TControls, TFormInfo["flags"]>(bundled) as TItem,
+  arrayInit(config: ArrayConfig<TFormInfo> & TFormInfo["config"], bundled: KeyValueControls<any, TFormInfo["flags"]>) {
+    return new ArrayControl<any, any, TFormInfo["flags"]>(
+      () => new GroupControl<any, any, TFormInfo["flags"]>(bundled),
     );
   }
 
@@ -97,33 +71,24 @@ class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInf
   ) {
     this.initItem(control, config, registry);
   }
-  fieldComplete<TValue>(
-    control: FieldControl<TValue | null, TFormInfo["flags"]>,
+  fieldComplete(
+    control: FieldControl<any, TFormInfo["flags"]>,
     config: FieldConfig<TFormInfo> & TFormInfo["config"],
     _: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) {
-    this.initItem(control, config as any, registry);
+    this.initItem(control, config, registry);
   }
-  groupComplete<
-    TConfig extends ItemConfig<TFormInfo>,
-    TValue extends { [key in keyof TControls]: TControls[key]["value"] },
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
-    control: GroupControl<TValue, TControls, TFormInfo["flags"]>,
+  groupComplete(
+    control: GroupControl<any, any, TFormInfo["flags"]>,
     config: GroupConfig<TFormInfo> & TFormInfo["config"],
     _: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
   ) {
-    this.initItem(control, config as any, registry);
+    this.initItem(control, config, registry);
   }
-  arrayComplete<
-    TValue extends { [key in keyof TControls]: TControls[key]["value"] },
-    TItem extends GroupControl<TValue, TControls, TFormInfo["flags"]>,
-    TControls extends FieldControlMap<TValue, TFormInfo["flags"]>
-  >(
-    control: ArrayControl<TValue, TItem, TControls, TFormInfo["flags"]>,
-    // TODO: as above, this type is complaining for mysterious reasons
+  arrayComplete(
+    control: ArrayControl<any, any, TFormInfo["flags"]>,
     config: GroupConfig<TFormInfo> & TFormInfo["config"],
     _: GroupControl<any, any, TFormInfo["flags"]>,
     registry: TFormInfo["registry"],
@@ -155,8 +120,8 @@ class DefaultVisitor<TFormInfo extends FormInfoBase> implements Visitor<TFormInf
     control.setTriggerExecutors(triggers);
   }
 
-  initField<TValue>(
-    control: FieldControl<TValue, TFormInfo["flags"]>,
+  initField(
+    control: FieldControl<any, TFormInfo["flags"]>,
     config: FieldConfig<TFormInfo>,
     registry: TFormInfo["registry"],
   ) {
@@ -182,20 +147,16 @@ export interface ConfigBundle<
 }
 
 export function bundleConfig<
-  TFormInfo extends FormInfoBase,
   TConfig extends GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
+  TFormInfo extends FormInfoBase,
   TValue = never
 >(
   config: TConfig,
   registry: TFormInfo["registry"] = {},
   visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>(),
 ) {
-  type TValue2 = [TValue] extends [never]
-    ? FormValue<TConfig["fields"], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
-    : TValue;
-
-  const bundle = bundleConfig2<TFormInfo, TValue2>(config, visitor) as ConfigBundle<
-    GroupControl<TValue2, FieldControlMap<TValue2, TFormInfo["flags"]>, TFormInfo["flags"]>,
+  const bundle = bundleConfig2<TFormInfo, TValue>(config, visitor) as ConfigBundle<
+    GroupControl<TValue, any, TFormInfo["flags"]>,
     typeof config,
     TFormInfo
   >;
@@ -203,21 +164,10 @@ export function bundleConfig<
   return bundle;
 }
 
-function completeConfig2<
-  TFormInfo extends FormInfoBase,
-  TValue = FormValue<TFormInfo["config"][], FieldTypeMap<TFormInfo["config"], never, never, never, never, never>>
->(
-  bundle: ConfigBundle<
-    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
-    TFormInfo["config"],
-    TFormInfo
-  >,
+function completeConfig2<TFormInfo extends FormInfoBase>(
+  bundle: ConfigBundle<GroupControl<any, any, TFormInfo["flags"]>, TFormInfo["config"], TFormInfo>,
   registry: TFormInfo["registry"],
-  rootBundle: ConfigBundle<
-    GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>,
-    TFormInfo["config"],
-    TFormInfo
-  >,
+  rootBundle: ConfigBundle<GroupControl<any, any, TFormInfo["flags"]>, TFormInfo["config"], TFormInfo>,
   visitor: Visitor<TFormInfo>,
 ) {
   const { config, control, children } = bundle;
@@ -229,7 +179,7 @@ function completeConfig2<
     } else if (isGroupConfig<TFormInfo["config"]>(config)) {
       visitor.groupComplete(control, config as any, rootBundle.control, registry);
     }
-    visitor.fieldComplete(control as any, config as any, rootBundle.control, registry);
+    visitor.fieldComplete(control, config as any, rootBundle.control, registry);
   }
   visitor.itemComplete(control, config as any, rootBundle.control, registry);
 }
@@ -247,8 +197,7 @@ function bundleConfig2<TFormInfo extends FormInfoBase, TValue>(
         const bundle = bundleConfig2<TFormInfo, TValue>({ ...f, name: "group" }, visitor);
         return {
           controls: {
-            ...(bundle.control as GroupControl<TValue, FieldControlMap<TValue, TFormInfo["flags"]>, TFormInfo["flags"]>)
-              .controls,
+            ...(bundle.control as GroupControl<any, any, TFormInfo["flags"]>).controls,
           },
           config: f,
           items: [bundle],
@@ -260,7 +209,7 @@ function bundleConfig2<TFormInfo extends FormInfoBase, TValue>(
 
     const controls = items.reduce(
       (acc, f) => ({ ...acc, ...f.controls }),
-      {} as FieldControlMap<TValue, TFormInfo["flags"]>,
+      {} as KeyValueControls<TValue, TFormInfo["flags"]>,
     );
     const children = items.reduce((acc, f) => [...acc, ...f.items], <typeof items[0]["items"]>[]);
 

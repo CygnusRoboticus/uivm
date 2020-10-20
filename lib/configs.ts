@@ -2,7 +2,7 @@ import { never, Observable } from "rxjs";
 import { AbstractFlags, Messages } from "./controls";
 import { ExecutableDefinition, ExecutableRegistry } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
-import { FieldDataTypeDefinition } from "./typing";
+import { FieldDataTypeDefinition, FieldTypeMap } from "./typing";
 
 export interface ItemConfig<TFormInfo extends FormInfoBase> extends BaseItemConfig {
   flags?: {
@@ -36,6 +36,7 @@ export interface FormInfoBase {
   config: ItemConfig<this>;
   registry: ExecutableRegistry;
   flags: AbstractFlags;
+  types: FieldTypeMap<this["config"]>;
 }
 
 export interface OptionSingle<T = unknown> {

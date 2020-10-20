@@ -1,6 +1,7 @@
+import { FormInfoBase } from "./configs";
 import { ArrayControl, FieldControl, GroupControl } from "./controls";
 import { AnyConfig } from "./primitives";
-import { FieldDataType, FieldTypeMap, FormControl, FormValue } from "./typing";
+import { FieldDataType, FieldTypeMap, FormControl } from "./typing";
 
 describe("typings", () => {
   test("compiler safety", () => {
@@ -76,19 +77,22 @@ describe("typings", () => {
     ] as const;
 
     // for testing purposes
-    type DynaFieldTypeMap = FieldTypeMap<
-      AnyConfig,
-      { type: "text" | "code" | "radiobutton" },
-      { type: "number" | "date" },
-      { type: "checkbox" },
-      never,
-      { type: "text" }
-    >;
+    interface DynaFieldTypeMap extends FieldTypeMap<AnyConfig> {
+      string: { type: "text" | "code" | "radiobutton" };
+      number: { type: "number" | "date" };
+      boolean: { type: "checkbox" };
+      array: never;
+      null: { type: "text" };
+    }
 
-    const testControl: FormControl<
-      typeof testConfig,
-      FormValue<typeof testConfig, DynaFieldTypeMap>
-    > = new GroupControl({
+    interface FormInfo extends FormInfoBase {
+      types: DynaFieldTypeMap;
+    }
+
+    const testControl1 = {} as FormControl<typeof testConfig, FormInfo>;
+    type asdf = typeof testControl1.controls.repeatable.value;
+
+    const testControl: FormControl<typeof testConfig, FormInfo> = new GroupControl({
       checkbox: new FieldControl<boolean>(false),
       code: new FieldControl<string>(""),
       date: new FieldControl<number>(0),
@@ -104,7 +108,13 @@ describe("typings", () => {
         }),
       }),
       repeatable: new ArrayControl(
-        v =>
+        (
+          v: {
+            repeatableText: string | null;
+            repeatableNumber: number;
+            repeatableFieldsetGroup: { repeatableFieldsetGroupText: string | null };
+          } | null,
+        ) =>
           new GroupControl({
             repeatableText: new FieldControl(v?.repeatableText ?? null),
             repeatableNumber: new FieldControl(v?.repeatableNumber ?? 0),
@@ -124,7 +134,7 @@ describe("typings", () => {
       text: new FieldControl<string | null>(null),
     });
 
-    const testValue: FormValue<typeof testConfig, DynaFieldTypeMap> = {
+    const testValue: typeof testControl["value"] = {
       checkbox: true,
       code: "",
       date: 0,
