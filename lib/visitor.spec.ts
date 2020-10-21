@@ -1,14 +1,16 @@
-import { AnyConfig, FormConfig } from "./configs";
+import { ExecutableRegistry } from "./executable";
 import { bundleConfig } from "./visitor";
 
 describe("#bundleConfig", () => {
+  const registry = {} as ExecutableRegistry;
+
   test("item config", () => {
     const config = {
       type: "group",
       name: "group",
       fields: [{ type: "message" }],
     };
-    const bundle = bundleConfig(config);
+    const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);
     expect(bundle.children[0].children.length).toEqual(0);
@@ -20,7 +22,7 @@ describe("#bundleConfig", () => {
       name: "group",
       fields: [{ type: "text", name: "text" }],
     };
-    const bundle = bundleConfig(config);
+    const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);
     expect(bundle.children[0].children.length).toEqual(0);
@@ -33,7 +35,7 @@ describe("#bundleConfig", () => {
       name: "group",
       fields: [{ type: "text", name: "text" }, { type: "message" }],
     };
-    const bundle = bundleConfig(config);
+    const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
     expect(bundle.control.value).toEqual({ text: null });
@@ -45,7 +47,7 @@ describe("#bundleConfig", () => {
       name: "group",
       fields: [{ type: "text", name: "text" }, { type: "message" }],
     };
-    const bundle = bundleConfig(config);
+    const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
     expect(bundle.control.value).toEqual({ text: null });
@@ -68,7 +70,7 @@ describe("#bundleConfig", () => {
         },
       ],
     };
-    const bundle = bundleConfig(config);
+    const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(3);
     expect(bundle.children[2].children.length).toEqual(3);

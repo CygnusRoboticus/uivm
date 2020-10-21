@@ -1,6 +1,6 @@
 import { Observable } from "rxjs";
 import { Option } from "./configs";
-import { ItemControl, Messages } from "./controls";
+import { ItemControl } from "./controls";
 
 export interface SearchResolver<TValue, TParams extends object> {
   search(subject: Observable<{ search: string; params: TParams }>): Observable<Option<TValue>[]>;
@@ -10,12 +10,18 @@ export interface SearchResolver<TValue, TParams extends object> {
 export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
 export type AsyncValidator<TValue = unknown, TErrors = unknown> = (value: TValue) => Observable<TErrors | null>;
 
-export interface ExecutableRegistry {
-  flags?: ExecutableService<this["flags"], Observable<boolean>>;
-  triggers?: ExecutableService<this["triggers"], Observable<void>>;
-  messagers?: ExecutableService<this["messagers"], Observable<Messages | null>>;
-  validators?: ExecutableService<this["validators"], Observable<Messages | null>>;
-  search?: ExecutableService<this["search"], Observable<SearchResolver<unknown, {}>>>;
+export interface ExecutableRegistry<
+  TFlags extends ExecutableService<TFlags, Observable<boolean>> = {},
+  TTriggers extends ExecutableService<TTriggers, Observable<void>> = {},
+  TMessagers extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
+  TValidators extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
+  TSearches extends ExecutableService<TSearches, SearchResolver<unknown, {}>> = {}
+> {
+  flags: TFlags;
+  triggers: TTriggers;
+  messagers: TMessagers;
+  validators: TValidators;
+  search: TSearches;
 }
 
 type KeysOfType<T, U> = { [K in keyof T]: T[K] extends U ? K : never }[keyof T];

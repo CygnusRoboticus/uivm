@@ -1,14 +1,6 @@
 import { BehaviorSubject } from "rxjs";
-import { first, take } from "rxjs/operators";
-import {
-  AbstractFlags,
-  ArrayControl,
-  ArrayType,
-  FieldControl,
-  GroupControl,
-  KeyValueControls,
-  Messages,
-} from "./controls";
+import { first } from "rxjs/operators";
+import { ArrayControl, FieldControl, GroupControl, Messages } from "./controls";
 
 describe("bundleConfig", () => {
   const createForm = () =>
@@ -23,14 +15,11 @@ describe("bundleConfig", () => {
           new GroupControl({
             groupField1: new FieldControl(v?.groupField1 ?? null),
           }),
+        [{ groupField1: "shirts" }],
       ),
     });
 
   let form: ReturnType<typeof createForm> = {} as any;
-  let value: typeof form["value"] = {} as any;
-  const a1 = form.controls.group1.controls.field3;
-  const a2 = value.array1[0].groupField1;
-  const a3 = value.group1.field3;
 
   beforeEach(() => {
     form = createForm();
@@ -38,17 +27,21 @@ describe("bundleConfig", () => {
 
   test("value is updated", () => {
     expect(form.value).toEqual({
-      array1: [],
+      array1: [{ groupField1: "shirts" }],
       field1: "pants",
       field2: "skirts",
       group1: {
         field3: "shorts",
       },
     });
-    form.patchValue({ array1: [{ groupField1: "shirts" }], field1: "pants1", field2: "skirts2" });
+    form.patchValue({
+      array1: [{ groupField1: "shirts" }, { groupField1: "shorts" }],
+      field1: "pants1",
+      field2: "skirts2",
+    });
 
     expect(form.value).toEqual({
-      array1: [{ groupField1: "shirts" }],
+      array1: [{ groupField1: "shirts" }, { groupField1: "shorts" }],
       field1: "pants1",
       field2: "skirts2",
       group1: {
@@ -62,8 +55,7 @@ describe("bundleConfig", () => {
     form.controls.field1.setValue("pants3");
     expect(form.controls.field1.status.dirty).toBeTruthy();
     expect(form.status.dirty).toBeTruthy();
-    // FIXME: later
-    // expect(form.controls.array1.controls[0].status.dirty).toBeFalsy();
+    expect(form.controls.array1.controls[0].status.dirty).toBeFalsy();
   });
 
   test("flags are set from executors", async () => {

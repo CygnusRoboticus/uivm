@@ -2,7 +2,6 @@ import { combineLatest, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { ArrayConfig, FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "./configs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls, Messages } from "./controls";
-import { FieldTypeMap, FormControl, Obj } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig } from "./utils";
 
 export interface Visitor<TFormInfo extends FormInfoBase> {
@@ -150,11 +149,7 @@ export function bundleConfig<
   TConfig extends GroupConfig<TFormInfo> & FieldConfig<TFormInfo> & TFormInfo["config"],
   TFormInfo extends FormInfoBase,
   TValue = never
->(
-  config: TConfig,
-  registry: TFormInfo["registry"] = {},
-  visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>(),
-) {
+>(config: TConfig, registry: TFormInfo["registry"], visitor: Visitor<TFormInfo> = new DefaultVisitor<TFormInfo>()) {
   const bundle = bundleConfig2<TFormInfo, TValue>(config, visitor) as ConfigBundle<
     GroupControl<TValue, any, TFormInfo["flags"]>,
     typeof config,

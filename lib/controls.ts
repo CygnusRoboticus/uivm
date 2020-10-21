@@ -1,6 +1,6 @@
-import { array as AR, nonEmptyArray as NEA, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subject, Subscription } from "rxjs";
-import { catchError, filter, first, map, switchMap, take, tap } from "rxjs/operators";
+import { array as AR, readonlyArray as RAR } from "fp-ts";
+import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription } from "rxjs";
+import { filter, first, map, switchMap } from "rxjs/operators";
 import { Obj } from "./typing";
 import { isPromise, notNullish } from "./utils";
 
@@ -347,7 +347,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
       return;
     }
 
-    this.status = this.childFields.reduce(
+    this.status = this.children.reduce(
       (acc, c) => ({
         valid: acc.valid || c.status.valid,
         disabled: acc.disabled || c.status.disabled,
@@ -373,7 +373,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     return x;
   }
 
-  get childFields() {
+  get children() {
     return <FieldControl<unknown, TFlags>[]>[];
   }
 
@@ -414,7 +414,7 @@ export class GroupControl<
     super(reduceControls<TValue, TFlags>(controls, opts.status?.disabled ?? false), opts);
     this.value = reduceControls<TValue, TFlags>(controls, opts.status?.disabled ?? false);
     this.controls = controls;
-    Object.values(this.controls).forEach(control => this.registerControl(control as TControls[keyof TControls]));
+    this.children.forEach(control => this.registerControl(control as TControls[keyof TControls]));
 
     this.setValue = (value: TValue) => {
       Object.keys(value).forEach(name => {
@@ -432,8 +432,12 @@ export class GroupControl<
         }
       });
     };
-    this.reset = () => this.childFields.forEach(control => control.reset());
+    this.reset = () => this.children.forEach(control => control.reset());
     this.groupReady();
+  }
+
+  get children() {
+    return Object.values(this.controls) as FieldControl<unknown, TFlags>[];
   }
 
   contains(controlName: string) {
@@ -506,12 +510,16 @@ export class ArrayControl<
   ) {
     super(value, opts);
     this.controls = value.map(v => this.itemFactory(v) as ReturnType<this["itemFactory"]>);
-    this.controls.forEach(control => this.registerControl(control));
+    this.children.forEach(control => this.registerControl(control));
     this.arrayReady();
   }
 
   get length() {
     return this.controls.length;
+  }
+
+  get children() {
+    return this.controls as FieldControl<unknown, TFlags>[];
   }
 
   at(index: number) {

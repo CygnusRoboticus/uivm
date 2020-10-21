@@ -89,11 +89,8 @@ describe("typings", () => {
       types: DynaFieldTypeMap;
     }
 
-    const testControl1 = {} as FormControl<typeof testConfig, FormInfo>;
-    type asdf = typeof testControl1.controls.repeatable.value;
-
     const testControl: FormControl<typeof testConfig, FormInfo> = new GroupControl({
-      checkbox: new FieldControl<boolean>(false),
+      checkbox: new FieldControl<boolean>(true),
       code: new FieldControl<string>(""),
       date: new FieldControl<number>(0),
       rowText: new FieldControl<string | null>(""),

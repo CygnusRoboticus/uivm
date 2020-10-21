@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
 // also exported from '@storybook/react' if you can deal with breaking changes in 6.1
-import { Story, Meta } from "@storybook/react/types-6-0";
-import { bundleConfig, ConfigBundle } from "../lib/visitor";
+import { Meta, Story } from "@storybook/react/types-6-0";
+import React, { useEffect, useState } from "react";
+import { Observable, of } from "rxjs";
+import { tap } from "rxjs/operators";
 import { FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "../lib/configs";
 import { FieldControl, GroupControl, ItemControl, Messages } from "../lib/controls";
 import { ExecutableDefinition } from "../lib/executable";
-import { Observable, of } from "rxjs";
-import { tap } from "rxjs/operators";
+import { bundleConfig, ConfigBundle } from "../lib/visitor";
 
 const registry = {
   messagers: {
