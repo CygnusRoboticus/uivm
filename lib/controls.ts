@@ -380,6 +380,9 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   dispose() {
     this._value$.complete();
     this._errors$.complete();
+    if (this.validationSub) {
+      this.validationSub.unsubscribe();
+    }
     super.dispose();
   }
 

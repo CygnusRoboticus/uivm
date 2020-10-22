@@ -1,5 +1,5 @@
 import { ArrayControl, FieldControl, GroupControl } from "./controls";
-import { FieldDataType, FieldTypeMap, FormControl } from "./typing";
+import { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormControl } from "./typing";
 
 describe("typings", () => {
   test("compiler safety", () => {
@@ -41,7 +41,7 @@ describe("typings", () => {
       { type: "divider" },
       {
         name: "repeatable",
-        type: "group",
+        type: "repeatable",
         array: true,
         fields: [
           { name: "repeatableText", type: "text" },
@@ -74,7 +74,6 @@ describe("typings", () => {
       { name: "text", type: "text" },
     ] as const;
 
-    // for testing purposes
     interface CustomTypes extends FieldTypeMap<CustomConfigs> {
       string: { type: "text" | "code" | "radiobutton" };
       number: { type: "number" | "date" };
@@ -84,21 +83,37 @@ describe("typings", () => {
     }
 
     type CustomConfigs =
-      | { type: "text"; name: string }
-      | { type: "code"; name: string }
-      | { type: "radiobutton"; name: string }
-      | { type: "number"; name: string }
-      | { type: "date"; name: string }
-      | { type: "checkbox"; name: string }
-      | { type: "select"; name: string }
-      | { type: "slider"; name: string }
-      | { type: "repeatable"; name: string; array: true; fields: readonly CustomConfigs[] }
-      | { type: "group"; name: string; fields: readonly CustomConfigs[] }
-      | { type: "divider" }
-      | { type: "row"; fields: readonly CustomConfigs[] }
-      | { type: "fieldset"; fields: readonly CustomConfigs[] }
-      | { type: "tab"; fields: readonly CustomConfigs[] }
-      | { type: "tabs"; fields: readonly { type: "tab"; fields: readonly CustomConfigs[] }[] };
+      | { dataType?: FieldDataTypeDefinition; type: "text"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "code"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "radiobutton"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "number"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "date"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "checkbox"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "select"; name: string }
+      | { dataType?: FieldDataTypeDefinition; type: "slider"; name: string }
+      | {
+          dataType?: FieldDataTypeDefinition;
+          type: "repeatable";
+          name: string;
+          array: true;
+          fields: readonly CustomConfigs[];
+        }
+      | {
+          dataType?: FieldDataTypeDefinition;
+          type: "group";
+          array?: never;
+          name: string;
+          fields: readonly CustomConfigs[];
+        }
+      | { dataType?: FieldDataTypeDefinition; type: "divider" }
+      | { dataType?: FieldDataTypeDefinition; type: "row"; fields: readonly CustomConfigs[] }
+      | { dataType?: FieldDataTypeDefinition; type: "fieldset"; fields: readonly CustomConfigs[] }
+      | { dataType?: FieldDataTypeDefinition; type: "tab"; fields: readonly CustomConfigs[] }
+      | {
+          dataType?: FieldDataTypeDefinition;
+          type: "tabs";
+          fields: readonly { type: "tab"; fields: readonly CustomConfigs[] }[];
+        };
 
     const testControl: FormControl<typeof testConfig, CustomConfigs, CustomTypes> = new GroupControl({
       checkbox: new FieldControl<boolean>(true),
