@@ -3,19 +3,21 @@ import { Meta, Story } from "@storybook/react/types-6-0";
 import React, { useEffect, useState } from "react";
 import { Observable, of } from "rxjs";
 import { tap } from "rxjs/operators";
-import { FieldConfig, FormInfoBase, GroupConfig, ItemConfig } from "../lib/configs";
-import { FieldControl, GroupControl, ItemControl, Messages } from "../lib/controls";
+import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
+import { AbstractFlags, FieldControl, GroupControl, ItemControl, Messages } from "../lib/controls";
 import { ExecutableDefinition } from "../lib/executable";
+import { FieldTypeMap } from "../lib/typing";
 import { bundleConfig, ConfigBundle } from "../lib/visitor";
 
 const registry = {
   messagers: {
-    static(control: any, params: { message: string }) {
-      return of({ static: { message: params.message } });
+    static(config: ItemConfig<any, any>, control: ItemControl<any>, { message }: { message: string }) {
+      return of({ static: { message } });
     },
   },
   triggers: {
     autofill(
+      config: any,
       control: any,
       { field, pattern, replace }: { field: string; pattern?: RegExp | string; replace?: string },
     ) {
@@ -33,41 +35,51 @@ const registry = {
     },
   },
   flags: {
-    static(control: any, params: { value: boolean }) {
-      return of(params.value);
+    static(config: any, control: any, { value }: { value: boolean }) {
+      return of(value);
     },
+    pants: {} as any,
   },
+  validators: {},
+  search: {},
 };
 
-interface FormInfo extends FormInfoBase {
-  config: CustomConfigs;
-  registry: typeof registry;
-}
+type CustomRegistry = typeof registry;
 
-interface FormConfig extends GroupConfig<FormInfo>, FieldConfig<FormInfo> {
+interface FormConfig
+  extends GroupConfig<CustomConfigs, CustomRegistry, AbstractFlags>,
+    FieldConfig<CustomRegistry, AbstractFlags> {
   type: "form";
 }
 
-interface TextConfig extends FieldConfig<FormInfo> {
+interface TextConfig extends FieldConfig<CustomRegistry, AbstractFlags> {
   type: "text";
   label?: string;
   placeholder?: string;
 }
 
-interface ButtonConfig extends ItemConfig<FormInfo> {
+interface ButtonConfig extends ItemConfig<CustomRegistry, AbstractFlags> {
   type: "button";
   label: string;
   submit?: boolean;
-  clickTrigger?: ExecutableDefinition<FormInfo["registry"]["triggers"], Observable<void>>[];
+  clickTrigger?: ExecutableDefinition<CustomRegistry["triggers"], Observable<void>>[];
 }
 
-interface MessageConfig extends ItemConfig<FormInfo> {
+interface MessageConfig extends ItemConfig<CustomRegistry, AbstractFlags> {
   type: "message";
   title?: string;
   message?: string;
 }
 
 type CustomConfigs = FormConfig | TextConfig | ButtonConfig | MessageConfig;
+
+interface CustomConfigsTypes extends FieldTypeMap<CustomConfigs> {
+  string: { type: "text" };
+  number: never;
+  boolean: never;
+  array: never;
+  null: never;
+}
 
 const ComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -85,6 +97,9 @@ function TypedForm() {
         label: "First Name",
         type: "text",
         name: "firstName",
+        flags: {
+          hidden: [],
+        },
         triggers: [{ name: "autofill", params: { field: "autofill", pattern: "^(.*)", replace: "$1 - autofill" } }],
       },
       { label: "Last Name", type: "text", name: "lastName" },
@@ -94,7 +109,9 @@ function TypedForm() {
     ],
   } as const;
 
-  const [bundle] = useState(bundleConfig<FormInfo, typeof config>(config, registry));
+  const [bundle] = useState(
+    bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, CustomRegistry>(config, registry),
+  );
   const [value, setValue] = useState(bundle.control.value);
   useEffect(() => {
     bundle.control.setValue({
@@ -115,7 +132,7 @@ function TypedForm() {
   );
 }
 
-function Fields({ control, config, children }: ConfigBundle<ItemControl<FormInfo["flags"]>, CustomConfigs, FormInfo>) {
+function Fields({ control, config, children }: ConfigBundle<ItemControl, CustomConfigs, CustomRegistry>) {
   return (
     <>
       {children.map((c, i) => {
@@ -126,7 +143,7 @@ function Fields({ control, config, children }: ConfigBundle<ItemControl<FormInfo
   );
 }
 
-function Form(props: ConfigBundle<GroupControl<any, any, FormInfo["flags"]>, FormConfig, FormInfo>) {
+function Form(props: ConfigBundle<GroupControl<{}, {}>, CustomConfigs, CustomRegistry>) {
   return (
     <form>
       <Fields {...props}></Fields>
@@ -134,7 +151,7 @@ function Form(props: ConfigBundle<GroupControl<any, any, FormInfo["flags"]>, For
   );
 }
 
-function Text({ config, control }: ConfigBundle<FieldControl<string | null, FormInfo["flags"]>, TextConfig, FormInfo>) {
+function Text({ config, control }: ConfigBundle<FieldControl<string | null>, TextConfig, CustomRegistry>) {
   const [value, setValue] = useState<string | null>(null);
   const [disabled, setDisabled] = useState(false);
 
@@ -158,7 +175,7 @@ function Text({ config, control }: ConfigBundle<FieldControl<string | null, Form
   );
 }
 
-function Message({ config, control }: ConfigBundle<ItemControl<FormInfo["flags"]>, MessageConfig, FormInfo>) {
+function Message({ config, control }: ConfigBundle<ItemControl, MessageConfig, CustomRegistry>) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);
@@ -178,7 +195,7 @@ function Message({ config, control }: ConfigBundle<ItemControl<FormInfo["flags"]
   );
 }
 
-function Button({ config, control }: ConfigBundle<ItemControl<FormInfo["flags"]>, ButtonConfig, FormInfo>) {
+function Button({ config, control }: ConfigBundle<ItemControl, ButtonConfig, CustomRegistry>) {
   return <button type={config.submit ? "submit" : "button"}>{config.label}</button>;
 }
 

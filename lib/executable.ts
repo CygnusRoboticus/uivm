@@ -1,27 +1,18 @@
 import { Observable } from "rxjs";
 import { Option } from "./configs";
-import { ItemControl } from "./controls";
+import { AbstractFlags, ItemControl, Messages } from "./controls";
 
 export interface SearchResolver<TValue, TParams extends object> {
   search(subject: Observable<{ search: string; params: TParams }>): Observable<Option<TValue>[]>;
   resolve(value: TValue[], params: TParams): Promise<Option<TValue>[]>;
 }
 
-export type Validator<TValue = unknown, TErrors = unknown> = (value: TValue) => TErrors | null;
-export type AsyncValidator<TValue = unknown, TErrors = unknown> = (value: TValue) => Observable<TErrors | null>;
-
-export interface ExecutableRegistry<
-  TFlags extends ExecutableService<TFlags, Observable<boolean>> = {},
-  TTriggers extends ExecutableService<TTriggers, Observable<void>> = {},
-  TMessagers extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
-  TValidators extends ExecutableService<TValidators, Observable<{ message: string }>> = {},
-  TSearches extends ExecutableService<TSearches, SearchResolver<unknown, {}>> = {}
-> {
-  flags: TFlags;
-  triggers: TTriggers;
-  messagers: TMessagers;
-  validators: TValidators;
-  search: TSearches;
+export interface ExecutableRegistry<TFlags = {}, TTriggers = {}, TMessagers = {}, TValidators = {}, TSearches = {}> {
+  flags: ExecutableService<TFlags, Observable<boolean>>;
+  messagers: ExecutableService<TMessagers, Observable<Messages | null>>;
+  search: ExecutableService<TSearches, SearchResolver<unknown, {}>>;
+  triggers: ExecutableService<TTriggers, Observable<void>>;
+  validators: ExecutableService<TValidators, Observable<Messages | null>>;
 }
 
 type KeysOfType<T, U> = { [K in keyof T]: T[K] extends U ? K : never }[keyof T];
@@ -50,17 +41,24 @@ export type ExecutableRegistryOverride<
 /**
  * Dynaform Executable type. This does not need to be implemented, it is exported for reference.
  */
-export type Executable<TConfig, TParams = undefined, TControl = ItemControl, TValue = unknown> = (
-  config: TConfig,
-  params: TParams,
-  control: TControl,
-  ...args: any[]
-) => TValue;
+export type Executable<
+  TConfig,
+  TControl extends ItemControl<TFlags>,
+  TParams,
+  TValue = unknown,
+  TFlags extends AbstractFlags = AbstractFlags
+> = (config: TConfig, control: TControl, configParams: TParams, ...args: any[]) => TValue;
 
-type ExecutableService<TService = {}, TValue = unknown> =
+type ExecutableService<TService = {}, TValue = unknown, TFlags extends AbstractFlags = AbstractFlags> =
   | {
-      [k in keyof TService]: TService[k] extends (config: infer T, params: infer U, ...args: any[]) => TValue
-        ? Executable<T, U, TValue>
+      [k in keyof TService]: TService[k] extends (
+        config: infer TConfig,
+        control: infer TControl,
+        params: infer TParams,
+      ) => TValue
+        ? TControl extends ItemControl<infer TFlags>
+          ? Executable<TConfig, TControl, TParams, TValue, TFlags>
+          : never
         : never;
     }
   | {};
@@ -74,7 +72,7 @@ export type ExecutableDefinition<TService, TValue> = {
   [k in keyof TService]: {
     name: TService[k] extends (...args: any) => TValue ? k : never;
   } & WithOptional<{
-    params: TService[k] extends (...args: any) => TValue ? Parameters<TService[k]>[1] : never;
+    params: TService[k] extends (...args: any) => TValue ? Parameters<TService[k]>[2] : never;
   }>;
 }[keyof TService];
 

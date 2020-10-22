@@ -16,10 +16,3 @@ export interface BaseGroupConfig<TConfig extends BaseItemConfig> extends BaseIte
 export interface BaseArrayConfig<TConfig extends BaseItemConfig> extends BaseGroupConfig<TConfig>, BaseFieldConfig {
   array: true;
 }
-
-export type AnyConfig<TConfig extends BaseItemConfig = never> =
-  | TConfig
-  | BaseItemConfig
-  | BaseFieldConfig
-  | BaseGroupConfig<TConfig>
-  | BaseArrayConfig<TConfig>;

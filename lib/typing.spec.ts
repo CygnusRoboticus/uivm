@@ -1,6 +1,4 @@
-import { FormInfoBase } from "./configs";
 import { ArrayControl, FieldControl, GroupControl } from "./controls";
-import { AnyConfig } from "./primitives";
 import { FieldDataType, FieldTypeMap, FormControl } from "./typing";
 
 describe("typings", () => {
@@ -77,7 +75,7 @@ describe("typings", () => {
     ] as const;
 
     // for testing purposes
-    interface DynaFieldTypeMap extends FieldTypeMap<AnyConfig> {
+    interface CustomTypes extends FieldTypeMap<CustomConfigs> {
       string: { type: "text" | "code" | "radiobutton" };
       number: { type: "number" | "date" };
       boolean: { type: "checkbox" };
@@ -85,11 +83,24 @@ describe("typings", () => {
       null: { type: "text" };
     }
 
-    interface FormInfo extends FormInfoBase {
-      types: DynaFieldTypeMap;
-    }
+    type CustomConfigs =
+      | { type: "text"; name: string }
+      | { type: "code"; name: string }
+      | { type: "radiobutton"; name: string }
+      | { type: "number"; name: string }
+      | { type: "date"; name: string }
+      | { type: "checkbox"; name: string }
+      | { type: "select"; name: string }
+      | { type: "slider"; name: string }
+      | { type: "repeatable"; name: string; array: true; fields: readonly CustomConfigs[] }
+      | { type: "group"; name: string; fields: readonly CustomConfigs[] }
+      | { type: "divider" }
+      | { type: "row"; fields: readonly CustomConfigs[] }
+      | { type: "fieldset"; fields: readonly CustomConfigs[] }
+      | { type: "tab"; fields: readonly CustomConfigs[] }
+      | { type: "tabs"; fields: readonly { type: "tab"; fields: readonly CustomConfigs[] }[] };
 
-    const testControl: FormControl<typeof testConfig, FormInfo> = new GroupControl({
+    const testControl: FormControl<typeof testConfig, CustomConfigs, CustomTypes> = new GroupControl({
       checkbox: new FieldControl<boolean>(true),
       code: new FieldControl<string>(""),
       date: new FieldControl<number>(0),
@@ -161,6 +172,33 @@ describe("typings", () => {
       tabsTabsText: "",
       text: "",
     };
+
+    const {
+      checkbox,
+      code,
+      date,
+      rowText,
+      fieldsetText,
+      fieldsetSelect,
+      fieldsetFieldsetText,
+      group: {
+        groupText,
+        groupGroup: { groupGroupNumber, groupGroupRowCheckbox },
+      },
+      repeatable: [],
+      // {
+      //   repeatableText: "",
+      //   repeatableNumber: 0,
+      //   repeatableFieldsetGroup: { repeatableFieldsetGroupText: "" },
+      // },
+      number,
+      numberType,
+      radiobutton,
+      select,
+      slider,
+      tabsTabsText,
+      text,
+    } = testValue;
 
     testControl.setValue(testValue);
     expect(testControl.value).toEqual(testValue);

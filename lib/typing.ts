@@ -1,5 +1,4 @@
-import { FormInfoBase } from "./configs";
-import { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { AbstractFlags, ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export enum FieldDataType {
@@ -33,18 +32,20 @@ type DTK = "dataType";
 type FK = "fields";
 
 // value utilities
-type FieldTypeType<T extends TFormInfo["config"], TFormInfo extends FormInfoBase> = T extends BaseArrayConfig<
-  TFormInfo["config"]
->
-  ? FormValue<T[FK], TFormInfo>[]
-  : T extends BaseGroupConfig<TFormInfo["config"]>
-  ? FormValue<T[FK], TFormInfo>
-  : T extends TFormInfo["types"]["string"]
-  ? FieldTypeNullable<T, TFormInfo["types"]["null"], FieldTypeArrayable<T, TFormInfo["types"]["array"], string>>
-  : T extends TFormInfo["types"]["number"]
-  ? FieldTypeNullable<T, TFormInfo["types"]["null"], FieldTypeArrayable<T, TFormInfo["types"]["array"], number>>
-  : T extends TFormInfo["types"]["boolean"]
-  ? FieldTypeNullable<T, TFormInfo["types"]["null"], FieldTypeArrayable<T, TFormInfo["types"]["array"], boolean>>
+type FieldTypeType<
+  T extends TConfig,
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>
+> = T extends BaseArrayConfig<TConfig>
+  ? FormValue<T[FK], TConfig, TTypes>[]
+  : T extends BaseGroupConfig<TConfig>
+  ? FormValue<T[FK], TConfig, TTypes>
+  : T extends TTypes["string"]
+  ? FieldTypeNullable<T, TTypes["null"], FieldTypeArrayable<T, TTypes["array"], string>>
+  : T extends TTypes["number"]
+  ? FieldTypeNullable<T, TTypes["null"], FieldTypeArrayable<T, TTypes["array"], number>>
+  : T extends TTypes["boolean"]
+  ? FieldTypeNullable<T, TTypes["null"], FieldTypeArrayable<T, TTypes["array"], boolean>>
   : unknown;
 
 type FieldDataTypeType<T extends BaseFieldConfig[DTK]> = T extends { type: FieldDataType.StringType }
@@ -58,61 +59,85 @@ type FieldDataTypeType<T extends BaseFieldConfig[DTK]> = T extends { type: Field
 type FieldTypeNullable<T, U, V> = T extends U ? V | null : V;
 type FieldTypeArrayable<T, U, V> = T extends U ? V[] : V;
 
-type FieldValue<T extends TFormInfo["config"], TFormInfo extends FormInfoBase> = T extends { [k in DTK]: any }
+type FieldValue<T extends TConfig, TConfig extends BaseItemConfig, TTypes extends FieldTypeMap<TConfig>> = T extends {
+  [k in DTK]: any;
+}
   ? FieldDataTypeType<Extract<T, BaseFieldConfig>[DTK]>
-  : FieldTypeType<Extract<T, TFormInfo["config"]>, TFormInfo>;
+  : FieldTypeType<Extract<T, TConfig>, TConfig, TTypes>;
 
-type MappedValues<T extends readonly TFormInfo["config"][], TFormInfo extends FormInfoBase> = Mutable<
+type MappedValues<
+  T extends readonly TConfig[],
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>
+> = Mutable<
   {
     [i in keyof T]: {
       [j in T[i] extends BaseFieldConfig ? T[i][NK] : EK]: T[i] extends { [k in DTK]: any }
         ? FieldDataTypeType<Extract<T[i], BaseFieldConfig>[DTK]>
-        : FieldTypeType<Extract<T[i], TFormInfo["config"]>, TFormInfo>;
+        : FieldTypeType<Extract<T[i], TConfig>, TConfig, TTypes>;
     };
   }
 >;
 
-type FormValue<T extends readonly TFormInfo["config"][], TFormInfo extends FormInfoBase> = UnionToIntersection<
-  | Exclude<MappedValues<T, TFormInfo>[number], { [k in EK]: unknown }>
-  | DeepEmptyFlatten<MappedValues<T, TFormInfo>[number]>
+export type FormValue<
+  T extends readonly TConfig[],
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>
+> = UnionToIntersection<
+  | Exclude<MappedValues<T, TConfig, TTypes>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedValues<T, TConfig, TTypes>[number]>
 >;
 
 // control utilities
-type FieldControlType<T extends BaseItemConfig, TFormInfo extends FormInfoBase> = T extends BaseArrayConfig<
-  TFormInfo["config"]
->
+type FieldControlType<
+  T extends TConfig,
+  TConfig extends BaseFieldConfig,
+  TTypes extends FieldTypeMap<TConfig>,
+  TFlags extends AbstractFlags
+> = T extends BaseArrayConfig<TConfig>
   ? ArrayControl<
       // @ts-ignore
-      FormValue<T[FK], TFormInfo>,
-      FormControls<T[FK], TFormInfo>,
-      TFormInfo["flags"]
+      FormValue<T[FK], TConfig, TTypes>,
+      FormControls<T[FK], TConfig, TTypes, TFlags>,
+      TFlags
     >
   : T extends BaseFieldConfig
-  ? T extends BaseGroupConfig<TFormInfo["config"]>
+  ? T extends BaseGroupConfig<TConfig>
     ? GroupControl<
         // @ts-ignore
-        FormValue<T[FK], TFormInfo>,
-        FormControls<T[FK], TFormInfo>,
-        TFormInfo["flags"]
+        FormValue<T[FK], TConfig, TTypes>,
+        FormControls<T[FK], TConfig, TTypes, TFlags>,
+        TFlags
       >
-    : FieldControl<FieldValue<T, TFormInfo>, TFormInfo["flags"]>
-  : ItemControl<TFormInfo["flags"]>;
+    : FieldControl<FieldValue<T, TConfig, TTypes>, TFlags>
+  : ItemControl<TFlags>;
 
-type MappedControls<T extends readonly TFormInfo["config"][], TFormInfo extends FormInfoBase> = Mutable<
+type MappedControls<
+  T extends readonly TConfig[],
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>,
+  TFlags extends AbstractFlags
+> = Mutable<
   {
     [i in keyof T]: {
       [j in T[i] extends BaseFieldConfig ? T[i][NK] : EK]: T[i] extends BaseFieldConfig
-        ? FieldControlType<T[i], TFormInfo>
-        : T[i] extends BaseGroupConfig<TFormInfo["config"]>
-        ? FormControls<T[i][FK], TFormInfo>
+        ? // @ts-ignore
+          FieldControlType<T[i], TConfig, TTypes, TFlags>
+        : T[i] extends BaseGroupConfig<TConfig>
+        ? FormControls<T[i][FK], TConfig, TTypes, TFlags>
         : never;
     };
   }
 >;
 
-type FormControls<T extends readonly TFormInfo["config"][], TFormInfo extends FormInfoBase> = UnionToIntersection<
-  | Exclude<MappedControls<T, TFormInfo>[number], { [k in EK]: unknown }>
-  | DeepEmptyFlatten<MappedControls<T, TFormInfo>[number]>
+export type FormControls<
+  T extends readonly TConfig[],
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>,
+  TFlags extends AbstractFlags
+> = UnionToIntersection<
+  | Exclude<MappedControls<T, TConfig, TTypes, TFlags>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedControls<T, TConfig, TTypes, TFlags>[number]>
 >;
 
 // @see https://medium.com/@flut1/deep-flatten-typescript-types-with-finite-recursion-cb79233d93ca
@@ -135,11 +160,13 @@ type DF9<T> = T extends any ? DFBase<T, EmptyObjectValues<T>> : never;
 export type Obj = { [key: string]: any };
 
 export type FormControl<
-  T extends readonly TFormInfo["config"][],
-  TFormInfo extends FormInfoBase,
+  T extends readonly TConfig[],
+  TConfig extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfig>,
+  TFlags extends AbstractFlags = AbstractFlags
 > = GroupControl<
-// @ts-ignore
-  FormValue<T, TFormInfo>,
-  FormControls<T, TFormInfo>,
-  TFormInfo["flags"]
+  // @ts-ignore
+  FormValue<T, TConfig, TTypes>,
+  FormControls<T, TConfig, TTypes, TFlags>,
+  TFlags
 >;
