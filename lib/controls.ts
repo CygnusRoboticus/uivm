@@ -1,19 +1,21 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
 import { BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription } from "rxjs";
 import { filter, first, map, switchMap } from "rxjs/operators";
+import { AbstractFlags, Messages } from "./configs";
 import { Obj } from "./typing";
 import { isPromise, notNullish } from "./utils";
 
-export interface Messages {
-  [key: string]: {
-    message: string;
-    [key: string]: unknown;
-  };
-}
+export type Executor<TControl extends BaseControl, TReturn> = (
+  control: TControl,
+) => TReturn | Promise<TReturn> | Observable<TReturn>;
 
-export interface Validator<TValue, TFlags extends AbstractFlags = AbstractFlags> {
-  (control: FieldControl<TValue, TFlags>): Messages | null | Promise<Messages | null> | Observable<Messages | null>;
-}
+type Validator<TControl extends BaseControl> = Executor<TControl, Messages | null>;
+type Trigger<TControl extends BaseControl> = Executor<TControl, void>;
+type Flagger<TControl extends BaseControl, TFlags extends AbstractFlags = AbstractFlags> = Executor<
+  TControl,
+  [keyof TFlags, boolean]
+>;
+type Disabler<TControl extends BaseControl> = Executor<TControl, boolean>;
 
 function findControl<TValue, TFlags extends AbstractFlags = AbstractFlags>(
   control: FieldControl<TValue, TFlags>,
@@ -43,17 +45,14 @@ function findControl<TValue, TFlags extends AbstractFlags = AbstractFlags>(
 
 export interface ItemControlOptions<TFlags extends AbstractFlags = AbstractFlags> {
   status?: Partial<AbstractStatus>;
-  flags?: Partial<TFlags>;
-  flagExecutors?: Observable<[keyof TFlags, boolean]>[];
-  messages?: Messages;
-  messageExecutors?: Observable<Messages | null>[];
-  triggerExecutors?: Observable<void>[];
+  flaggers?: Flagger<ItemControl<TFlags>, TFlags>[];
+  messagers?: Validator<ItemControl<TFlags>>[];
 }
 
 export interface FieldControlOptions<TValue, TFlags extends AbstractFlags> extends ItemControlOptions<TFlags> {
-  validators?: Validator<TValue, TFlags>[];
-  disabled?: boolean;
-  disableExecutors?: Observable<boolean>[];
+  validators?: Validator<FieldControl<TValue, TFlags>>[];
+  triggers?: Trigger<FieldControl<TValue, TFlags>>[];
+  disablers?: Disabler<FieldControl<TValue, TFlags>>[];
 }
 
 function reduceControls<TValue, TFlags extends AbstractFlags>(
@@ -101,11 +100,6 @@ export interface AbstractStatus {
   disabled: boolean;
 }
 
-export interface AbstractFlags {
-  hidden: boolean;
-  [key: string]: boolean;
-}
-
 export abstract class BaseControl {
   protected _parent: BaseControl | null = null;
 
@@ -129,13 +123,10 @@ export abstract class BaseControl {
 }
 
 export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends BaseControl {
-  protected _flagExecutors$ = new BehaviorSubject<Observable<[keyof TFlags, boolean]>[]>([
-    new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]),
-  ]);
-  protected _messageExecutors$ = new BehaviorSubject<Observable<Messages | null>[]>([]);
-  protected _triggerExecutors$ = new BehaviorSubject<Observable<void>[]>([]);
+  protected _flaggers$ = new BehaviorSubject<Flagger<this, TFlags>[]>([() => ["hidden", false]]);
+  protected _messagers$ = new BehaviorSubject<Validator<this>[]>([]);
 
-  flags$: Observable<TFlags> = this._flagExecutors$.pipe(
+  flags$: Observable<TFlags> = this._flaggers$.pipe(
     switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
     map(
       AR.reduce({} as TFlags, (acc, [k, v]) => {
@@ -145,7 +136,7 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
     ),
   );
 
-  messages$: Observable<Messages | null> = this._messageExecutors$.pipe(
+  messages$: Observable<Messages | null> = this._messagers$.pipe(
     switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
     map(AR.filter(notNullish)),
     map(msgs => {
@@ -158,18 +149,11 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
 
   constructor(opts: ItemControlOptions<TFlags> = {}) {
     super();
-    if (opts.flagExecutors) {
-      this.setFlagExecutors(opts.flagExecutors);
-    } else if (opts.flags) {
-      this.setFlags(opts.flags);
+    if (opts.flaggers) {
+      this.setFlaggers(opts.flaggers);
     }
-    if (opts.messageExecutors) {
-      this.setMessageExecutors(opts.messageExecutors);
-    } else if (opts.messages) {
-      this.setMessages(opts.messages);
-    }
-    if (opts.triggerExecutors) {
-      this.setTriggerExecutors(opts.triggerExecutors);
+    if (opts.messagers) {
+      this.setMessagers(opts.messagers);
     }
   }
 
@@ -177,28 +161,12 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
     this.parent?.update();
   }
 
-  setFlags = (flags: Partial<TFlags>) => {
-    this.setFlagExecutors(
-      Object.keys(flags).map(
-        k => new BehaviorSubject<[keyof TFlags, boolean]>([k, !!flags[k]]),
-      ),
-    );
-  };
-
-  setMessages = (messages: Messages | null) => {
-    this.setMessageExecutors(messages ? [new BehaviorSubject(messages)] : []);
-  };
-
-  setFlagExecutors(observables: Observable<[keyof TFlags, boolean]>[]) {
-    this._flagExecutors$.next([new BehaviorSubject<[keyof TFlags, boolean]>(["hidden", false]), ...observables]);
+  setFlaggers(flaggers: Flagger<this, TFlags>[]) {
+    this._flaggers$.next(flaggers);
   }
 
-  setMessageExecutors(observables: Observable<Messages | null>[]) {
-    this._messageExecutors$.next(observables);
-  }
-
-  setTriggerExecutors(observables: Observable<void>[]) {
-    this._triggerExecutors$.next(observables);
+  setMessagers(messagers: Validator<this>[]) {
+    this._messagers$.next(messagers);
   }
 
   dispose() {
@@ -213,20 +181,37 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
   }
 }
 
+function extractSources<TControl extends ItemControl<TFlags>, TFlags extends AbstractFlags, TReturn>(
+  control: TControl,
+) {
+  return (source: Observable<Executor<TControl, TReturn>[]>) =>
+    source.pipe(
+      switchMap(s =>
+        s.map(v => {
+          const result = v(control);
+          if (isPromise(result) || isObservable(result)) {
+            return from(result).pipe(first());
+          }
+          return of(result);
+        }),
+      ),
+    );
+}
+
 export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> extends ItemControl<TFlags> {
   value: TValue;
   initialValue: TValue;
   status: AbstractStatus;
   errors: Messages | null;
 
-  protected _value$: BehaviorSubject<TValue>;
-  protected _status$: BehaviorSubject<AbstractStatus>;
-  protected _errors$: BehaviorSubject<Messages | null>;
-  protected _disabledExecutors$: BehaviorSubject<Observable<boolean>[]>;
+  protected _value$: Observable<TValue>;
+  protected _status$: Observable<AbstractStatus>;
+  protected _errors$: Observable<Messages | null>;
   protected _initialized$: BehaviorSubject<boolean>;
 
-  protected validators: Validator<TValue, TFlags>[];
-  protected validationSub?: Subscription;
+  protected _disablers$ = new BehaviorSubject<Disabler<this>[]>([]);
+  protected _triggers$ = new BehaviorSubject<Trigger<this>[]>([]);
+  protected _validators$ = new BehaviorSubject<Validator<this>[]>([]);
 
   get value$() {
     return this._value$.asObservable();
@@ -254,56 +239,52 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     };
     this.errors = <Messages | null>null;
 
-    this.validators = opts.validators ?? [];
-
     this._value$ = new BehaviorSubject(this.value);
     this._status$ = new BehaviorSubject(this.status);
-    this._errors$ = new BehaviorSubject(this.errors);
-    this._disabledExecutors$ = new BehaviorSubject<Observable<boolean>[]>([]);
     this._initialized$ = new BehaviorSubject<boolean>(false);
 
-    if (opts.disableExecutors) {
-      this.setDisableExecutors(opts.disableExecutors);
-    } else if (opts.disabled !== undefined) {
-      this.setDisabled(opts.disabled);
+    if (opts.status) {
+      this.setStatus(opts.status);
     }
+    if (opts.disablers) {
+      this.setDisablers(opts.disablers);
+    }
+    if (opts.triggers) {
+      this.setTriggers(opts.triggers);
+    }
+
+    this._errors$ = combineLatest([this._initialized$.pipe(filter(Boolean)), this._value$, this._validators$]).pipe();
 
     this.validate();
     this.fieldReady();
   }
 
-  setValidators = (validators: Validator<TValue, TFlags>[]) => {
-    this.validators = validators;
-    this.validate();
+  setValidators = (validators: Validator<this>[]) => {
+    this._validators$.next(validators);
   };
 
   setDisabled(disabled: boolean) {
-    this.setDisableExecutors([new BehaviorSubject(disabled)]);
+    this.setDisablers([() => disabled]);
   }
 
-  setDisableExecutors(observables: Observable<boolean>[]) {
-    this._disabledExecutors$.next(observables);
+  setDisablers(disablers: Disabler<this>[]) {
+    this._disablers$.next(disablers);
+  }
+
+  setTriggers(triggers: Trigger<this>[]) {
+    this._triggers$.next(triggers);
   }
 
   validate() {
-    const sources = this.validators.length
-      ? combineLatest(
-          this.validators.map(v => {
-            const result = v(this);
-            if (isPromise(result) || isObservable(result)) {
-              return from(result).pipe(first());
-            }
-            return of(result);
-          }),
-        ).pipe(map(AR.filter(notNullish)))
-      : of([]);
+    const sources = [];
 
     if (this.validationSub) {
       this.validationSub.unsubscribe();
     }
-    this.validationSub = combineLatest([this._initialized$.pipe(filter(Boolean)), sources])
+    this.validationSub = combineLatest([this._initialized$.pipe(filter(Boolean)), this._validators$])
       .pipe(
         map(([, v]) => v),
+        extractSources(this),
         map(results => (results.length ? results.reduce((acc, r) => ({ ...acc, ...r }), {}) : null)),
         first(),
       )
@@ -380,9 +361,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   dispose() {
     this._value$.complete();
     this._errors$.complete();
-    if (this.validationSub) {
-      this.validationSub.unsubscribe();
-    }
+    this._status$.complete();
     super.dispose();
   }
 

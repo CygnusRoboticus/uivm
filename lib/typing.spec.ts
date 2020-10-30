@@ -74,13 +74,14 @@ describe("typings", () => {
       { name: "text", type: "text" },
     ] as const;
 
-    interface CustomTypes extends FieldTypeMap<CustomConfigs> {
-      string: { type: "text" | "code" | "radiobutton" };
-      number: { type: "number" | "date" };
-      boolean: { type: "checkbox" };
-      array: never;
-      null: { type: "text" };
-    }
+    type CustomTypes = FieldTypeMap<
+      CustomConfigs,
+      { type: "text" | "code" | "radiobutton" },
+      { type: "number" | "date" },
+      { type: "checkbox" },
+      never,
+      { type: "text" }
+    >;
 
     type CustomConfigs =
       | { dataType?: FieldDataTypeDefinition; type: "text"; name: string }

@@ -1,8 +1,19 @@
 import { Observable } from "rxjs";
-import { AbstractFlags, Messages } from "./controls";
 import { ExecutableDefinition, ExecutableRegistry } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldDataTypeDefinition } from "./typing";
+
+export interface Messages {
+  [key: string]: {
+    message: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface AbstractFlags {
+  hidden: boolean;
+  [key: string]: boolean;
+}
 
 export interface ItemConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags> extends BaseItemConfig {
   flags?: {
@@ -30,24 +41,3 @@ export type ArrayConfig<
   TRegistry extends ExecutableRegistry,
   TFlags extends AbstractFlags
 > = FieldConfig<TRegistry, TFlags> & BaseArrayConfig<TConfig>;
-
-export interface OptionSingle<T = unknown> {
-  label: string;
-  value: T;
-  disabled?: boolean;
-  sublabel?: string;
-  icon?: { name: string; color?: string; tooltip?: string };
-  help?: string;
-}
-
-export interface OptionMulti<T = unknown, U = unknown> {
-  label: string;
-  /**
-   * Value to uniquely identify group; not used in selection.
-   */
-  value: U;
-  icon?: string;
-  options: (Option<T> | string)[];
-}
-
-export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;

@@ -6,6 +6,7 @@ import { tap } from "rxjs/operators";
 import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
 import { AbstractFlags, FieldControl, GroupControl, ItemControl, Messages } from "../lib/controls";
 import { ExecutableDefinition } from "../lib/executable";
+import { BaseItemConfig } from "../lib/primitives";
 import { FieldTypeMap } from "../lib/typing";
 import { bundleConfig, ConfigBundle } from "../lib/visitor";
 
@@ -17,9 +18,10 @@ const registry = {
   },
   triggers: {
     autofill(
-      config: any,
-      control: any,
+      source: Observable<any>,
+      config: BaseItemConfig,
       { field, pattern, replace }: { field: string; pattern?: RegExp | string; replace?: string },
+      control: FieldControl<any, any>,
     ) {
       const regex = pattern && replace ? (typeof pattern === "string" ? new RegExp(pattern) : pattern) : undefined;
       return control.value$.pipe(

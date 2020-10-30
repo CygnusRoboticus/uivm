@@ -1,15 +1,7 @@
 import { combineLatest, Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
-import {
-  AbstractFlags,
-  ArrayControl,
-  FieldControl,
-  GroupControl,
-  ItemControl,
-  KeyValueControls,
-  Messages,
-} from "./controls";
+import { AbstractFlags, ArrayConfig, FieldConfig, GroupConfig, ItemConfig, Messages } from "./configs";
+import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
 import { Executable, ExecutableDefinition, ExecutableRegistry } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
@@ -183,9 +175,14 @@ export interface ConfigBundle<
 export function bundleConfig<
   T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig>,
+  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
   TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags = AbstractFlags
+  TFlags extends AbstractFlags = AbstractFlags,
+  TS = unknown,
+  TN = unknown,
+  TB = unknown,
+  TArray = unknown,
+  TNull = unknown
 >(
   config: T,
   registry: TRegistry,
