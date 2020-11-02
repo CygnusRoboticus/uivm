@@ -1,3 +1,4 @@
+import { from, isObservable, Observable, of } from "rxjs";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export function notNullish<T>(value: T | null | undefined): value is T {
@@ -6,6 +7,13 @@ export function notNullish<T>(value: T | null | undefined): value is T {
 
 export function isPromise<T>(value: any): value is Promise<T> {
   return value && typeof value.then === "function";
+}
+
+export function toObservable<T>(source: T | Promise<T> | Observable<T>) {
+  if (isObservable(source) || isPromise(source)) {
+    return from(source);
+  }
+  return of(source);
 }
 
 export function isFieldConfig<TConfig extends BaseItemConfig>(

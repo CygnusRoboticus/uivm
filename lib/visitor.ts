@@ -2,10 +2,10 @@ import { combineLatest, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { AbstractFlags, ArrayConfig, FieldConfig, GroupConfig, ItemConfig, Messages } from "./configs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
-import { Executable, ExecutableDefinition, ExecutableRegistry } from "./executable";
+import { Executable, ExecutableDefinition, ExecutableRegistry, Executor } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
-import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish } from "./utils";
+import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish, toObservable } from "./utils";
 
 export interface Visitor<
   TConfig extends BaseItemConfig,
@@ -99,46 +99,35 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
   }
 
   initItem(control: ItemControl<TFlags>, config: ItemConfig<TRegistry, TFlags>, registry: TRegistry) {
-    const flags = Object.entries(config.flags ?? {}).map(([key, value]) => {
+    const flags = Object.entries(config.flags ?? {}).reduce((acc, [key, value]) => {
       const sources = value
         .map(def => {
-          const method = getRegistryMethod<TRegistry, Observable<boolean>, TFlags>(registry, "flags", def as any);
+          const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
           const params = (def as any).params;
           return method ? method(config, control, params) : null;
         })
-        .filter(notNullish);
-      return combineLatest(sources).pipe(map(f => <[keyof TFlags, boolean]>[key, f.some(Boolean)]));
-    });
+        .filter(notNullish)
+        .map(s => (c: ItemControl<TFlags>) => toObservable(s(c)).pipe(map(v => [key, v] as [keyof TFlags, boolean])));
+      acc.push(...sources);
+      return acc;
+    }, <Executor<ItemControl<TFlags>, [keyof TFlags, boolean]>[]>[]);
 
     const messages = (config.messagers ?? [])
       .map(def => {
-        const method = getRegistryMethod<TRegistry, Observable<Messages | null>, TFlags>(
-          registry,
-          "messagers",
-          def as any,
-        );
+        const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "messagers", def as any);
         const params = (def as any).params;
         return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
-    const triggers = (config.triggers ?? [])
-      .map(def => {
-        const method = getRegistryMethod<TRegistry, Observable<void>, TFlags>(registry, "triggers", def as any);
-        const params = (def as any).params;
-        return method ? method(config, control, params) : null;
-      })
-      .filter(notNullish);
-
-    control.setFlagExecutors(flags);
-    control.setMessageExecutors(messages);
-    control.setTriggerExecutors(triggers);
+    control.setFlaggers(flags);
+    control.setMessagers(messages);
   }
 
   initField(control: FieldControl<any, TFlags>, config: FieldConfig<TRegistry, TFlags>, registry: TRegistry) {
     const disablers = (config.disablers ?? [])
       .map(def => {
-        const method = getRegistryMethod<TRegistry, Observable<boolean>, TFlags>(registry, "flags", def as any);
+        const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
         const params = (def as any).params;
         return method ? method(config, control, params) : null;
       })
@@ -146,18 +135,23 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
 
     const validators = (config.validators ?? [])
       .map(def => {
-        const method = getRegistryMethod<TRegistry, Observable<Messages | null>[], TFlags>(
-          registry,
-          "flags",
-          def as any,
-        );
+        const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "validators", def as any);
         const params = (def as any).params;
         return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
-    control.setDisableExecutors(disablers);
-    // control.setValidators(validators);
+    const triggers = (config.triggers ?? [])
+      .map(def => {
+        const method = getRegistryMethod<TRegistry, void, TFlags>(registry, "triggers", def as any);
+        const params = (def as any).params;
+        return method ? method(config, control, params) : null;
+      })
+      .filter(notNullish);
+
+    control.setDisablers(disablers);
+    control.setTriggers(triggers);
+    control.setValidators(validators);
   }
 }
 
@@ -212,7 +206,7 @@ export function getRegistryMethod<
   registry: TRegistry,
   kind: keyof TRegistry,
   def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
-): Executable<BaseItemConfig, ItemControl<TFlags>, any, TValue, TFlags> | null {
+): Executable<BaseItemConfig, any, ItemControl<TFlags>, TValue, TFlags> | null {
   const method = registry[kind]?.[def.name] as any;
   if (method && registry[kind]) {
     return method.bind(registry[kind]);

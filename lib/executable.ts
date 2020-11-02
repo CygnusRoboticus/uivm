@@ -1,6 +1,6 @@
 import { Observable } from "rxjs";
 import { AbstractFlags, Messages } from "./configs";
-import { ItemControl } from "./controls";
+import { BaseControl, ItemControl } from "./controls";
 import { BaseItemConfig } from "./primitives";
 
 export interface ExecutableRegistry<TFlags = {}, TTriggers = {}, TMessagers = {}, TValidators = {}, TSearches = {}> {
@@ -43,7 +43,11 @@ export type Executable<
   TControl extends ItemControl<TFlags>,
   TValue = unknown,
   TFlags extends AbstractFlags = AbstractFlags
-> = (config: TConfig, control: TControl, configParams: TParams, ...args: any[]) => TValue;
+> = (config: TConfig, control: TControl, configParams: TParams, ...args: any[]) => Executor<TControl, TValue>;
+
+export type Executor<TControl extends BaseControl, TValue> = (
+  control: TControl,
+) => TValue | Promise<TValue> | Observable<TValue>;
 
 type ExecutableService<TService = {}, TValue = unknown> =
   | {

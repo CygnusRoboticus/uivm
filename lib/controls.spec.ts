@@ -1,9 +1,7 @@
-import { BehaviorSubject } from "rxjs";
 import { first } from "rxjs/operators";
-import { Messages } from "./configs";
 import { ArrayControl, FieldControl, GroupControl } from "./controls";
 
-describe("bundleConfig", () => {
+describe("controls", () => {
   const createForm = () =>
     new GroupControl({
       field1: new FieldControl("pants"),
@@ -20,10 +18,12 @@ describe("bundleConfig", () => {
       ),
     });
 
-  let form: ReturnType<typeof createForm> = {} as any;
+  let form: ReturnType<typeof createForm>;
+  let field1: ReturnType<typeof createForm>["controls"]["field1"];
 
   beforeEach(() => {
     form = createForm();
+    field1 = form.controls.field1;
   });
 
   test("value is updated", () => {
@@ -51,25 +51,45 @@ describe("bundleConfig", () => {
     });
   });
 
-  test("status bubbles upwards", () => {
-    expect(form.status.dirty).toBeFalsy();
-    form.controls.field1.setValue("pants3");
-    expect(form.controls.field1.status.dirty).toBeTruthy();
-    expect(form.status.dirty).toBeTruthy();
-    expect(form.controls.array1.controls[0].status.dirty).toBeFalsy();
+  test("status bubbles upwards", async () => {
+    expect((await form.status$.pipe(first()).toPromise()).dirty).toBeFalsy();
+    field1.setValue("pants3");
+    expect((await field1.status$.pipe(first()).toPromise()).dirty).toBeTruthy();
+    expect((await form.status$.pipe(first()).toPromise()).dirty).toBeTruthy();
+    expect((await form.controls.array1.controls[0].status$.pipe(first()).toPromise()).dirty).toBeFalsy();
   });
 
   test("flags are set from executors", async () => {
-    expect(await form.controls.field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
-    form.controls.field1.setFlaggers([new BehaviorSubject<[string, boolean]>(["hidden", true])]);
-    expect(await form.controls.field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: true });
+    expect(await field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
+    field1.setFlaggers([() => ["hidden", true]]);
+    expect(await field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: true });
     expect(await form.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
   });
 
   test("messages are set from executors", async () => {
-    expect(await form.controls.field1.messages$.pipe(first()).toPromise()).toEqual(null);
-    form.controls.field1.setMessagers([new BehaviorSubject<Messages | null>({ pants: { message: "skirts" } })]);
-    expect(await form.controls.field1.messages$.pipe(first()).toPromise()).toEqual({ pants: { message: "skirts" } });
+    expect(await field1.messages$.pipe(first()).toPromise()).toEqual(null);
+    field1.setMessagers([() => ({ pants: { message: "skirts" } })]);
+    expect(await field1.messages$.pipe(first()).toPromise()).toEqual({ pants: { message: "skirts" } });
     expect(await form.messages$.pipe(first()).toPromise()).toEqual(null);
+  });
+
+  test("triggers are fired on update", async () => {
+    field1.setTriggers([() => expect(true).toBeTruthy()]);
+    field1.setValue("pants");
+    expect.assertions(1);
+  });
+
+  test("errors are set from validators", async () => {
+    expect(await field1.errors$.pipe(first()).toPromise()).toEqual(null);
+    expect((await field1.status$.pipe(first()).toPromise()).valid).toEqual(true);
+    field1.setValidators([c => (c.value === "pants" ? { pants: { message: "skirts" } } : null)]);
+    console.log(1);
+    expect(await field1.errors$.pipe(first()).toPromise()).toEqual({ pants: { message: "skirts" } });
+    expect((await field1.status$.pipe(first()).toPromise()).valid).toEqual(false);
+    console.log(1);
+    field1.setValue("skirts");
+    expect(await field1.errors$.pipe(first()).toPromise()).toEqual(null);
+    expect((await field1.status$.pipe(first()).toPromise()).valid).toEqual(true);
+    console.log(1);
   });
 });
