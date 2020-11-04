@@ -1,10 +1,10 @@
-import { array as AR, nonEmptyArray as NEAR, readonlyArray as RAR } from "fp-ts";
+import { array as AR, readonlyArray as RAR } from "fp-ts";
 import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
-import { filter, first, map, startWith, switchMap, tap } from "rxjs/operators";
+import { distinctUntilChanged, filter, map, shareReplay, startWith, switchMap } from "rxjs/operators";
 import { AbstractFlags, Messages } from "./configs";
 import { Executor } from "./executable";
 import { Obj } from "./typing";
-import { isPromise, notNullish, toObservable } from "./utils";
+import { notNullish, toObservable } from "./utils";
 
 type Validator<TControl extends BaseControl> = Executor<TControl, Messages | null>;
 type Trigger<TControl extends BaseControl> = Executor<TControl, void>;
@@ -134,6 +134,7 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
         return acc;
       }),
     ),
+    shareReplay(),
   );
 
   messages$: Observable<Messages | null> = combineLatest([this._messagers$, this._initialized$]).pipe(
@@ -147,6 +148,8 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
       }
       return null;
     }),
+    distinctUntilChanged(),
+    shareReplay(),
   );
 
   constructor(opts: ItemControlOptions<TFlags> = {}) {
@@ -262,16 +265,20 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
         }
         return null;
       }),
+      distinctUntilChanged(),
+      shareReplay(),
     );
 
     this._innerStatus$ = combineLatest([this._disablers$, this._initialized$]).pipe(
       map(([v]) => v),
       extractSources<FieldControl<TValue, TFlags>, TFlags, boolean>(this),
-      switchMap(v => combineLatest([this._status$, v])),
-      map(([status, disabled]) => ({
+      switchMap(v => combineLatest([this._status$, this._errors$, v])),
+      map(([status, errors, disabled]) => ({
         ...status,
+        valid: !errors,
         disabled: status.disabled || disabled.some(Boolean),
       })),
+      shareReplay(),
     );
 
     this.fieldReady();
