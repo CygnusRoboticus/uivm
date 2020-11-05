@@ -1,6 +1,10 @@
-import { combineLatest } from "rxjs";
-import { first } from "rxjs/operators";
+import { BehaviorSubject, combineLatest } from "rxjs";
+import { toArray } from "rxjs/operators";
 import { ArrayControl, FieldControl, GroupControl } from "./controls";
+
+function tick() {
+  return new Promise(resolve => setTimeout(resolve));
+}
 
 describe("controls", () => {
   const createForm = () =>
@@ -56,110 +60,91 @@ describe("controls", () => {
     });
   });
 
-  test("status bubbles upwards", async () => {
-    let index = 0;
-    form.status$.subscribe(v => {
-      if (index === 0) {
-        expect(v).toEqual({ dirty: false, disabled: false, pending: false, touched: false, valid: true });
-      } else if (index === 4) {
-        expect(v).toEqual({ dirty: true, disabled: false, pending: false, touched: true, valid: true });
-      } else {
-        expect(v).toEqual({ asdf: 1 });
-      }
-      index++;
-    });
-    field1.status$.subscribe(v => {
-      if (index === 1) {
-        expect(v).toEqual({ dirty: false, disabled: false, pending: false, touched: false, valid: true });
-      } else if (index === 3) {
-        expect(v).toEqual({ dirty: true, disabled: false, pending: false, touched: true, valid: true });
-      } else {
-        expect(v).toEqual({ asdf: 2 });
-      }
-      index++;
-    });
-    form.controls.array1.controls[0].status$.subscribe(v => {
-      if (index === 2) {
-        expect(v).toEqual({ dirty: false, disabled: false, pending: false, touched: false, valid: true });
-      } else {
-        expect(v).toEqual({ asdf: 3 });
-      }
-      index++;
-    });
+  test("status bubbles upwards", async done => {
+    combineLatest([
+      form.dirty$,
+      field1.dirty$,
+      form.controls.array1.controls[0].dirty$,
+      form.touched$,
+      field1.touched$,
+      form.controls.array1.controls[0].touched$,
+    ])
+      .pipe(toArray())
+      .subscribe(v => {
+        expect(v).toEqual([
+          [false, false, false, false, false, false],
+          [false, true, false, false, false, false],
+          [false, true, false, false, true, false],
+          [true, true, false, false, true, false],
+          [true, true, false, true, true, false],
+        ]);
+        done();
+      });
+    expect(field1.dirty).toEqual(false);
+    expect(field1.touched).toEqual(false);
     field1.setValue("pants3");
-    expect.assertions(5);
+    expect(field1.dirty).toEqual(true);
+    expect(field1.touched).toEqual(true);
+    await tick();
+    form.dispose();
   });
 
-  test("flags are set from executors", async () => {
-    expect(await field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
-    field1.setFlaggers([() => ["hidden", true]]);
-    expect(await field1.flags$.pipe(first()).toPromise()).toEqual({ hidden: true });
-    expect(await form.flags$.pipe(first()).toPromise()).toEqual({ hidden: false });
+  test("flags are set from executors", async done => {
+    combineLatest([field1.flags$, form.flags$])
+      .pipe(toArray())
+      .subscribe(v => {
+        expect(v).toEqual([
+          [{}, {}],
+          [{ hidden: true }, {}],
+          [{ hidden: false }, {}],
+        ]);
+        done();
+      });
+    const obs = new BehaviorSubject<[string, boolean]>(["hidden", true]);
+    expect(field1.flags).toEqual({});
+    await tick();
+    field1.setFlaggers([() => obs]);
+    await tick();
+    expect(field1.flags).toEqual({ hidden: true });
+    obs.next(["hidden", false]);
+    await tick();
+    form.dispose();
   });
 
-  test("messages are set from executors", async () => {
-    let index = 0;
-    field1.messages$.subscribe(v => {
-      if (index === 0) {
-        expect(v).toEqual(null);
-      } else if (index === 1) {
-        expect(v).toEqual({ pants: { message: "skirts" } });
-      } else if (index === 2) {
-        expect(v).toEqual(null);
-      } else {
-        expect(v).toEqual([]);
-      }
-      index++;
+  test("messages are set from executors", async done => {
+    field1.messages$.pipe(toArray()).subscribe(v => {
+      expect(v).toEqual([null, { pants: { message: "skirts" } }, null]);
+      done();
     });
     field1.setMessagers([() => ({ pants: { message: "skirts" } })]);
     field1.setMessagers([]);
-    expect.assertions(3);
+    await tick();
+    form.dispose();
   });
 
-  test("triggers are fired on update", async () => {
+  test("triggers are fired on update", () => {
     field1.setTriggers([() => expect(true).toBeTruthy()]);
     field1.setValue("pants");
-    expect.assertions(1);
+    expect.assertions(2);
   });
 
-  test("errors are set from validators", () => {
-    let index = 0;
-    combineLatest([field1.errors$, field1.status$]).subscribe(v => {
-      if (index === 0) {
-        expect(v).toEqual([null, { dirty: false, disabled: false, pending: false, touched: false, valid: true }]);
-      } else if (index === 1) {
+  test("errors are set from validators", async done => {
+    combineLatest([field1.errors$, field1.valid$])
+      .pipe(toArray())
+      .subscribe(v => {
         expect(v).toEqual([
-          { pants: { message: "skirts" } },
-          { dirty: false, disabled: false, pending: false, touched: false, valid: true },
+          [null, true],
+          [{ pants: { message: "skirts" } }, true],
+          [{ pants: { message: "skirts" } }, false],
+          [null, false],
+          [null, true],
         ]);
-      } else if (index === 2) {
-        expect(v).toEqual([
-          { pants: { message: "skirts" } },
-          { dirty: false, disabled: false, pending: false, touched: false, valid: false },
-        ]);
-      } else if (index === 3) {
-        expect(v).toEqual([null, { dirty: false, disabled: false, pending: false, touched: false, valid: false }]);
-      } else if (index === 4) {
-        expect(v).toEqual([null, { dirty: false, disabled: false, pending: false, touched: false, valid: true }]);
-      } else if (index === 5) {
-        expect(v).toEqual([null, { dirty: true, disabled: false, pending: false, touched: true, valid: true }]);
-      } else {
-        expect(v).toEqual([]);
-      }
-      index++;
-    });
+        done();
+      });
     field1.setValidators([c => (c.value === "pants" ? { pants: { message: "skirts" } } : null)]);
+    await tick();
     field1.setValue("skirts");
-    expect.assertions(6);
-  });
-
-  test("validators do not run if not subscribed", () => {
-    field1.setValidators([
-      c => {
-        expect(true).toEqual(false);
-        return c.value === "pants" ? { pants: { message: "skirts" } } : null;
-      },
-    ]);
-    field1.setValue("skirts");
+    await tick();
+    form.dispose();
   });
 });

@@ -49,6 +49,8 @@ export type Executor<TControl extends BaseControl, TValue> = (
   control: TControl,
 ) => TValue | Promise<TValue> | Observable<TValue>;
 
+export type ObservableExecutor<TControl extends BaseControl, TValue> = (control: TControl) => Observable<TValue>;
+
 type ExecutableService<TService = {}, TValue = unknown> =
   | {
       [k in keyof TService]: TService[k] extends Executable<

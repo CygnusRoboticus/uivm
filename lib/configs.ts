@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { ExecutableDefinition, ExecutableRegistry } from "./executable";
+import { ExecutableDefinition, ExecutableRegistry, ObservableExecutor } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldDataTypeDefinition } from "./typing";
 
@@ -10,10 +10,7 @@ export interface Messages {
   };
 }
 
-export interface AbstractFlags {
-  hidden: boolean;
-  [key: string]: boolean;
-}
+export type AbstractFlags = Record<string, boolean>;
 
 export interface ItemConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags> extends BaseItemConfig {
   flags?: {
@@ -26,8 +23,8 @@ export interface ItemConfig<TRegistry extends ExecutableRegistry, TFlags extends
 export interface FieldConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags>
   extends ItemConfig<TRegistry, TFlags>,
     BaseFieldConfig {
-  validators?: readonly ExecutableDefinition<TRegistry["validators"], Observable<Messages | null>>[];
-  disablers?: readonly ExecutableDefinition<TRegistry["flags"], Observable<boolean>>[];
+  validators?: readonly ExecutableDefinition<TRegistry["validators"], ObservableExecutor<any, Messages | null>>[];
+  disablers?: readonly ExecutableDefinition<TRegistry["flags"], ObservableExecutor<any, boolean>>[];
   dataType?: FieldDataTypeDefinition;
 }
 

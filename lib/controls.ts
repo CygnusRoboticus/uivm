@@ -1,18 +1,18 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
-import { distinctUntilChanged, filter, map, shareReplay, startWith, switchMap } from "rxjs/operators";
+import { BehaviorSubject, combineLatest, of, Subscription } from "rxjs";
+import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import { AbstractFlags, Messages } from "./configs";
-import { Executor } from "./executable";
+import { Executor, ObservableExecutor } from "./executable";
 import { Obj } from "./typing";
 import { notNullish, toObservable } from "./utils";
 
 type Validator<TControl extends BaseControl> = Executor<TControl, Messages | null>;
 type Trigger<TControl extends BaseControl> = Executor<TControl, void>;
-type Flagger<TControl extends BaseControl, TFlags extends AbstractFlags = AbstractFlags> = Executor<
+type Flagger<TControl extends BaseControl, TFlags extends AbstractFlags = AbstractFlags> = ObservableExecutor<
   TControl,
   [keyof TFlags, boolean]
 >;
-type Disabler<TControl extends BaseControl> = Executor<TControl, boolean>;
+type Disabler<TControl extends BaseControl> = ObservableExecutor<TControl, boolean>;
 
 function findControl<TValue, TFlags extends AbstractFlags = AbstractFlags>(
   control: FieldControl<TValue, TFlags>,
@@ -41,15 +41,18 @@ function findControl<TValue, TFlags extends AbstractFlags = AbstractFlags>(
 }
 
 export interface ItemControlOptions<TFlags extends AbstractFlags = AbstractFlags> {
-  status?: Partial<AbstractStatus>;
   flaggers?: Flagger<ItemControl<TFlags>, TFlags>[];
   messagers?: Validator<ItemControl<TFlags>>[];
 }
 
 export interface FieldControlOptions<TValue, TFlags extends AbstractFlags> extends ItemControlOptions<TFlags> {
-  validators?: Validator<FieldControl<TValue, TFlags>>[];
+  dirty?: boolean;
+  touched?: boolean;
+  disabled?: boolean;
+
   triggers?: Trigger<FieldControl<TValue, TFlags>>[];
   disablers?: Disabler<FieldControl<TValue, TFlags>>[];
+  validators?: Validator<FieldControl<TValue, TFlags>>[];
 }
 
 function reduceControls<TValue, TFlags extends AbstractFlags>(controls: KeyValueControls<TValue, TFlags>) {
@@ -95,7 +98,7 @@ export interface AbstractStatus {
 export abstract class BaseControl {
   protected _parent: BaseControl | null = null;
 
-  get parent() {
+  get parent(): BaseControl | null {
     return this._parent;
   }
 
@@ -115,42 +118,61 @@ export abstract class BaseControl {
 }
 
 export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends BaseControl {
-  protected _flaggers$ = new BehaviorSubject<Flagger<ItemControl<TFlags>, TFlags>[]>([() => ["hidden", false]]);
-  protected _messagers$ = new BehaviorSubject<Validator<ItemControl<TFlags>>[]>([]);
+  protected _flags$ = new BehaviorSubject({} as TFlags);
+  protected _messages$ = new BehaviorSubject<Messages | null>(null);
+
+  protected flaggers: Flagger<ItemControl<TFlags>, TFlags>[] = [];
+  protected messagers: Validator<ItemControl<TFlags>>[] = [];
+
+  protected flagsSub?: Subscription;
+  protected messagesSub?: Subscription;
+
+  get flags() {
+    return this._flags$.getValue();
+  }
+  get messages() {
+    return this._messages$.getValue();
+  }
+
+  get flags$() {
+    return this._flags$.asObservable();
+  }
+  get messages$() {
+    return this._messages$.pipe(distinctUntilChanged());
+  }
+
   protected _initializer$ = new BehaviorSubject(false);
   protected _initialized$ = this._initializer$.pipe(filter(Boolean));
-
   protected get initialized() {
     return this._initializer$.getValue();
   }
 
-  flags$: Observable<TFlags> = combineLatest([this._flaggers$, this._initialized$]).pipe(
-    map(([v]) => v),
-    extractSources<ItemControl<TFlags>, TFlags, [keyof TFlags, boolean]>(this),
-    switchMap(v => v),
-    map(
-      AR.reduce({} as TFlags, (acc, [k, v]) => {
-        acc[k] = (!!acc[k] || v) as TFlags[typeof k];
-        return acc;
-      }),
-    ),
-    shareReplay(),
-  );
+  updateFlags() {
+    this.flagsSub?.unsubscribe();
+    this.flagsSub = this._initialized$
+      .pipe(
+        switchMap(() => extractSources<ItemControl<TFlags>, TFlags, [keyof TFlags, boolean]>(this, this.flaggers)),
+        map(flgs =>
+          flgs.reduce((acc, [k, v]) => {
+            acc[k] = (!!acc[k] || v) as TFlags[typeof k];
+            return acc;
+          }, {} as TFlags),
+        ),
+      )
+      .subscribe(flags => this._flags$.next(flags));
+  }
 
-  messages$: Observable<Messages | null> = combineLatest([this._messagers$, this._initialized$]).pipe(
-    map(([v]) => v),
-    extractSources<ItemControl<TFlags>, TFlags, Messages | null>(this),
-    switchMap(v => v),
-    map(AR.filter(notNullish)),
-    map(msgs => {
-      if (msgs.length) {
-        return msgs.reduce((acc, m) => ({ ...acc, ...m }), {});
-      }
-      return null;
-    }),
-    distinctUntilChanged(),
-    shareReplay(),
-  );
+  updateMessages() {
+    this.messagesSub?.unsubscribe();
+    this.messagesSub = this._initialized$
+      .pipe(
+        switchMap(() => extractSources<ItemControl<TFlags>, TFlags, Messages | null>(this, this.messagers)),
+        map(AR.filter(notNullish)),
+        map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
+        distinctUntilChanged(),
+      )
+      .subscribe(messages => this._messages$.next(messages));
+  }
 
   constructor(opts: ItemControlOptions<TFlags> = {}) {
     super();
@@ -165,20 +187,29 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
   }
 
   update() {
+    if (!this.initialized) {
+      return;
+    }
+
     this.parent?.update();
   }
 
   setFlaggers(flaggers: Flagger<ItemControl<TFlags>, TFlags>[]) {
-    this._flaggers$.next(flaggers);
+    this.flaggers = flaggers;
+    this.updateFlags();
   }
 
   setMessagers(messagers: Validator<ItemControl<TFlags>>[]) {
-    this._messagers$.next(messagers);
+    this.messagers = messagers;
+    this.updateMessages();
   }
 
   dispose() {
-    this._messagers$.complete();
-    this._flaggers$.complete();
+    this.flagsSub?.unsubscribe();
+    this.messagesSub?.unsubscribe();
+
+    this._flags$.complete();
+    this._messages$.complete();
     this._initializer$.complete();
   }
 
@@ -196,56 +227,113 @@ export class ItemControl<TFlags extends AbstractFlags = AbstractFlags> extends B
 
 function extractSources<TControl extends ItemControl<TFlags>, TFlags extends AbstractFlags, TReturn>(
   control: TControl,
+  executors: Executor<TControl, TReturn>[],
 ) {
-  return (source: Observable<Executor<TControl, TReturn>[]>) =>
-    source.pipe(
-      map(AR.map(v => toObservable(v(control)))),
-      map(obs => (obs.length ? combineLatest(obs) : of([]))),
-    );
+  const obs = executors.map(v => toObservable(v(control)));
+  return obs.length ? combineLatest(obs) : of([]);
 }
 
 export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> extends ItemControl<TFlags> {
-  value: TValue;
   protected initialValue: TValue;
-  protected status: AbstractStatus;
-  protected triggerSub?: Subscription;
+  protected _parent: FieldControl<unknown, TFlags> | null = null;
 
   protected _value$: BehaviorSubject<TValue>;
-  protected _status$: BehaviorSubject<AbstractStatus>;
-  protected _innerStatus$: Observable<AbstractStatus>;
-  protected _errors$: Observable<Messages | null>;
+  protected _disabled$ = new BehaviorSubject(false);
+  protected _pending$ = new BehaviorSubject(false);
+  protected _dirty$ = new BehaviorSubject(false);
+  protected _touched$ = new BehaviorSubject(false);
+  protected _errors$ = new BehaviorSubject<Messages | null>(null);
+  protected _enabled$ = this._disabled$.pipe(
+    map(v => !v),
+    filter(Boolean),
+  );
 
-  protected _disablers$ = new BehaviorSubject<Disabler<FieldControl<TValue, TFlags>>[]>([]);
-  protected _triggers$ = new BehaviorSubject<Trigger<FieldControl<TValue, TFlags>>[]>([]);
-  protected _validators$ = new BehaviorSubject<Validator<FieldControl<TValue, TFlags>>[]>([]);
+  protected _childrenValid$ = new BehaviorSubject(true);
+  protected _childrenDirty$ = new BehaviorSubject(false);
+  protected _childrenPending$ = new BehaviorSubject(false);
+  protected _childrenTouched$ = new BehaviorSubject(false);
+  protected _parentDisabled$ = new BehaviorSubject(false);
+
+  protected triggers: Trigger<FieldControl<TValue, TFlags>>[] = [];
+  protected disablers: Disabler<FieldControl<TValue, TFlags>>[] = [];
+  protected validators: Validator<FieldControl<TValue, TFlags>>[] = [];
+
+  protected triggerSub?: Subscription;
+  protected disablerSub?: Subscription;
+  protected validatorSub?: Subscription;
+
+  get value() {
+    return this._value$.getValue();
+  }
+  get disabled() {
+    return this._disabled$.getValue() || this._parentDisabled$.getValue();
+  }
+  get valid() {
+    return !this._errors$.getValue() && this._childrenValid$.getValue();
+  }
+  get pending() {
+    return this._pending$.getValue() || this._childrenPending$.getValue();
+  }
+  get dirty() {
+    return this._dirty$.getValue() || this._childrenDirty$.getValue();
+  }
+  get touched() {
+    return this._touched$.getValue() || this._childrenTouched$.getValue();
+  }
+  get errors() {
+    return this._errors$.getValue();
+  }
 
   get value$() {
-    return this._value$.asObservable();
+    return this._value$.pipe(distinctUntilChanged());
   }
-  get status$() {
-    return this._innerStatus$;
+  get disabled$() {
+    return combineLatest([this._disabled$, this._parentDisabled$]).pipe(
+      map(([d, pd]) => d || pd),
+      distinctUntilChanged(),
+    );
+  }
+  get valid$() {
+    return combineLatest([this._errors$, this._childrenValid$]).pipe(
+      map(([e, cv]) => !e && cv),
+      distinctUntilChanged(),
+    );
+  }
+  get pending$() {
+    return combineLatest([this._pending$, this._childrenPending$]).pipe(
+      map(([p, cp]) => p || cp),
+      distinctUntilChanged(),
+    );
+  }
+  get dirty$() {
+    return combineLatest([this._dirty$, this._childrenDirty$]).pipe(
+      map(([d, cd]) => d || cd),
+      distinctUntilChanged(),
+    );
+  }
+  get touched$() {
+    return combineLatest([this._touched$, this._childrenTouched$]).pipe(
+      map(([t, ct]) => t || ct),
+      distinctUntilChanged(),
+    );
   }
   get errors$() {
-    return this._errors$;
+    return this._errors$.pipe(distinctUntilChanged());
   }
 
   constructor(value: TValue, opts: FieldControlOptions<TValue, TFlags> = {}) {
     super(opts);
-    this.value = value;
+    this._value$ = new BehaviorSubject(value);
     this.initialValue = value;
-    this.status = {
-      valid: true,
-      disabled: false,
-      pending: false,
-      dirty: false,
-      touched: false,
-    };
 
-    this._value$ = new BehaviorSubject(this.value);
-    this._status$ = new BehaviorSubject(this.status);
-
-    if (opts.status) {
-      this.setStatus(opts.status);
+    if (opts.dirty !== undefined) {
+      this.setDirty(opts.dirty);
+    }
+    if (opts.touched !== undefined) {
+      this.setTouched(opts.touched);
+    }
+    if (opts.disabled !== undefined) {
+      this.setDisabled(opts.disabled);
     }
     if (opts.disablers) {
       this.setDisablers(opts.disablers);
@@ -253,64 +341,49 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
     if (opts.triggers) {
       this.setTriggers(opts.triggers);
     }
-
-    this._errors$ = combineLatest([this._validators$, this._initialized$, this._value$]).pipe(
-      map(([v]) => v),
-      map(AR.map(v => toObservable(v(this)).pipe(startWith(null)))),
-      switchMap(obs => (obs.length ? combineLatest(obs) : of([]))),
-      map(AR.filter(notNullish)),
-      map(msgs => {
-        if (msgs.length) {
-          return msgs.reduce((acc, m) => ({ ...acc, ...m }), {});
-        }
-        return null;
-      }),
-      distinctUntilChanged(),
-      shareReplay(),
-    );
-
-    this._innerStatus$ = combineLatest([this._disablers$, this._initialized$]).pipe(
-      map(([v]) => v),
-      extractSources<FieldControl<TValue, TFlags>, TFlags, boolean>(this),
-      switchMap(v => combineLatest([this._status$, this._errors$, v])),
-      map(([status, errors, disabled]) => ({
-        ...status,
-        valid: !errors,
-        disabled: status.disabled || disabled.some(Boolean),
-      })),
-      shareReplay(),
-    );
+    if (opts.validators) {
+      this.setValidators(opts.validators);
+    }
 
     this.fieldReady();
   }
 
-  setValidators = (validators: Validator<FieldControl<TValue, TFlags>>[]) => {
-    this._validators$.next(validators);
-  };
-
-  setDisabled(disabled: boolean) {
-    this.setDisablers([() => disabled]);
+  setDirty(dirty: boolean) {
+    this._dirty$.next(dirty);
+    this.update();
   }
 
-  setDisablers(disablers: Disabler<FieldControl<TValue, TFlags>>[]) {
-    this._disablers$.next(disablers);
+  setTouched(touched: boolean) {
+    this._touched$.next(touched);
+    this.update();
+  }
+
+  setDisabled(disabled: boolean) {
+    this.setDisablers([() => of(disabled)]);
   }
 
   setTriggers(triggers: Trigger<FieldControl<TValue, TFlags>>[]) {
-    this._triggers$.next(triggers);
+    this.triggers = triggers;
+    this.trigger();
   }
 
-  setStatus = (status: Partial<AbstractStatus>) => {
-    const updated = { ...this.status, ...status } as AbstractStatus;
-    this.status = updated;
-    this.update();
-  };
+  setDisablers(disablers: Disabler<FieldControl<TValue, TFlags>>[]) {
+    this.disablers = disablers;
+    this.updateDisablers();
+  }
+
+  setValidators(validators: Validator<FieldControl<TValue, TFlags>>[]) {
+    this.validators = validators;
+    this.validate();
+  }
 
   setValue = (value: TValue) => {
-    this.value = value;
-    const triggers = this._triggers$.getValue();
-    this.executeTriggers();
-    this.setStatus({ dirty: true, touched: true });
+    this._value$.next(value);
+    this._dirty$.next(true);
+    this._touched$.next(true);
+    this.validate();
+    this.trigger();
+    this.update();
   };
 
   patchValue = (value: TValue) => {
@@ -318,20 +391,56 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   };
 
   reset = () => {
-    this.value = this.initialValue;
-    this.setStatus({ dirty: false, touched: false });
+    this._value$.next(this.initialValue);
+    this._dirty$.next(false);
+    this._touched$.next(false);
+    this.validate();
+    this.trigger();
+    this.update();
   };
 
-  executeTriggers() {
-    if (this.triggerSub) {
-      this.triggerSub.unsubscribe();
-    }
-    this.triggerSub = this._triggers$
+  validate() {
+    this.validatorSub?.unsubscribe();
+    this.validatorSub = combineLatest([this._enabled$, this._initialized$])
       .pipe(
-        extractSources<FieldControl<TValue, TFlags>, TFlags, void>(this),
-        switchMap(v => v),
+        tap(() => this._pending$.next(true)),
+        switchMap(() => extractSources<FieldControl<TValue, TFlags>, TFlags, Messages | null>(this, this.validators)),
+        map(msgs => msgs.filter(Boolean)),
+        map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
+        finalize(() => this._pending$.next(false)),
+        catchError(e => {
+          this._pending$.next(false);
+          throw e;
+        }),
+        first(),
+      )
+      .subscribe(errors => {
+        this._errors$.next(errors);
+        this.update();
+      });
+  }
+
+  protected trigger() {
+    this.triggerSub?.unsubscribe();
+    this.triggerSub = this._initialized$
+      .pipe(
+        switchMap(() => extractSources<FieldControl<TValue, TFlags>, TFlags, void>(this, this.triggers)),
+        first(),
       )
       .subscribe();
+  }
+
+  protected updateDisablers() {
+    this.disablerSub?.unsubscribe();
+    this.disablerSub = this._initialized$
+      .pipe(
+        switchMap(() => extractSources<FieldControl<TValue, TFlags>, TFlags, boolean>(this, this.disablers)),
+        map(disableds => disableds.some(Boolean)),
+      )
+      .subscribe(disabled => {
+        this._disabled$.next(disabled);
+        this.update();
+      });
   }
 
   get(path: Array<string | number> | string): FieldControl<TValue, TFlags> | null {
@@ -343,18 +452,20 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
       return;
     }
 
-    this.status = this.children.reduce(
+    const status = this.children.reduce(
       (acc, c) => ({
-        valid: acc.valid || c.status.valid,
-        disabled: acc.disabled || c.status.disabled,
-        pending: acc.pending || c.status.pending,
-        dirty: acc.dirty || c.status.dirty,
-        touched: acc.touched || c.status.touched,
+        dirty: acc.dirty || c.dirty,
+        pending: acc.pending || c.pending,
+        touched: acc.touched || c.touched,
+        valid: acc.valid && c.valid,
       }),
-      this.status,
+      { dirty: false, pending: false, touched: false, valid: true },
     );
-    this._value$.next(this.value);
-    this._status$.next(this.status);
+    this._childrenDirty$.next(status.dirty);
+    this._childrenPending$.next(status.pending);
+    this._childrenTouched$.next(status.touched);
+    this._childrenValid$.next(status.valid);
+    this._parentDisabled$.next(this._parent?.disabled ?? false);
     super.update();
   }
 
@@ -373,12 +484,24 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   }
 
   dispose() {
-    this._triggers$.complete();
-    this._disablers$.complete();
-    this._validators$.complete();
+    this.triggerSub?.unsubscribe();
+    this.disablerSub?.unsubscribe();
+    this.validatorSub?.unsubscribe();
+
     this._value$.complete();
-    this._status$.complete();
+    this._disabled$.complete();
+    this._pending$.complete();
+    this._dirty$.complete();
+    this._touched$.complete();
+    this._errors$.complete();
+    this._childrenDirty$.complete();
+    this._childrenPending$.complete();
+    this._childrenTouched$.complete();
+    this._childrenValid$.complete();
+    this._parentDisabled$.complete();
+
     super.dispose();
+    this.children.forEach(c => c.dispose());
   }
 
   protected itemReady() {}
@@ -411,7 +534,6 @@ export class GroupControl<
 > extends FieldControl<TValue, TFlags> {
   constructor(public controls: TControls, opts: FieldControlOptions<TValue, TFlags> = {}) {
     super(reduceControls<TValue, TFlags>(controls), opts);
-    this.value = reduceControls<TValue, TFlags>(controls);
     this.controls = controls;
     this.children.forEach(control => this.registerControl(control as TControls[keyof TControls]));
 
@@ -440,7 +562,9 @@ export class GroupControl<
     });
   };
 
-  reset = () => this.children.forEach(control => control.reset());
+  reset = () => {
+    this.children.forEach(control => control.reset());
+  };
 
   update() {
     if (!this.initialized) {
@@ -448,7 +572,6 @@ export class GroupControl<
     }
 
     const value = reduceControls<TValue, TFlags>(this.controls);
-    this.value = value;
     this._value$.next(value);
     super.update();
   }
@@ -550,7 +673,8 @@ export class ArrayControl<
 
   clear() {
     this.controls.splice(0);
-    this.setStatus({ dirty: true, touched: true });
+    this._dirty$.next(true);
+    this._touched$.next(true);
   }
 
   update() {
@@ -559,7 +683,6 @@ export class ArrayControl<
     }
 
     const value = this.controls.map(control => control.value);
-    this.value = value;
     this._value$.next(value);
     super.update();
   }

@@ -3,8 +3,8 @@ import { Meta, Story } from "@storybook/react/types-6-0";
 import React, { useEffect, useState } from "react";
 import { Observable, of } from "rxjs";
 import { tap } from "rxjs/operators";
-import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
-import { AbstractFlags, FieldControl, GroupControl, ItemControl, Messages } from "../lib/controls";
+import { AbstractFlags, FieldConfig, GroupConfig, ItemConfig, Messages } from "../lib/configs";
+import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
 import { ExecutableDefinition } from "../lib/executable";
 import { BaseItemConfig } from "../lib/primitives";
 import { FieldTypeMap } from "../lib/typing";
@@ -12,33 +12,33 @@ import { bundleConfig, ConfigBundle } from "../lib/visitor";
 
 const registry = {
   messagers: {
-    static(config: ItemConfig<any, any>, control: ItemControl<any>, { message }: { message: string }) {
-      return of({ static: { message } });
+    static(config: ItemConfig<any, any>, { message }: { message: string }, control: ItemControl<any>) {
+      return () => of({ static: { message } });
     },
   },
   triggers: {
     autofill(
-      source: Observable<any>,
       config: BaseItemConfig,
       { field, pattern, replace }: { field: string; pattern?: RegExp | string; replace?: string },
       control: FieldControl<any, any>,
     ) {
       const regex = pattern && replace ? (typeof pattern === "string" ? new RegExp(pattern) : pattern) : undefined;
-      return control.value$.pipe(
-        tap(() => {
-          const dependent = control.root.get(field);
-          console.log({ field, pattern, replace, dependent });
-          if (dependent) {
-            const value = typeof control.value === "string" ? control.value : "";
-            dependent.setValue(regex && replace ? value.replace(regex, replace) : value);
-          }
-        }),
-      );
+      return () =>
+        control.value$.pipe(
+          tap(() => {
+            const dependent = control.root.get(field);
+            console.log({ field, pattern, replace, dependent });
+            if (dependent) {
+              const value = typeof control.value === "string" ? control.value : "";
+              dependent.setValue(regex && replace ? value.replace(regex, replace) : value);
+            }
+          }),
+        );
     },
   },
   flags: {
-    static(config: any, control: any, { value }: { value: boolean }) {
-      return of(value);
+    static(config: any, { value }: { value: boolean }, control: any) {
+      return () => of(value);
     },
     pants: {} as any,
   },
@@ -75,13 +75,7 @@ interface MessageConfig extends ItemConfig<CustomRegistry, AbstractFlags> {
 
 type CustomConfigs = FormConfig | TextConfig | ButtonConfig | MessageConfig;
 
-interface CustomConfigsTypes extends FieldTypeMap<CustomConfigs> {
-  string: { type: "text" };
-  number: never;
-  boolean: never;
-  array: never;
-  null: never;
-}
+type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, never, never, never>;
 
 const ComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -99,9 +93,6 @@ function TypedForm() {
         label: "First Name",
         type: "text",
         name: "firstName",
-        flags: {
-          hidden: [],
-        },
         triggers: [{ name: "autofill", params: { field: "autofill", pattern: "^(.*)", replace: "$1 - autofill" } }],
       },
       { label: "Last Name", type: "text", name: "lastName" },
@@ -158,10 +149,8 @@ function Text({ config, control }: ConfigBundle<FieldControl<string | null>, Tex
   const [disabled, setDisabled] = useState(false);
 
   useEffect(() => {
-    control.value$.subscribe(v => setValue(v));
-    control.status$.subscribe(s => {
-      setDisabled(s.disabled);
-    });
+    control.value$.subscribe(setValue);
+    control.disabled$.subscribe(setDisabled);
   }, []);
 
   return (
