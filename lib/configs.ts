@@ -1,5 +1,4 @@
-import { Observable } from "rxjs";
-import { ExecutableDefinition, ExecutableRegistry, ObservableExecutor } from "./executable";
+import { ExecutableDefinition, ExecutableRegistry, Executor, ObservableExecutor } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldDataTypeDefinition } from "./typing";
 
@@ -14,17 +13,17 @@ export type AbstractFlags = Record<string, boolean>;
 
 export interface ItemConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags> extends BaseItemConfig {
   flags?: {
-    [flag in keyof TFlags]: readonly ExecutableDefinition<TRegistry["flags"], Observable<boolean>>[];
+    [flag in keyof TFlags]: readonly ExecutableDefinition<TRegistry["flags"], ObservableExecutor<any, boolean>>[];
   };
-  triggers?: readonly ExecutableDefinition<TRegistry["triggers"], Observable<void>>[];
-  messagers?: readonly ExecutableDefinition<TRegistry["messagers"], Observable<Messages | null>>[];
+  messagers?: readonly ExecutableDefinition<TRegistry["messagers"], ObservableExecutor<any, Messages | null>>[];
 }
 
 export interface FieldConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags>
   extends ItemConfig<TRegistry, TFlags>,
     BaseFieldConfig {
-  validators?: readonly ExecutableDefinition<TRegistry["validators"], ObservableExecutor<any, Messages | null>>[];
+  triggers?: readonly ExecutableDefinition<TRegistry["triggers"], Executor<any, void>>[];
   disablers?: readonly ExecutableDefinition<TRegistry["flags"], ObservableExecutor<any, boolean>>[];
+  validators?: readonly ExecutableDefinition<TRegistry["validators"], Executor<any, Messages | null>>[];
   dataType?: FieldDataTypeDefinition;
 }
 

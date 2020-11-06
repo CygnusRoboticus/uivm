@@ -73,21 +73,15 @@ type ExecutableService<TService = {}, TValue = unknown> =
 // This could be codegolf'd into more generic types, but meh
 // @see https://github.com/microsoft/TypeScript/issues/28339
 // @see https://github.com/Microsoft/TypeScript/issues/25760
-type WithOptional<T> = Pick<T, RequiredKeys<T>> & Partial<Pick<T, OptionalKeys<T>>>;
+export type WithOptional<T> = Pick<T, RequiredKeys<T>> & Partial<Pick<T, OptionalKeys<T>>>;
 
 export type ExecutableDefinition<TService, TValue> = {
   [k in keyof TService]: {
-    name: TService[k] extends (...args: any) => TValue ? k : never;
+    name: TService[k] extends (config: BaseItemConfig, control: BaseControl, params: {}) => TValue ? k : never;
   } & WithOptional<{
-    params: TService[k] extends (...args: any) => TValue ? Parameters<TService[k]>[2] : never;
-  }>;
-}[keyof TService];
-
-export type ExecutableTriggerDefinition<TService, TValue> = {
-  [k in keyof TService]: {
-    name: TService[k] extends (...args: any) => TValue ? k : never;
-  } & WithOptional<{
-    params: TService[k] extends (...args: any) => TValue ? Parameters<TService[k]>[1] : never;
+    params: TService[k] extends (config: BaseItemConfig, control: BaseControl, params: {}) => TValue
+      ? Parameters<TService[k]>[2]
+      : never;
   }>;
 }[keyof TService];
 
@@ -114,6 +108,6 @@ export interface OptionMulti<T = unknown, U = unknown> {
 export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;
 
 export interface SearchResolver<TValue, TParams extends object> {
-  search(subject: Observable<{ search: string; params: TParams }>): Observable<Option<TValue>[]>;
+  search(search: string, params: TParams): Observable<Option<TValue>[]>;
   resolve(value: TValue[], params: TParams): Promise<Option<TValue>[]>;
 }

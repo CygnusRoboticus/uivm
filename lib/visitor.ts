@@ -103,7 +103,7 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
         .map(def => {
           const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
           const params = (def as any).params;
-          return method ? method(config, params, control) : null;
+          return method ? method(config, control, params) : null;
         })
         .filter(notNullish)
         .map(s => (c: ItemControl<TFlags>) => toObservable(s(c)).pipe(map(v => [key, v] as [keyof TFlags, boolean])));
@@ -115,7 +115,7 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
       .map(def => {
         const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "messagers", def as any);
         const params = (def as any).params;
-        return method ? method(config, params, control) : null;
+        return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
@@ -130,7 +130,7 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
       .map(def => {
         const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
         const params = (def as any).params;
-        return method ? method(config, params, control) : null;
+        return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
@@ -138,7 +138,7 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
       .map(def => {
         const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "validators", def as any);
         const params = (def as any).params;
-        return method ? method(config, params, control) : null;
+        return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
@@ -146,7 +146,7 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
       .map(def => {
         const method = getRegistryMethod<TRegistry, void, TFlags>(registry, "triggers", def as any);
         const params = (def as any).params;
-        return method ? method(config, params, control) : null;
+        return method ? method(config, control, params) : null;
       })
       .filter(notNullish);
 
@@ -157,14 +157,16 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
 }
 
 export interface ConfigBundle<
+  T extends TConfig,
   TControl extends ItemControl<TFlags>,
   TConfig extends BaseItemConfig,
   TRegistry extends ExecutableRegistry = ExecutableRegistry,
   TFlags extends AbstractFlags = AbstractFlags
 > {
+  registry: TRegistry;
   control: TControl;
-  config: TConfig;
-  children: ConfigBundle<ItemControl<TFlags>, TConfig, TRegistry, TFlags>[];
+  config: T;
+  children: ConfigBundle<TConfig, ItemControl<TFlags>, TConfig, TRegistry, TFlags>[];
 }
 
 export function bundleConfig<
@@ -193,7 +195,7 @@ export function bundleConfig<
     TConfig,
     TRegistry,
     TFlags
-  >(config, visitor);
+  >(config, registry, visitor);
   // @ts-ignore
   completeConfig2(bundle, registry, bundle, visitor);
   return bundle;
@@ -220,9 +222,9 @@ function completeConfig2<
   TRegistry extends ExecutableRegistry,
   TFlags extends AbstractFlags
 >(
-  bundle: ConfigBundle<ItemControl<TFlags>, TConfig, TRegistry, TFlags>,
+  bundle: ConfigBundle<TConfig, ItemControl<TFlags>, TConfig, TRegistry, TFlags>,
   registry: TRegistry,
-  rootBundle: ConfigBundle<GroupControl<{}, {}, TFlags>, TConfig, TRegistry, TFlags>,
+  rootBundle: ConfigBundle<TConfig, GroupControl<{}, {}, TFlags>, TConfig, TRegistry, TFlags>,
   visitor: Visitor<TConfig, TRegistry, TFlags>,
 ) {
   const { config, control, children } = bundle;
@@ -245,14 +247,22 @@ function bundleConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends ExecutableRegistry,
   TFlags extends AbstractFlags
->(config: TConfig, visitor: Visitor<TConfig, TRegistry, TFlags>): ConfigBundle<TControl, TConfig, TRegistry, TFlags> {
+>(
+  config: TConfig,
+  registry: TRegistry,
+  visitor: Visitor<TConfig, TRegistry, TFlags>,
+): ConfigBundle<TConfig, TControl, TConfig, TRegistry, TFlags> {
   if (isGroupConfig<TConfig>(config)) {
     const items = config.fields.map(f => {
       if (isFieldConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, visitor);
+        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, registry, visitor);
         return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
       } else if (isGroupConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>({ ...f, name: "group" }, visitor);
+        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(
+          { ...f, name: "group" },
+          registry,
+          visitor,
+        );
         return {
           controls: {
             ...(bundle.control as GroupControl<{}, {}, TFlags>).controls,
@@ -261,7 +271,7 @@ function bundleConfig2<
           items: [bundle],
         };
       }
-      const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, visitor);
+      const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, registry, visitor);
       return { controls: {}, config: f, items: [bundle] };
     });
 
@@ -270,26 +280,26 @@ function bundleConfig2<
 
     if (isArrayConfig<TConfig>(config)) {
       const control = visitor.arrayInit(config as any, controls);
-      return { config, control: control as any, children };
+      return { registry, config, control: control as any, children };
     } else if (isFieldConfig<TConfig>(config)) {
       const control = visitor.groupInit(
         config as any,
         controls,
         children.map(c => c.control),
       );
-      return { config, control: control as any, children };
+      return { registry, config, control: control as any, children };
     } else {
       const control = visitor.itemInit(
         config as any,
         children.map(c => c.control),
       );
-      return { config, control: control as any, children };
+      return { registry, config, control: control as any, children };
     }
   } else if (isFieldConfig<TConfig>(config)) {
     const control = visitor.fieldInit(config as any);
-    return { config, control: control as any, children: [] };
+    return { registry, config, control: control as any, children: [] };
   }
 
   const control = visitor.itemInit(config as any, []);
-  return { config, control: control as any, children: [] };
+  return { registry, config, control: control as any, children: [] };
 }

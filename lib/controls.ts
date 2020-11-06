@@ -517,7 +517,7 @@ export class FieldControl<TValue, TFlags extends AbstractFlags = AbstractFlags> 
   }
 }
 
-export type ArrayType<T> = T extends Array<infer R> ? R : any;
+export type ArrayType<T> = T extends Array<infer R> ? R : never;
 
 export type KeyValueControls<TValue extends Obj, TFlags extends AbstractFlags> = {
   [k in keyof TValue]: FieldControl<TValue[k], TFlags>;
