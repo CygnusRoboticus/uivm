@@ -1,5 +1,5 @@
-import { AbstractFlags } from "./configs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { AbstractHints } from "./controls.types";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export enum FieldDataType {
@@ -125,7 +125,7 @@ type FieldControlType<
   T extends TConfig,
   TConfig extends BaseFieldConfig,
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TFlags extends AbstractFlags,
+  THints extends AbstractHints,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -135,25 +135,25 @@ type FieldControlType<
   ? ArrayControl<
       // @ts-ignore
       FormValue<T[FK], TConfig, TTypes>,
-      FormControls<T[FK], TConfig, TTypes, TFlags>,
-      TFlags
+      FormControls<T[FK], TConfig, TTypes, THints>,
+      THints
     >
   : T extends BaseFieldConfig
   ? T extends BaseGroupConfig<TConfig>
     ? GroupControl<
         // @ts-ignore
         FormValue<T[FK], TConfig, TTypes>,
-        FormControls<T[FK], TConfig, TTypes, TFlags>,
-        TFlags
+        FormControls<T[FK], TConfig, TTypes, THints>,
+        THints
       >
-    : FieldControl<FieldValue<T, TConfig, TTypes>, TFlags>
-  : ItemControl<TFlags>;
+    : FieldControl<FieldValue<T, TConfig, TTypes>, THints>
+  : ItemControl<THints>;
 
 type MappedControls<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TFlags extends AbstractFlags,
+  THints extends AbstractHints,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -164,9 +164,9 @@ type MappedControls<
     [i in keyof T]: {
       [j in T[i] extends BaseFieldConfig ? T[i][NK] : EK]: T[i] extends BaseFieldConfig
         ? // @ts-ignore
-          FieldControlType<T[i], TConfig, TTypes, TFlags>
+          FieldControlType<T[i], TConfig, TTypes, THints>
         : T[i] extends BaseGroupConfig<TConfig>
-        ? FormControls<T[i][FK], TConfig, TTypes, TFlags>
+        ? FormControls<T[i][FK], TConfig, TTypes, THints>
         : never;
     };
   }
@@ -176,15 +176,15 @@ export type FormControls<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TFlags extends AbstractFlags,
+  THints extends AbstractHints,
   TS = unknown,
   TN = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
 > = UnionToIntersection<
-  | Exclude<MappedControls<T, TConfig, TTypes, TFlags>[number], { [k in EK]: unknown }>
-  | DeepEmptyFlatten<MappedControls<T, TConfig, TTypes, TFlags>[number]>
+  | Exclude<MappedControls<T, TConfig, TTypes, THints>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedControls<T, TConfig, TTypes, THints>[number]>
 >;
 
 // @see https://medium.com/@flut1/deep-flatten-typescript-types-with-finite-recursion-cb79233d93ca
@@ -210,7 +210,7 @@ export type FormControl<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TFlags extends AbstractFlags = AbstractFlags,
+  THints extends AbstractHints = AbstractHints,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -219,6 +219,6 @@ export type FormControl<
 > = GroupControl<
   // @ts-ignore
   FormValue<T, TConfig, TTypes>,
-  FormControls<T, TConfig, TTypes, TFlags>,
-  TFlags
+  FormControls<T, TConfig, TTypes, THints>,
+  THints
 >;

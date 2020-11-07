@@ -16,6 +16,9 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
         type: "message",
         chrome: "info",
         messagers: [{ name: "static", params: { message: "You should enter 'John Wick'" } }],
+        hints: {
+          error: [{ name: "field", params: { field: "firstName", value: "John" } }],
+        },
       },
       {
         type: "formGroup",
@@ -34,7 +37,7 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
         label: "Movie",
         type: "text",
         name: "movie",
-        flags: {
+        hints: {
           hidden: [{ name: "field", params: { field: "lastName", value: "Wick" } }],
         },
       },
@@ -60,19 +63,21 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
       { type: "button", label: "Click", trigger: { name: "alert", params: { message: "I'm an alert alright" } } },
     ],
     // };
+    // const a = {
+    //   a: 1,
   } as const;
 
   const [bundle] = useState(() =>
     bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry),
   );
-  const [value, setValue] = useState(() => bundle.control.value);
+  const [state, setState] = useState(() => bundle.control.state);
   useEffect(() => {
     bundle.control.patchValue({
       firstName: "John",
       lastName: "Wick",
       movie: "Parabellum",
     });
-    bundle.control.value$.subscribe(setValue);
+    bundle.control.state$.subscribe(setState);
     return () => bundle.control.dispose();
   }, []);
 
@@ -80,7 +85,7 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
     <>
       <FieldsComponent children={[bundle]}></FieldsComponent>
 
-      <pre>{JSON.stringify(value, null, 2)}</pre>
+      <pre>{JSON.stringify(state, null, 2)}</pre>
     </>
   );
 }

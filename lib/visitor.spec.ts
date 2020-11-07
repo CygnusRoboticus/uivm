@@ -1,8 +1,8 @@
-import { ExecutableRegistry } from "./executable";
+import { FuzzyExecutableRegistry } from "./executable";
 import { bundleConfig } from "./visitor";
 
 describe("#bundleConfig", () => {
-  const registry = {} as ExecutableRegistry;
+  const registry = {} as FuzzyExecutableRegistry;
 
   test("item config", () => {
     const config = {

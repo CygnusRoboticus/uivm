@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
-import { AbstractFlags, Messages } from "../lib/configs";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
+import { AbstractHints, Trigger } from "../lib/controls.types";
 import { Executable } from "../lib/executable";
-import { ConfigBundle, getRegistryMethod } from "../lib/visitor";
+import { ConfigBundle, getRegistryMethod, getRegistryValue } from "../lib/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
@@ -62,19 +62,12 @@ export function Text({
   config,
   control,
 }: ConfigBundle<TextConfig, FieldControl<string | null>, CustomConfigs, CustomRegistry>) {
-  const [value, setValue] = useState<string | null>(null);
-  const [disabled, setDisabled] = useState(false);
-  const [errors, setErrors] = useState<Messages | null>(null);
-  const [flags, setFlags] = useState<AbstractFlags>({});
-
+  const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
-    control.value$.subscribe(setValue);
-    control.disabled$.subscribe(setDisabled);
-    control.errors$.subscribe(setErrors);
-    control.flags$.subscribe(setFlags);
+    control.state$.subscribe(setState);
   }, []);
 
-  return flags.hidden ? null : (
+  return hints.hidden ? null : (
     <SemanticForm.Field
       // id=""
       required={config.validators?.some(v => v.name === "required")}
@@ -99,17 +92,12 @@ export function Checkbox({
   config,
   control,
 }: ConfigBundle<CheckboxConfig, FieldControl<boolean>, CustomConfigs, CustomRegistry>) {
-  const [value, setValue] = useState<boolean | null>(null);
-  const [disabled, setDisabled] = useState(false);
-  const [errors, setErrors] = useState<Messages | null>(null);
-
+  const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
-    control.value$.subscribe(setValue);
-    control.disabled$.subscribe(setDisabled);
-    control.errors$.subscribe(setErrors);
+    control.state$.subscribe(setState);
   }, []);
 
-  return (
+  return hints.hidden ? null : (
     <SemanticForm.Checkbox
       required={config.validators?.some(v => v.name === "required")}
       label={config.label}
@@ -131,28 +119,23 @@ export function Select({
   config,
   control,
 }: ConfigBundle<SelectConfig<unknown>, FieldControl<unknown | unknown[]>, CustomConfigs, CustomRegistry>) {
-  const [value, setValue] = useState<boolean | null>(null);
-  const [disabled, setDisabled] = useState(false);
-  const [errors, setErrors] = useState<Messages | null>(null);
-
+  const [state, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
-    control.value$.subscribe(setValue);
-    control.disabled$.subscribe(setDisabled);
-    control.errors$.subscribe(setErrors);
+    control.state$.subscribe(setState);
   }, []);
 
   return <>asdf</>;
 }
 
 export function Message({ config, control }: ConfigBundle<MessageConfig, ItemControl, CustomConfigs, CustomRegistry>) {
-  const [messages, setMessage] = useState<Messages | null>();
+  const [{ hints, messages }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
-    control.messages$.subscribe(setMessage);
+    control.state$.subscribe(setState);
   }, []);
 
   const arrayMessages = Object.values(messages ?? {}).map(m => m.message);
 
-  return (
+  return hints.hidden ? null : (
     <SemanticMessage
       header={config.title}
       content={arrayMessages.length === 1 ? arrayMessages[0] : null}
@@ -182,14 +165,23 @@ export function Button({
   control,
   registry,
 }: ConfigBundle<ButtonConfig, ItemControl, CustomConfigs, CustomRegistry>) {
-  const [trigger] = useState<Executable<ButtonConfig, {}, ItemControl>>(() =>
-    getRegistryMethod(registry, "triggers", config.trigger),
+  const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
+  useEffect(() => {
+    control.state$.subscribe(setState);
+  }, []);
+
+  const [trigger] = useState(() =>
+    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>>(
+      registry,
+      "triggers",
+      config,
+      control,
+      config.trigger,
+    ),
   );
-  return (
-    <SemanticButton
-      type={config.submit ? "submit" : "button"}
-      onClick={() => trigger(config, control, config.trigger.params)(control)}
-    >
+
+  return hints.hidden ? null : (
+    <SemanticButton type={config.submit ? "submit" : "button"} onClick={() => trigger(control)}>
       {config.label}
     </SemanticButton>
   );

@@ -1,70 +1,76 @@
-import { of } from "rxjs";
-import { map, tap } from "rxjs/operators";
-import { FieldConfig, ItemConfig } from "../lib/configs";
+import { combineLatest, of } from "rxjs";
+import { filter, map, switchMap, tap } from "rxjs/operators";
 import { FieldControl, ItemControl } from "../lib/controls";
-import { Option } from "../lib/executable";
+import { ExecutableRegistry, Option } from "../lib/executable";
 import { BaseItemConfig } from "../lib/primitives";
-
-class Messagers {
-  static(config: ItemConfig<any, any>, control: ItemControl<any>, { message }: { message: string }) {
-    return (c: any) => of({ static: { message } });
-  }
-}
+import { isFieldControl, isGroupControl } from "../lib/utils";
+import { CustomConfigs } from "./react.configs";
 
 export const registry = {
-  messagers: new Messagers(),
+  messagers: {
+    static(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
+      return (c: ItemControl) => of({ static: { message } });
+    },
+  },
   triggers: {
     autofill(
       config: BaseItemConfig,
-      control: FieldControl<any, any>,
+      control: ItemControl,
       { field, pattern, replace }: { field: string; pattern?: RegExp | string; replace?: string },
     ) {
       const regex = pattern && replace ? (typeof pattern === "string" ? new RegExp(pattern) : pattern) : undefined;
-      return (c: any) =>
-        control.value$.pipe(
-          tap(() => {
-            const dependent = control.root.get(field);
-            console.log({ field, pattern, replace, dependent });
+      return (c: FieldControl<unknown>) => {
+        return combineLatest([c.root$.pipe(filter(isGroupControl)), c.value$]).pipe(
+          tap(([root]) => {
+            const dependent = root.get(field);
             if (dependent) {
-              const value = typeof control.value === "string" ? control.value : "";
+              const value = typeof c.value === "string" ? c.value : "";
               dependent.setValue(regex && replace ? value.replace(regex, replace) : value);
             }
           }),
           map(() => {}),
         );
+      };
     },
-    alert(config: any, control: any, { message }: { message: string }) {
-      return () => alert(message);
+    alert(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
+      return (c: ItemControl) => alert(message);
     },
   },
-  flags: {
-    static(config: any, control: any, { value }: { value: boolean }) {
-      return (c: any) => of(value);
+  hints: {
+    static(config: BaseItemConfig, control: ItemControl, { value }: { value: boolean }) {
+      return (c: ItemControl) => of(value);
     },
-    field(config: any, control: any, { field, value }: { field: string; value: unknown }) {
-      return () => {
-        const root = control.root;
-        const dependent = root.get(field);
-        if (dependent) {
-          return dependent.value$.pipe(map(v => v === value));
-        }
-        return false;
+    field(config: BaseItemConfig, control: ItemControl, { field, value }: { field: string; value: unknown }) {
+      return (c: ItemControl) => {
+        return c.root$.pipe(
+          filter(isGroupControl),
+          switchMap(root => {
+            const dependent = root.get(field);
+            if (dependent) {
+              return dependent.value$.pipe(map(v => v === value));
+            }
+            return of(false);
+          }),
+        );
       };
     },
   },
   validators: {
-    required(config: FieldConfig<any, any>, control: FieldControl<any>, params?: { message?: string }) {
-      return (c: FieldControl<any, any>) => {
+    required(config: BaseItemConfig, control: ItemControl, params?: { message?: string }) {
+      return (c: FieldControl<unknown>) => {
         if (c.value === undefined || c.value === null || c.value === "" || (Array.isArray(c.value) && c.value.length)) {
-          return { required: { message: params.message || "Field is required." } };
+          return { required: { message: params?.message || "Field is required." } };
         }
         return null;
       };
     },
   },
   search: {
-    static(config: FieldConfig<any, any>, control: FieldControl<any>, params: { options: Option[] }) {
-      return () => params.options;
+    static(config: BaseItemConfig, control: ItemControl, params: { options: readonly Option[] }) {
+      return {
+        search: (q: string, c: ItemControl, p: object) => params.options,
+        resolve: (v: any[], c: ItemControl, p: object) => params.options.filter(o => v.includes(o.value)),
+      };
     },
   },
 };

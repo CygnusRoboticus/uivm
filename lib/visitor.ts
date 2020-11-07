@@ -1,156 +1,185 @@
-import { map } from "rxjs/operators";
-import { AbstractFlags, ArrayConfig, FieldConfig, GroupConfig, ItemConfig, Messages } from "./configs";
+import { first, map } from "rxjs/operators";
+import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
-import { Executable, ExecutableDefinition, ExecutableRegistry, ObservableExecutor } from "./executable";
+import { AbstractHints, Disabler, Hinter, ObservableExecutor, Trigger, Validator } from "./controls.types";
+import { Executable, ExecutableDefinition, FuzzyExecutableRegistry, SearchResolver } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish, toObservable } from "./utils";
+import { array as AR } from "fp-ts";
+import { combineLatest } from "rxjs";
 
 export interface Visitor<
   TConfig extends BaseItemConfig,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
 > {
-  itemInit: (config: ItemConfig<TRegistry, TFlags> & TConfig, children: ItemControl<TFlags>[]) => ItemControl<TFlags>;
-  fieldInit: (config: FieldConfig<TRegistry, TFlags> & TConfig) => FieldControl<{}, TFlags>;
+  itemInit: (config: ItemConfig<TRegistry, THints> & TConfig, children: ItemControl<THints>[]) => ItemControl<THints>;
+  fieldInit: (config: FieldConfig<TRegistry, THints> & TConfig) => FieldControl<{}, THints>;
   groupInit: (
-    config: GroupConfig<TConfig, TRegistry, TFlags> & TConfig,
-    bundled: KeyValueControls<{}, TFlags>,
-    children: ItemControl<TFlags>[],
-  ) => GroupControl<{}, {}, TFlags>;
+    config: GroupConfig<TConfig, TRegistry, THints> & TConfig,
+    bundled: KeyValueControls<{}, THints>,
+    children: ItemControl<THints>[],
+  ) => GroupControl<{}, {}, THints>;
   arrayInit: (
-    config: ArrayConfig<TConfig, TRegistry, TFlags> & TConfig,
-    bundled: KeyValueControls<{}, TFlags>,
-  ) => ArrayControl<{}, {}, TFlags>;
+    config: ArrayConfig<TConfig, TRegistry, THints> & TConfig,
+    bundled: KeyValueControls<{}, THints>,
+  ) => ArrayControl<{}, {}, THints>;
 
   itemComplete: (
-    control: ItemControl<TFlags>,
-    config: ItemConfig<TRegistry, TFlags> & TConfig,
-    root: GroupControl<{}, {}, TFlags>,
+    control: ItemControl<THints>,
+    config: ItemConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) => void;
   fieldComplete: (
-    control: FieldControl<TRegistry, TFlags>,
-    config: FieldConfig<TRegistry, TFlags> & TConfig,
-    root: GroupControl<{}, {}, TFlags>,
+    control: FieldControl<TRegistry, THints>,
+    config: FieldConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) => void;
   groupComplete: (
-    control: GroupControl<{}, {}, TFlags>,
-    config: GroupConfig<TConfig, TRegistry, TFlags> & FieldConfig<TRegistry, TFlags> & TConfig,
-    root: GroupControl<{}, {}, TFlags>,
+    control: GroupControl<{}, {}, THints>,
+    config: GroupConfig<TConfig, TRegistry, THints> & FieldConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) => void;
   arrayComplete: (
-    control: ArrayControl<{}, {}, TFlags>,
-    config: ArrayConfig<TConfig, TRegistry, TFlags>,
-    root: GroupControl<{}, {}, TFlags>,
+    control: ArrayControl<{}, {}, THints>,
+    config: ArrayConfig<TConfig, TRegistry, THints>,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) => void;
 }
 
-class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags>
-  implements Visitor<TConfig, TRegistry, TFlags> {
-  itemInit(config: ItemConfig<TRegistry, TFlags> & TConfig) {
-    return new ItemControl<TFlags>();
+class DefaultVisitor<
+  TConfig extends BaseItemConfig,
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
+> implements Visitor<TConfig, TRegistry, THints> {
+  itemInit(config: ItemConfig<TRegistry, THints> & TConfig) {
+    return new ItemControl<THints>();
   }
-  fieldInit(config: FieldConfig<TRegistry, TFlags> & TConfig) {
-    return new FieldControl<any, TFlags>(null);
+  fieldInit(config: FieldConfig<TRegistry, THints> & TConfig) {
+    return new FieldControl<any, THints>(null);
   }
-  groupInit(config: GroupConfig<TConfig, TRegistry, TFlags> & TConfig, bundled: KeyValueControls<{}, TFlags>) {
-    return new GroupControl<{}, {}, TFlags>(bundled);
+  groupInit(config: GroupConfig<TConfig, TRegistry, THints> & TConfig, bundled: KeyValueControls<{}, THints>) {
+    return new GroupControl<{}, {}, THints>(bundled);
   }
-  arrayInit(config: ArrayConfig<TConfig, TRegistry, TFlags> & TConfig, bundled: KeyValueControls<{}, TFlags>) {
-    return new ArrayControl<{}, {}, TFlags>(() => new GroupControl<{}, {}, TFlags>(bundled));
+  arrayInit(config: ArrayConfig<TConfig, TRegistry, THints> & TConfig, bundled: KeyValueControls<{}, THints>) {
+    return new ArrayControl<{}, {}, THints>(() => new GroupControl<{}, {}, THints>(bundled));
   }
 
   itemComplete(
-    control: ItemControl<TFlags>,
-    config: ItemConfig<TRegistry, TFlags> & TConfig,
-    _: GroupControl<{}, {}, TFlags>,
+    control: ItemControl<THints>,
+    config: ItemConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) {
-    this.initItem(control, config, registry);
+    this.initItem(control, parent, config, registry);
   }
   fieldComplete(
-    control: FieldControl<TRegistry, TFlags>,
-    config: FieldConfig<TRegistry, TFlags> & TConfig,
-    _: GroupControl<{}, {}, TFlags>,
+    control: FieldControl<TRegistry, THints>,
+    config: FieldConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) {
-    this.initField(control, config, registry);
+    this.initField(control, parent, config, registry);
   }
   groupComplete(
-    control: GroupControl<{}, {}, TFlags>,
-    config: GroupConfig<TConfig, TRegistry, TFlags> & FieldConfig<TRegistry, TFlags> & TConfig,
-    _: GroupControl<{}, {}, TFlags>,
+    control: GroupControl<{}, {}, THints>,
+    config: GroupConfig<TConfig, TRegistry, THints> & FieldConfig<TRegistry, THints> & TConfig,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) {
-    this.initField(control, config, registry);
+    this.initField(control, parent, config, registry);
   }
   arrayComplete(
-    control: ArrayControl<{}, {}, TFlags>,
-    config: ArrayConfig<TConfig, TRegistry, TFlags>,
-    _: GroupControl<{}, {}, TFlags>,
+    control: ArrayControl<{}, {}, THints>,
+    config: ArrayConfig<TConfig, TRegistry, THints>,
+    parent: GroupControl<{}, {}, THints> | null,
+    root: GroupControl<{}, {}, THints>,
     registry: TRegistry,
   ) {
-    this.initField(control, config, registry);
+    this.initField(control, parent, config, registry);
   }
 
-  initItem(control: ItemControl<TFlags>, config: ItemConfig<TRegistry, TFlags>, registry: TRegistry) {
-    const flags = Object.entries(config.flags ?? {}).reduce((acc, [key, value]) => {
-      const sources = value
-        .map(def => {
-          const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
-          const params = (def as any).params;
-          return method ? method(config, control, params) : null;
-        })
-        .filter(notNullish)
-        .map(s => (c: ItemControl<TFlags>) => toObservable(s(c)).pipe(map(v => [key, v] as [keyof TFlags, boolean])));
+  initItem(
+    control: ItemControl<THints>,
+    parent: GroupControl<{}, {}, THints> | null,
+    config: ItemConfig<TRegistry, THints>,
+    registry: TRegistry,
+  ) {
+    const hints = Object.entries(config.hints ?? {}).reduce((acc, [key, value]) => {
+      const sources = getRegistryValues<
+        typeof registry,
+        typeof config,
+        typeof control,
+        ObservableExecutor<typeof control, boolean>,
+        THints
+      >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints>) =>
+        toObservable(s(c)).pipe(map(v => [key, v] as [keyof THints, boolean])),
+      );
       acc.push(...sources);
       return acc;
-    }, <ObservableExecutor<ItemControl<TFlags>, [keyof TFlags, boolean]>[]>[]);
+    }, <Hinter<ItemControl<THints>, THints>[]>[]);
 
-    const messages = (config.messagers ?? [])
-      .map(def => {
-        const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "messagers", def as any);
-        const params = (def as any).params;
-        return method ? method(config, control, params) : null;
-      })
-      .filter(notNullish);
+    const messages = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      Validator<typeof control>,
+      THints
+    >(registry, "messagers", config, control, (config.messagers ?? []) as any);
 
-    control.setFlaggers(flags);
+    control.setHinters(hints);
     control.setMessagers(messages);
+
+    if (!control.parent && parent) {
+      control.setParent(parent);
+    }
   }
 
-  initField(control: FieldControl<any, TFlags>, config: FieldConfig<TRegistry, TFlags>, registry: TRegistry) {
-    this.initItem(control, config, registry);
+  initField(
+    control: FieldControl<any, THints>,
+    parent: GroupControl<{}, {}, THints> | null,
+    config: FieldConfig<TRegistry, THints>,
+    registry: TRegistry,
+  ) {
+    this.initItem(control, parent, config, registry);
 
-    const disablers = (config.disablers ?? [])
-      .map(def => {
-        const method = getRegistryMethod<TRegistry, boolean, TFlags>(registry, "flags", def as any);
-        const params = (def as any).params;
-        return method ? method(config, control, params) : null;
-      })
-      .filter(notNullish);
+    const disablers = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      Disabler<typeof control>,
+      THints
+    >(registry, "hints", config, control, config.disablers ?? ([] as any));
 
-    const validators = (config.validators ?? [])
-      .map(def => {
-        const method = getRegistryMethod<TRegistry, Messages | null, TFlags>(registry, "validators", def as any);
-        const params = (def as any).params;
-        return method ? method(config, control, params) : null;
-      })
-      .filter(notNullish);
+    const validators = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      Validator<typeof control>,
+      THints
+    >(registry, "validators", config, control, config.validators ?? ([] as any));
 
-    const triggers = (config.triggers ?? [])
-      .map(def => {
-        const method = getRegistryMethod<TRegistry, void, TFlags>(registry, "triggers", def as any);
-        const params = (def as any).params;
-        return method ? method(config, control, params) : null;
-      })
-      .filter(notNullish);
+    const triggers = getRegistryValues<typeof registry, typeof config, typeof control, Trigger<typeof control>, THints>(
+      registry,
+      "triggers",
+      config,
+      control,
+      config.triggers ?? ([] as any),
+    );
 
-    control.setDisablers(disablers as any);
+    control.setDisablers(disablers);
     control.setTriggers(triggers);
     control.setValidators(validators);
   }
@@ -158,24 +187,24 @@ class DefaultVisitor<TConfig extends BaseItemConfig, TRegistry extends Executabl
 
 export interface ConfigBundle<
   T extends TConfig,
-  TControl extends ItemControl<TFlags>,
+  TControl extends ItemControl<THints>,
   TConfig extends BaseItemConfig,
-  TRegistry extends ExecutableRegistry = ExecutableRegistry,
-  TFlags extends AbstractFlags = AbstractFlags
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
+  THints extends AbstractHints = AbstractHints
 > {
   id: string;
   registry: TRegistry;
   control: TControl;
   config: T;
-  children: ConfigBundle<TConfig, ItemControl<TFlags>, TConfig, TRegistry, TFlags>[];
+  children: ConfigBundle<TConfig, ItemControl<THints>, TConfig, TRegistry, THints>[];
 }
 
 export function bundleConfig<
   T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags = AbstractFlags,
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints = AbstractHints,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -184,41 +213,45 @@ export function bundleConfig<
 >(
   config: T,
   registry: TRegistry,
-  visitor: Visitor<TConfig, TRegistry, TFlags> = new DefaultVisitor<TConfig, TRegistry, TFlags>(),
+  visitor: Visitor<TConfig, TRegistry, THints> = new DefaultVisitor<TConfig, TRegistry, THints>(),
 ) {
   const bundle = bundleConfig2<
     GroupControl<
       // @ts-ignore
       FormValue<T["fields"], TConfig, TTypes>,
-      FormControls<T["fields"], TConfig, TTypes, TFlags>,
-      TFlags
+      FormControls<T["fields"], TConfig, TTypes, THints>,
+      THints
     >,
     TConfig,
     TRegistry,
-    TFlags
+    THints
   >(config.type, config, registry, visitor);
-  // @ts-ignore
-  completeConfig2(bundle, registry, bundle, visitor);
+  completeConfig2(bundle, null, bundle, registry, visitor);
   return bundle;
 }
 
 export function getRegistryMethods<
-  TRegistry extends ExecutableRegistry,
-  TValue = unknown,
-  TFlags extends AbstractFlags = AbstractFlags
->(registry: TRegistry, kind: keyof TRegistry, defs: ExecutableDefinition<any, unknown>[]) {
-  return defs.map(def => getRegistryMethod<TRegistry, TValue, TFlags>(registry, kind, def)).filter(notNullish);
+  TRegistry extends FuzzyExecutableRegistry,
+  TValue,
+  THints extends AbstractHints = AbstractHints
+>(registry: TRegistry, kind: keyof TRegistry, defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[]) {
+  return defs
+    .map(def => {
+      const method = getRegistryMethod<TRegistry, TValue, THints>(registry, kind, def);
+      return method ? { method, def } : null;
+    })
+    .filter(notNullish);
 }
 
 export function getRegistryMethod<
-  TRegistry extends ExecutableRegistry,
-  TValue = unknown,
-  TFlags extends AbstractFlags = AbstractFlags
+  TRegistry extends FuzzyExecutableRegistry,
+  TValue,
+  THints extends AbstractHints = AbstractHints
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
-  def: ExecutableDefinition<any, unknown>,
-): Executable<BaseItemConfig, any, ItemControl<TFlags>, TValue, TFlags> | null {
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
+): Executable<BaseItemConfig, ItemControl<THints>, any, TValue, THints> | null {
   const method = (registry[kind] as any)?.[def.name];
   if (method && registry[kind]) {
     return method.bind(registry[kind]);
@@ -226,46 +259,89 @@ export function getRegistryMethod<
   return null;
 }
 
+export function getRegistryValues<
+  TRegistry extends FuzzyExecutableRegistry,
+  TConfig extends BaseItemConfig,
+  TControl extends ItemControl<THints>,
+  TValue,
+  THints extends AbstractHints = AbstractHints
+>(
+  registry: TRegistry,
+  kind: keyof TRegistry,
+  config: TConfig,
+  control: TControl,
+  defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[],
+): TValue[] {
+  const methods = getRegistryMethods<TRegistry, TValue, THints>(registry, kind, defs);
+  return methods.map(({ method, def }) => method(config, control, (def as any).params));
+}
+
+export function getRegistryValue<
+  TRegistry extends FuzzyExecutableRegistry,
+  TConfig extends BaseItemConfig,
+  TControl extends ItemControl<THints>,
+  TValue,
+  THints extends AbstractHints = AbstractHints
+>(
+  registry: TRegistry,
+  kind: keyof TRegistry,
+  config: TConfig,
+  control: TControl,
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
+): TValue | null {
+  const method = getRegistryMethod<TRegistry, TValue, THints>(registry, kind, def);
+  return method ? method(config, control, (def as any).params) : null;
+}
+
 function completeConfig2<
   TConfig extends BaseItemConfig,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
 >(
-  bundle: ConfigBundle<TConfig, ItemControl<TFlags>, TConfig, TRegistry, TFlags>,
+  bundle: ConfigBundle<TConfig, ItemControl<THints>, TConfig, TRegistry, THints>,
+  parentBundle: ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints> | null,
+  rootBundle: ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints>,
   registry: TRegistry,
-  rootBundle: ConfigBundle<TConfig, GroupControl<{}, {}, TFlags>, TConfig, TRegistry, TFlags>,
-  visitor: Visitor<TConfig, TRegistry, TFlags>,
+  visitor: Visitor<TConfig, TRegistry, THints>,
 ) {
   const { config, control, children } = bundle;
-  children.forEach(c => completeConfig2(c, registry, rootBundle, visitor));
+  children.forEach(c =>
+    completeConfig2(
+      c,
+      bundle as ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints>,
+      rootBundle,
+      registry,
+      visitor,
+    ),
+  );
 
   if (isFieldConfig<TConfig>(config)) {
     if (isArrayConfig<TConfig>(config) && control instanceof FieldControl) {
-      visitor.arrayComplete(control as any, config as any, rootBundle.control, registry);
+      visitor.arrayComplete(control as any, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
     } else if (isGroupConfig<TConfig>(config) && control instanceof GroupControl) {
-      visitor.groupComplete(control, config as any, rootBundle.control, registry);
+      visitor.groupComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
     } else if (control instanceof FieldControl) {
-      visitor.fieldComplete(control, config as any, rootBundle.control, registry);
+      visitor.fieldComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
     }
   }
-  visitor.itemComplete(control, config as any, rootBundle.control, registry);
+  visitor.itemComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
 }
 
 function bundleConfig2<
-  TControl extends ItemControl<TFlags>,
+  TControl extends ItemControl<THints>,
   TConfig extends BaseItemConfig,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
 >(
   id: string,
   config: TConfig,
   registry: TRegistry,
-  visitor: Visitor<TConfig, TRegistry, TFlags>,
-): ConfigBundle<TConfig, TControl, TConfig, TRegistry, TFlags> {
+  visitor: Visitor<TConfig, TRegistry, THints>,
+): ConfigBundle<TConfig, TControl, TConfig, TRegistry, THints> {
   if (isGroupConfig<TConfig>(config)) {
     const items = config.fields.map((f, i) => {
       if (isFieldConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(
+        const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
           `${id}-${f.name}`,
           f,
           registry,
@@ -273,7 +349,7 @@ function bundleConfig2<
         );
         return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
       } else if (isGroupConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(
+        const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
           `${id}-${i}`,
           { ...f, name: "group" },
           registry,
@@ -281,13 +357,13 @@ function bundleConfig2<
         );
         return {
           controls: {
-            ...(bundle.control as GroupControl<{}, {}, TFlags>).controls,
+            ...(bundle.control as GroupControl<{}, {}, THints>).controls,
           },
           config: f,
           items: [bundle],
         };
       }
-      const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(`${id}-${i}`, f, registry, visitor);
+      const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(`${id}-${i}`, f, registry, visitor);
       return { controls: {}, config: f, items: [bundle] };
     });
 

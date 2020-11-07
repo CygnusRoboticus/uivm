@@ -1,52 +1,39 @@
 import { FieldControl, ItemControl } from "./controls";
-import { ExecutableDefinition, ExecutableRegistry, Executor, ObservableExecutor } from "./executable";
+import { AbstractHints } from "./controls.types";
+import {
+  FuzzyExecutableRegistry,
+  HinterDefinition,
+  MessagerDefinition,
+  TriggerDefinition,
+  ValidatorDefinition,
+} from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldDataTypeDefinition } from "./typing";
 
-export interface Messages {
-  [key: string]: {
-    message: string;
-    [key: string]: unknown;
+export interface ItemConfig<TRegistry extends FuzzyExecutableRegistry, THints extends AbstractHints>
+  extends BaseItemConfig {
+  hints?: {
+    [flag in keyof THints]: readonly HinterDefinition<TRegistry, ItemControl<THints>, THints>[];
   };
+  messagers?: readonly MessagerDefinition<TRegistry, ItemControl<THints>, THints>[];
 }
 
-export type AbstractFlags = Record<string, boolean>;
-
-export interface ItemConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags> extends BaseItemConfig {
-  flags?: {
-    [flag in keyof TFlags]: readonly ExecutableDefinition<
-      TRegistry["flags"],
-      ObservableExecutor<ItemControl<TFlags>, boolean>
-    >[];
-  };
-  messagers?: readonly ExecutableDefinition<
-    TRegistry["messagers"],
-    ObservableExecutor<ItemControl<TFlags>, Messages | null>
-  >[];
-}
-
-export interface FieldConfig<TRegistry extends ExecutableRegistry, TFlags extends AbstractFlags>
-  extends ItemConfig<TRegistry, TFlags>,
+export interface FieldConfig<TRegistry extends FuzzyExecutableRegistry, THints extends AbstractHints>
+  extends ItemConfig<TRegistry, THints>,
     BaseFieldConfig {
-  triggers?: readonly ExecutableDefinition<TRegistry["triggers"], Executor<FieldControl<any, TFlags>, void>>[];
-  disablers?: readonly ExecutableDefinition<
-    TRegistry["flags"],
-    ObservableExecutor<FieldControl<any, TFlags>, boolean>
-  >[];
-  validators?: readonly ExecutableDefinition<
-    TRegistry["validators"],
-    Executor<FieldControl<any, TFlags>, Messages | null>
-  >[];
+  disablers?: readonly HinterDefinition<TRegistry, FieldControl<unknown, THints>, THints>[];
+  triggers?: readonly TriggerDefinition<TRegistry, FieldControl<unknown, THints>, THints>[];
+  validators?: readonly ValidatorDefinition<TRegistry, FieldControl<unknown, THints>, THints>[];
   dataType?: FieldDataTypeDefinition;
 }
 
 export type GroupConfig<
-  TConfig extends ItemConfig<TRegistry, TFlags>,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags
-> = ItemConfig<TRegistry, TFlags> & BaseGroupConfig<TConfig>;
+  TConfig extends ItemConfig<TRegistry, THints>,
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
+> = ItemConfig<TRegistry, THints> & BaseGroupConfig<TConfig>;
 export type ArrayConfig<
-  TConfig extends ItemConfig<TRegistry, TFlags>,
-  TRegistry extends ExecutableRegistry,
-  TFlags extends AbstractFlags
-> = FieldConfig<TRegistry, TFlags> & BaseArrayConfig<TConfig>;
+  TConfig extends ItemConfig<TRegistry, THints>,
+  TRegistry extends FuzzyExecutableRegistry,
+  THints extends AbstractHints
+> = FieldConfig<TRegistry, THints> & BaseArrayConfig<TConfig>;

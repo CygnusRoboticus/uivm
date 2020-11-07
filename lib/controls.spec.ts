@@ -89,8 +89,8 @@ describe("controls", () => {
     form.dispose();
   });
 
-  test("flags are set from executors", async done => {
-    combineLatest([field1.flags$, form.flags$])
+  test("hints are set from executors", async done => {
+    combineLatest([field1.hints$, form.hints$])
       .pipe(toArray())
       .subscribe(v => {
         expect(v).toEqual([
@@ -101,11 +101,11 @@ describe("controls", () => {
         done();
       });
     const obs = new BehaviorSubject<[string, boolean]>(["hidden", true]);
-    expect(field1.flags).toEqual({});
+    expect(field1.hints).toEqual({});
     await tick();
-    field1.setFlaggers([() => obs]);
+    field1.setHinters([() => obs]);
     await tick();
-    expect(field1.flags).toEqual({ hidden: true });
+    expect(field1.hints).toEqual({ hidden: true });
     obs.next(["hidden", false]);
     await tick();
     form.dispose();

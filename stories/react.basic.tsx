@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Messages } from "../lib/configs";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { Executor, OptionSingle } from "../lib/executable";
+import { Messages, Trigger } from "../lib/controls.types";
+import { OptionSingle } from "../lib/executable";
 import { ConfigBundle, getRegistryMethod, getRegistryMethods } from "../lib/visitor";
 import {
   ButtonConfig,
@@ -66,14 +66,9 @@ export function Text({
   config,
   control,
 }: ConfigBundle<TextConfig, FieldControl<string | null>, CustomConfigs, CustomRegistry>) {
-  const [value, setValue] = useState<string | null>(null);
-  const [disabled, setDisabled] = useState(false);
-  const [errors, setErrors] = useState<Messages | null>(null);
-
+  const [{ value, errors, disabled }, setState] = useState(control.state);
   useEffect(() => {
-    control.value$.subscribe(setValue);
-    control.disabled$.subscribe(setDisabled);
-    control.errors$.subscribe(setErrors);
+    control.state$.subscribe(setState);
   }, []);
 
   return (
@@ -129,15 +124,10 @@ export function Select({
   control,
   registry,
 }: ConfigBundle<SelectConfig<unknown>, FieldControl<string>, CustomConfigs, CustomRegistry>) {
-  const [value, setValue] = useState<string>(null);
-  const [disabled, setDisabled] = useState(false);
-  const [errors, setErrors] = useState<Messages | null>(null);
+  const [{ value, errors, disabled }, setState] = useState(control.state);
   const [options, setOptions] = useState<OptionSingle<string>[]>([]);
-
   useEffect(() => {
-    control.value$.subscribe(setValue);
-    control.disabled$.subscribe(setDisabled);
-    control.errors$.subscribe(setErrors);
+    control.state$.subscribe(setState);
     const searchers = getRegistryMethods(registry, "search", config.options);
   }, []);
 
@@ -145,7 +135,13 @@ export function Select({
     <div>
       {config.label ? <label htmlFor={id}>{config.label}</label> : null}
       <br />
-      <select name={config.name} id={id} value={value} disabled={disabled}>
+      <select
+        name={config.name}
+        id={id}
+        value={value ?? ""}
+        onChange={e => control.setValue(e.currentTarget.value)}
+        disabled={disabled}
+      >
         {options.map((o, i) => (
           <option key={i} value={o.value}>
             {o.label}
@@ -195,7 +191,7 @@ export function Button({
   registry,
 }: ConfigBundle<ButtonConfig, ItemControl, CustomConfigs, CustomRegistry>) {
   const [trigger] = useState(() =>
-    getRegistryMethod<typeof registry, Executor<ItemControl, void>>(registry, "triggers", config.trigger),
+    getRegistryMethod<typeof registry, Trigger<ItemControl>>(registry, "triggers", config.trigger),
   );
   return (
     <button

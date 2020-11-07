@@ -1,45 +1,52 @@
-import { AbstractFlags, FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
+import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
 import { FieldControl, ItemControl } from "../lib/controls";
-import { ExecutableDefinition, Executor, Option } from "../lib/executable";
+import { AbstractHints, Executor } from "../lib/controls.types";
+import { ExecutableDefinition, SearchDefinition } from "../lib/executable";
 import { FieldTypeMap } from "../lib/typing";
 import { CustomRegistry } from "./registry";
 
 export interface FormConfig
-  extends GroupConfig<CustomConfigs, CustomRegistry, AbstractFlags>,
-    FieldConfig<CustomRegistry, AbstractFlags> {
+  extends GroupConfig<CustomConfigs, CustomRegistry, AbstractHints>,
+    FieldConfig<CustomRegistry, AbstractHints> {
   type: "form";
 }
 
-export interface TextConfig extends FieldConfig<CustomRegistry, AbstractFlags> {
+export interface TextConfig extends FieldConfig<CustomRegistry, AbstractHints> {
   type: "text";
   label?: string;
   placeholder?: string;
 }
 
-export interface CheckboxConfig extends FieldConfig<CustomRegistry, AbstractFlags> {
+export interface CheckboxConfig extends FieldConfig<CustomRegistry, AbstractHints> {
   type: "checkbox";
   label: string;
 }
 
-export interface SelectConfig<T> extends FieldConfig<CustomRegistry, AbstractFlags> {
+export interface SelectConfig<T> extends FieldConfig<CustomRegistry, AbstractHints> {
   type: "select";
   label?: string;
   placeholder?: string;
-  options: ExecutableDefinition<CustomRegistry["search"], Executor<FieldControl<T | T[], AbstractFlags>, Option<T>>>[];
+  options: readonly SearchDefinition<
+    CustomRegistry,
+    FieldControl<unknown, AbstractHints>,
+    unknown,
+    object,
+    AbstractHints
+  >[];
 }
 
-export interface FormGroupConfig extends GroupConfig<CustomConfigs, CustomRegistry, AbstractFlags> {
+export interface FormGroupConfig extends GroupConfig<CustomConfigs, CustomRegistry, AbstractHints> {
   type: "formGroup";
 }
 
-export interface ButtonConfig extends ItemConfig<CustomRegistry, AbstractFlags> {
+export interface ButtonConfig extends ItemConfig<CustomRegistry, AbstractHints> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: ExecutableDefinition<CustomRegistry["triggers"], Executor<ItemControl<AbstractFlags>, void>>;
+  trigger: ExecutableDefinition<CustomRegistry["triggers"], Executor<ItemControl<AbstractHints>, void>>;
 }
 
-export interface MessageConfig extends ItemConfig<CustomRegistry, AbstractFlags> {
+export interface MessageConfig extends ItemConfig<CustomRegistry, AbstractHints> {
   type: "message";
   title?: string;
   chrome?: "info" | "warning" | "success" | "error";
@@ -53,5 +60,9 @@ export type CustomConfigs =
   | FormGroupConfig
   | CheckboxConfig
   | SelectConfig<unknown>;
+
+export type CustomHints = {
+  hidden: boolean;
+};
 
 export type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, never, never, never>;
