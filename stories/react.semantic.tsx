@@ -3,7 +3,7 @@ import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
 import { AbstractFlags, Messages } from "../lib/configs";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { Executor } from "../lib/executable";
+import { Executable } from "../lib/executable";
 import { ConfigBundle, getRegistryMethod } from "../lib/visitor";
 import {
   ButtonConfig,
@@ -12,6 +12,7 @@ import {
   FormConfig,
   FormGroupConfig,
   MessageConfig,
+  SelectConfig,
   TextConfig,
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
@@ -22,6 +23,7 @@ export const SemanticComponentMap = new Map<CustomConfigs["type"], React.Compone
   ["message", Message],
   ["button", Button],
   ["checkbox", Checkbox],
+  ["select", Select],
   ["formGroup", FormGroup],
 ]);
 
@@ -125,6 +127,23 @@ export function Checkbox({
   );
 }
 
+export function Select({
+  config,
+  control,
+}: ConfigBundle<SelectConfig<unknown>, FieldControl<unknown | unknown[]>, CustomConfigs, CustomRegistry>) {
+  const [value, setValue] = useState<boolean | null>(null);
+  const [disabled, setDisabled] = useState(false);
+  const [errors, setErrors] = useState<Messages | null>(null);
+
+  useEffect(() => {
+    control.value$.subscribe(setValue);
+    control.disabled$.subscribe(setDisabled);
+    control.errors$.subscribe(setErrors);
+  }, []);
+
+  return <>asdf</>;
+}
+
 export function Message({ config, control }: ConfigBundle<MessageConfig, ItemControl, CustomConfigs, CustomRegistry>) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
@@ -163,12 +182,8 @@ export function Button({
   control,
   registry,
 }: ConfigBundle<ButtonConfig, ItemControl, CustomConfigs, CustomRegistry>) {
-  const [trigger] = useState(() =>
-    getRegistryMethod<typeof registry, Executor<any, any>, typeof control["flags"]>(
-      registry,
-      "triggers",
-      config.trigger,
-    ),
+  const [trigger] = useState<Executable<ButtonConfig, {}, ItemControl>>(() =>
+    getRegistryMethod(registry, "triggers", config.trigger),
   );
   return (
     <SemanticButton

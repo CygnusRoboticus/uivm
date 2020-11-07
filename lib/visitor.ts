@@ -163,6 +163,7 @@ export interface ConfigBundle<
   TRegistry extends ExecutableRegistry = ExecutableRegistry,
   TFlags extends AbstractFlags = AbstractFlags
 > {
+  id: string;
   registry: TRegistry;
   control: TControl;
   config: T;
@@ -195,10 +196,18 @@ export function bundleConfig<
     TConfig,
     TRegistry,
     TFlags
-  >(config, registry, visitor);
+  >(config.type, config, registry, visitor);
   // @ts-ignore
   completeConfig2(bundle, registry, bundle, visitor);
   return bundle;
+}
+
+export function getRegistryMethods<
+  TRegistry extends ExecutableRegistry,
+  TValue = unknown,
+  TFlags extends AbstractFlags = AbstractFlags
+>(registry: TRegistry, kind: keyof TRegistry, defs: ExecutableDefinition<any, unknown>[]) {
+  return defs.map(def => getRegistryMethod<TRegistry, TValue, TFlags>(registry, kind, def)).filter(notNullish);
 }
 
 export function getRegistryMethod<
@@ -208,9 +217,9 @@ export function getRegistryMethod<
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
+  def: ExecutableDefinition<any, unknown>,
 ): Executable<BaseItemConfig, any, ItemControl<TFlags>, TValue, TFlags> | null {
-  const method = registry[kind]?.[def.name] as any;
+  const method = (registry[kind] as any)?.[def.name];
   if (method && registry[kind]) {
     return method.bind(registry[kind]);
   }
@@ -248,17 +257,24 @@ function bundleConfig2<
   TRegistry extends ExecutableRegistry,
   TFlags extends AbstractFlags
 >(
+  id: string,
   config: TConfig,
   registry: TRegistry,
   visitor: Visitor<TConfig, TRegistry, TFlags>,
 ): ConfigBundle<TConfig, TControl, TConfig, TRegistry, TFlags> {
   if (isGroupConfig<TConfig>(config)) {
-    const items = config.fields.map(f => {
+    const items = config.fields.map((f, i) => {
       if (isFieldConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, registry, visitor);
+        const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(
+          `${id}-${f.name}`,
+          f,
+          registry,
+          visitor,
+        );
         return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
       } else if (isGroupConfig<TConfig>(f)) {
         const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(
+          `${id}-${i}`,
           { ...f, name: "group" },
           registry,
           visitor,
@@ -271,7 +287,7 @@ function bundleConfig2<
           items: [bundle],
         };
       }
-      const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(f, registry, visitor);
+      const bundle = bundleConfig2<ItemControl<TFlags>, TConfig, TRegistry, TFlags>(`${id}-${i}`, f, registry, visitor);
       return { controls: {}, config: f, items: [bundle] };
     });
 
@@ -280,26 +296,56 @@ function bundleConfig2<
 
     if (isArrayConfig<TConfig>(config)) {
       const control = visitor.arrayInit(config as any, controls);
-      return { registry, config, control: control as any, children };
+      return {
+        id: `${id}-${config.name}`,
+        registry,
+        config,
+        control: control as any,
+        children,
+      };
     } else if (isFieldConfig<TConfig>(config)) {
       const control = visitor.groupInit(
         config as any,
         controls,
         children.map(c => c.control),
       );
-      return { registry, config, control: control as any, children };
+      return {
+        id: `${id}-${config.name}`,
+        registry,
+        config,
+        control: control as any,
+        children,
+      };
     } else {
       const control = visitor.itemInit(
         config as any,
         children.map(c => c.control),
       );
-      return { registry, config, control: control as any, children };
+      return {
+        id: `${id}-${config.type}`,
+        registry,
+        config,
+        control: control as any,
+        children,
+      };
     }
   } else if (isFieldConfig<TConfig>(config)) {
     const control = visitor.fieldInit(config as any);
-    return { registry, config, control: control as any, children: [] };
+    return {
+      id: `${id}-${config.name}`,
+      registry,
+      config,
+      control: control as any,
+      children: [],
+    };
   }
 
   const control = visitor.itemInit(config as any, []);
-  return { registry, config, control: control as any, children: [] };
+  return {
+    id: `${id}-${config.type}`,
+    registry,
+    config,
+    control: control as any,
+    children: [],
+  };
 }

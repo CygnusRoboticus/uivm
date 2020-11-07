@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Messages } from "../lib/configs";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { Executor } from "../lib/executable";
-import { ConfigBundle, getRegistryMethod } from "../lib/visitor";
+import { Executor, OptionSingle } from "../lib/executable";
+import { ConfigBundle, getRegistryMethod, getRegistryMethods } from "../lib/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
@@ -10,6 +10,7 @@ import {
   FormConfig,
   FormGroupConfig,
   MessageConfig,
+  SelectConfig,
   TextConfig,
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
@@ -20,6 +21,7 @@ export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentF
   ["message", Message],
   ["button", Button],
   ["checkbox", Checkbox],
+  ["select", Select],
   ["formGroup", FormGroup],
 ]);
 
@@ -60,6 +62,7 @@ export function Form({
 }
 
 export function Text({
+  id,
   config,
   control,
 }: ConfigBundle<TextConfig, FieldControl<string | null>, CustomConfigs, CustomRegistry>) {
@@ -75,9 +78,10 @@ export function Text({
 
   return (
     <div>
-      {config.label}
+      {config.label ? <label htmlFor={id}>{config.label}</label> : null}
       <br />
       <input
+        name={config.name}
         placeholder={config.placeholder}
         value={value ?? ""}
         onChange={e => control.setValue(e.currentTarget.value)}
@@ -90,6 +94,7 @@ export function Text({
 }
 
 export function Checkbox({
+  id,
   config,
   control,
 }: ConfigBundle<CheckboxConfig, FieldControl<boolean>, CustomConfigs, CustomRegistry>) {
@@ -107,11 +112,46 @@ export function Checkbox({
     <div>
       <input
         type="checkbox"
+        name={config.name}
         checked={value}
         onChange={e => control.setValue(e.currentTarget.checked)}
         disabled={disabled}
       />
-      <label>{config.label}</label>
+      <label htmlFor={id}>{config.label}</label>
+      {errors ? JSON.stringify(errors) : null}
+    </div>
+  );
+}
+
+export function Select({
+  id,
+  config,
+  control,
+  registry,
+}: ConfigBundle<SelectConfig<unknown>, FieldControl<string>, CustomConfigs, CustomRegistry>) {
+  const [value, setValue] = useState<string>(null);
+  const [disabled, setDisabled] = useState(false);
+  const [errors, setErrors] = useState<Messages | null>(null);
+  const [options, setOptions] = useState<OptionSingle<string>[]>([]);
+
+  useEffect(() => {
+    control.value$.subscribe(setValue);
+    control.disabled$.subscribe(setDisabled);
+    control.errors$.subscribe(setErrors);
+    const searchers = getRegistryMethods(registry, "search", config.options);
+  }, []);
+
+  return (
+    <div>
+      {config.label ? <label htmlFor={id}>{config.label}</label> : null}
+      <br />
+      <select name={config.name} id={id} value={value} disabled={disabled}>
+        {options.map((o, i) => (
+          <option key={i} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
       {errors ? JSON.stringify(errors) : null}
     </div>
   );

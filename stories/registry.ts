@@ -2,14 +2,17 @@ import { of } from "rxjs";
 import { map, tap } from "rxjs/operators";
 import { FieldConfig, ItemConfig } from "../lib/configs";
 import { FieldControl, ItemControl } from "../lib/controls";
+import { Option } from "../lib/executable";
 import { BaseItemConfig } from "../lib/primitives";
 
+class Messagers {
+  static(config: ItemConfig<any, any>, control: ItemControl<any>, { message }: { message: string }) {
+    return (c: any) => of({ static: { message } });
+  }
+}
+
 export const registry = {
-  messagers: {
-    static(config: ItemConfig<any, any>, control: ItemControl<any>, { message }: { message: string }) {
-      return (c: any) => of({ static: { message } });
-    },
-  },
+  messagers: new Messagers(),
   triggers: {
     autofill(
       config: BaseItemConfig,
@@ -59,7 +62,11 @@ export const registry = {
       };
     },
   },
-  search: {},
+  search: {
+    static(config: FieldConfig<any, any>, control: FieldControl<any>, params: { options: Option[] }) {
+      return () => params.options;
+    },
+  },
 };
 
 export type CustomRegistry = typeof registry;
