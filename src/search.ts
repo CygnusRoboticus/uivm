@@ -1,21 +1,8 @@
 import { combineLatest, Observable, of } from "rxjs";
-import {
-  bufferTime,
-  debounceTime,
-  filter,
-  first,
-  flatMap,
-  groupBy,
-  map,
-  mergeAll,
-  mergeMap,
-  share,
-  switchMap,
-  toArray,
-} from "rxjs/operators";
-import { GroupControl, ItemControl } from "./controls";
+import { bufferTime, debounceTime, filter, groupBy, map, mergeAll, share, switchMap } from "rxjs/operators";
+import { ItemControl } from "./controls";
 import { AbstractExtras, AbstractHints } from "./controls.types";
-import { SearchResolver } from "./executable";
+import { SearchResolver } from "./search.types";
 import { toObservable } from "./utils";
 import { readonlyArray as RAR } from "fp-ts";
 

@@ -1,14 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { AbstractExtras, AbstractHints, Messages, Trigger } from "../lib/controls.types";
-import {
-  ExecutableDefinitionDefault,
-  ExecutableDefinition,
-  FuzzyExecutableRegistry,
-  OptionSingle,
-  SearchResolver,
-} from "../lib/executable";
-import { ConfigBundle, getRegistryMethod, getRegistryValue, getRegistryValues } from "../lib/visitor";
+import { FieldControl, GroupControl, ItemControl } from "../src/controls";
+import { Messages, Trigger } from "../src/controls.types";
+import { OptionSingle, SearchResolver } from "../src/search.types";
+import { ConfigBundle } from "../src/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
@@ -21,9 +15,9 @@ import {
   TextConfig,
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
-import { createSearchObservable } from "../lib/search";
+import { createSearchObservable } from "../src/search";
 import { of } from "rxjs";
-import { BaseItemConfig } from "../lib/primitives";
+import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 
 export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],

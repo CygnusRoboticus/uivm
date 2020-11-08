@@ -1,9 +1,9 @@
 import { combineLatest, of } from "rxjs";
 import { filter, map, switchMap, tap } from "rxjs/operators";
-import { FieldControl, ItemControl } from "../lib/controls";
-import { Option } from "../lib/executable";
-import { BaseItemConfig } from "../lib/primitives";
-import { isGroupControl } from "../lib/utils";
+import { FieldControl, ItemControl } from "../src/controls";
+import { Option } from "../src/executable";
+import { BaseItemConfig } from "../src/primitives";
+import { isGroupControl } from "../src/utils";
 
 export const registry = {
   messagers: {

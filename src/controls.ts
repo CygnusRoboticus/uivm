@@ -11,12 +11,13 @@ import {
   Hinter,
   ItemControlOptions,
   ItemControlState,
+  KeyControlsValue,
+  KeyValueControls,
   Messages,
   Trigger,
   Validator,
 } from "./controls.types";
 import { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
-import { Obj } from "./typing";
 import { notNullish } from "./utils";
 
 export abstract class BaseControl {
@@ -367,8 +368,8 @@ export class FieldControl<
       this.extras$,
       combineLatest([this.disabled$, this.valid$, this.pending$, this.dirty$, this.touched$]),
     ]).pipe(
-      map(([value, errors, messages, hints, extras, [disabled, valid, pending, dirty, touched]]) => ({
-        value,
+      map(([v, errors, messages, hints, extras, [disabled, valid, pending, dirty, touched]]) => ({
+        value: v,
         errors,
         messages,
         hints,
@@ -492,7 +493,9 @@ export class FieldControl<
       });
   }
 
-  get<TValue = unknown>(path: Array<string | number> | string): FieldControl<TValue, THints, TExtras> | null {
+  get<TControlValue = unknown>(
+    path: Array<string | number> | string,
+  ): FieldControl<TControlValue, THints, TExtras> | null {
     return findControl(this, path, ".");
   }
 
@@ -555,16 +558,6 @@ export class FieldControl<
     };
   }
 }
-
-export type ArrayType<T> = T extends Array<infer R> ? R : never;
-
-export type KeyValueControls<TValue extends Obj, THints extends AbstractHints, TExtras extends AbstractExtras> = {
-  [k in keyof TValue]: FieldControl<TValue[k], THints, TExtras>;
-};
-
-export type KeyControlsValue<TControls extends Obj> = {
-  [k in keyof TControls]: TControls[k]["value"];
-};
 
 export class GroupControl<
   TValue extends KeyControlsValue<TControls>,

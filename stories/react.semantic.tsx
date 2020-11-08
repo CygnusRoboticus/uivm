@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { of } from "rxjs";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
-import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { Trigger } from "../lib/controls.types";
-import { createSearchObservable } from "../lib/search";
-import { OptionSingle, SearchResolver } from "../lib/executable";
-import { ConfigBundle, getRegistryValue, getRegistryValues } from "../lib/visitor";
+import { FieldControl, GroupControl, ItemControl } from "../src/controls";
+import { Trigger } from "../src/controls.types";
+import { createSearchObservable } from "../src/search";
+import { OptionSingle, SearchResolver } from "../src/search.types";
+import { ConfigBundle } from "../src/visitor";
+import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
   ButtonConfig,
   CheckboxConfig,

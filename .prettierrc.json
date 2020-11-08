@@ -13,13 +13,6 @@
       "options": {
         "parser": "typescript"
       }
-    },
-    {
-      "files": ["*.yml", "*.yaml"],
-      "options": {
-        "parser": "yaml",
-        "tabWidth": 2
-      }
     }
   ]
 }

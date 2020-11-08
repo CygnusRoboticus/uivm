@@ -1,28 +1,23 @@
 import { tuple } from "fp-ts/lib/function";
 import { combineLatest } from "rxjs";
-import { first, map } from "rxjs/operators";
+import { map } from "rxjs/operators";
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
-import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
+import { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 import {
   AbstractExtras,
   AbstractHints,
   Disabler,
-  Extraer,
   Hinter,
+  KeyValueControls,
   ObservableExecutor,
   Trigger,
   Validator,
 } from "./controls.types";
-import {
-  Executable,
-  ExecutableDefinitionDefault,
-  ExecutableDefinition,
-  FuzzyExecutableRegistry,
-  SearchResolver,
-} from "./executable";
+import { getRegistryValue, getRegistryValues } from "./visitor.utils";
+import { FuzzyExecutableRegistry } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
-import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish, toObservable } from "./utils";
+import { isArrayConfig, isFieldConfig, isGroupConfig, toObservable } from "./utils";
 
 export interface Visitor<
   TConfig extends BaseItemConfig,
@@ -79,7 +74,7 @@ export interface Visitor<
   ) => void;
 }
 
-class DefaultVisitor<
+export class DefaultVisitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
@@ -160,7 +155,7 @@ class DefaultVisitor<
         THints,
         TExtras
       >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints, TExtras>) =>
-        toObservable(s(c)).pipe(map(v => [key, v] as [keyof THints, boolean])),
+        toObservable(s(c)).pipe(map(v => tuple(key, v))),
       );
       acc.push(...sources);
       return acc;
@@ -301,77 +296,6 @@ export function bundleConfig<
   return bundle;
 }
 
-export function getRegistryMethods<
-  TRegistry extends FuzzyExecutableRegistry,
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
->(
-  registry: TRegistry,
-  kind: keyof TRegistry,
-  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
-) {
-  return defs
-    .map(def => {
-      const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
-      return method ? { method, def } : null;
-    })
-    .filter(notNullish);
-}
-
-export function getRegistryMethod<
-  TRegistry extends FuzzyExecutableRegistry,
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
->(
-  registry: TRegistry,
-  kind: keyof TRegistry,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
-): Executable<BaseItemConfig, ItemControl<THints, TExtras>, any, TValue, THints, TExtras> | null {
-  const method = (registry[kind] as any)?.[def.name];
-  if (method && registry[kind]) {
-    return method.bind(registry[kind]);
-  }
-  return null;
-}
-
-export function getRegistryValues<
-  TRegistry extends FuzzyExecutableRegistry,
-  TConfig extends BaseItemConfig,
-  TControl extends ItemControl<THints, TExtras>,
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
->(
-  registry: TRegistry,
-  kind: keyof TRegistry,
-  config: TConfig,
-  control: TControl,
-  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
-): TValue[] {
-  const methods = getRegistryMethods<TRegistry, TValue, THints, TExtras>(registry, kind, defs);
-  return methods.map(({ method, def }) => method(config, control, (def as any).params));
-}
-
-export function getRegistryValue<
-  TRegistry extends FuzzyExecutableRegistry,
-  TConfig extends BaseItemConfig,
-  TControl extends ItemControl<THints, TExtras>,
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
->(
-  registry: TRegistry,
-  kind: keyof TRegistry,
-  config: TConfig,
-  control: TControl,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
-): TValue | null {
-  const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
-  return method ? method(config, control, (def as any).params) : null;
-}
-
 function completeConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
@@ -430,16 +354,16 @@ function bundleConfig2<
   if (isGroupConfig<TConfig>(config)) {
     const items = config.fields.map((f, i) => {
       if (isFieldConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
+        const fieldBundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
           `${id}-${f.name}`,
           f,
           value?.[f.name],
           registry,
           visitor,
         );
-        return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
+        return { controls: { [f.name]: fieldBundle.control }, config: f, items: [fieldBundle] };
       } else if (isGroupConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
+        const groupBundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
           `${id}-${i}`,
           { ...f, name: "group" },
           value,
@@ -448,10 +372,10 @@ function bundleConfig2<
         );
         return {
           controls: {
-            ...(bundle.control as GroupControl<{}, {}, THints, TExtras>).controls,
+            ...(groupBundle.control as GroupControl<{}, {}, THints, TExtras>).controls,
           },
           config: f,
-          items: [bundle],
+          items: [groupBundle],
         };
       }
       const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
@@ -468,16 +392,16 @@ function bundleConfig2<
     const children = items.reduce((acc, f) => [...acc, ...f.items], <typeof items[0]["items"]>[]);
 
     if (isArrayConfig<TConfig>(config)) {
-      const control = visitor.arrayInit(config as any, controls, value);
+      const arrayControl = visitor.arrayInit(config as any, controls, value);
       return {
         id: `${id}-${config.name}`,
         registry,
         config,
-        control: control as any,
+        control: arrayControl as any,
         children,
       };
     } else if (isFieldConfig<TConfig>(config)) {
-      const control = visitor.groupInit(
+      const fieldControl = visitor.groupInit(
         config as any,
         controls,
         children.map(c => c.control),
@@ -486,11 +410,11 @@ function bundleConfig2<
         id: `${id}-${config.name}`,
         registry,
         config,
-        control: control as any,
+        control: fieldControl as any,
         children,
       };
     } else {
-      const control = visitor.itemInit(
+      const itemControl = visitor.itemInit(
         config as any,
         children.map(c => c.control),
       );
@@ -498,17 +422,17 @@ function bundleConfig2<
         id: `${id}-${config.type}`,
         registry,
         config,
-        control: control as any,
+        control: itemControl as any,
         children,
       };
     }
   } else if (isFieldConfig<TConfig>(config)) {
-    const control = visitor.fieldInit(config as any, value);
+    const fieldControl = visitor.fieldInit(config as any, value);
     return {
       id: `${id}-${config.name}`,
       registry,
       config,
-      control: control as any,
+      control: fieldControl as any,
       children: [],
     };
   }

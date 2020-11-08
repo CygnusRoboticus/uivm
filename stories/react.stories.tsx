@@ -1,6 +1,6 @@
 import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
-import { bundleConfig } from "../lib/visitor";
+import { bundleConfig } from "../src/visitor";
 import { Fields as BasicFields } from "./react.basic";
 import { CustomConfigs, CustomConfigsTypes } from "./react.configs";
 import { Fields as SemanticFields } from "./react.semantic";

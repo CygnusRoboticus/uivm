@@ -1,7 +1,7 @@
-import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
-import { FieldControl, ItemControl } from "../lib/controls";
-import { SearchDefinition, TriggerDefinition } from "../lib/executable";
-import { FieldTypeMap } from "../lib/typing";
+import { FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
+import { FieldControl, ItemControl } from "../src/controls";
+import { SearchDefinition, TriggerDefinition } from "../src/executable";
+import { FieldTypeMap } from "../src/typing";
 import { CustomRegistry } from "./registry";
 
 export interface FormConfig extends GroupConfig<CustomConfigs, CustomRegistry>, FieldConfig<CustomRegistry> {

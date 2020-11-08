@@ -1,9 +1,6 @@
-import { array as AR, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
-import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
-import { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
-import { AbstractExtras, AbstractHints, Executor } from "./controls.types";
-import { Obj } from "./typing";
+import { combineLatest, of } from "rxjs";
+import { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { AbstractExtras, AbstractHints, Executor, KeyValueControls, Obj } from "./controls.types";
 import { toObservable } from "./utils";
 
 export function findControl<
@@ -17,8 +14,9 @@ export function findControl<
 
   if (!Array.isArray(path)) {
     path = path.split(delimiter);
+  } else if (path.length === 0) {
+    return null;
   }
-  if (Array.isArray(path) && path.length === 0) return null;
   let found: FieldControl<unknown, THints, TExtras> | null = control;
   path.forEach((name: string | number) => {
     if (found instanceof GroupControl) {

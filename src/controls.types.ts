@@ -8,6 +8,19 @@ export interface Messages {
   };
 }
 
+export interface Obj {
+  [key: string]: any;
+}
+export type ArrayType<T> = T extends Array<infer R> ? R : never;
+
+export type KeyValueControls<TValue extends Obj, THints extends AbstractHints, TExtras extends AbstractExtras> = {
+  [k in keyof TValue]: FieldControl<TValue[k], THints, TExtras>;
+};
+
+export type KeyControlsValue<TControls extends Obj> = {
+  [k in keyof TControls]: TControls[k]["value"];
+};
+
 export type AbstractHints = Record<string, boolean | undefined>;
 export type AbstractExtras = Record<string, unknown | undefined>;
 
