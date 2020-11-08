@@ -13,7 +13,13 @@ import {
   Trigger,
   Validator,
 } from "./controls.types";
-import { Executable, ExecutableDefinition, FuzzyExecutableRegistry, SearchResolver } from "./executable";
+import {
+  Executable,
+  ExecutableDefinitionDefault,
+  ExecutableDefinition,
+  FuzzyExecutableRegistry,
+  SearchResolver,
+} from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish, toObservable } from "./utils";
@@ -300,7 +306,11 @@ export function getRegistryMethods<
   TValue,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
->(registry: TRegistry, kind: keyof TRegistry, defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[]) {
+>(
+  registry: TRegistry,
+  kind: keyof TRegistry,
+  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
+) {
   return defs
     .map(def => {
       const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
@@ -317,7 +327,7 @@ export function getRegistryMethod<
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
 ): Executable<BaseItemConfig, ItemControl<THints, TExtras>, any, TValue, THints, TExtras> | null {
   const method = (registry[kind] as any)?.[def.name];
   if (method && registry[kind]) {
@@ -338,7 +348,7 @@ export function getRegistryValues<
   kind: keyof TRegistry,
   config: TConfig,
   control: TControl,
-  defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[],
+  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
 ): TValue[] {
   const methods = getRegistryMethods<TRegistry, TValue, THints, TExtras>(registry, kind, defs);
   return methods.map(({ method, def }) => method(config, control, (def as any).params));
@@ -356,7 +366,7 @@ export function getRegistryValue<
   kind: keyof TRegistry,
   config: TConfig,
   control: TControl,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
 ): TValue | null {
   const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
   return method ? method(config, control, (def as any).params) : null;

@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { Messages, Trigger } from "../lib/controls.types";
-import { OptionSingle, SearchResolver } from "../lib/executable";
+import { AbstractExtras, AbstractHints, Messages, Trigger } from "../lib/controls.types";
+import {
+  ExecutableDefinitionDefault,
+  ExecutableDefinition,
+  FuzzyExecutableRegistry,
+  OptionSingle,
+  SearchResolver,
+} from "../lib/executable";
 import { ConfigBundle, getRegistryMethod, getRegistryValue, getRegistryValues } from "../lib/visitor";
 import {
   ButtonConfig,
@@ -17,6 +23,7 @@ import {
 import { CustomRegistry } from "./registry";
 import { createSearchObservable } from "../lib/search";
 import { of } from "rxjs";
+import { BaseItemConfig } from "../lib/primitives";
 
 export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -68,7 +75,7 @@ export function Text({
   id,
   config,
   control,
-}: ConfigBundle<TextConfig, FieldControl<string | null>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<TextConfig, FieldControl<string | null, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [{ value, errors, disabled }, setState] = useState(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -95,7 +102,7 @@ export function Checkbox({
   id,
   config,
   control,
-}: ConfigBundle<CheckboxConfig, FieldControl<boolean>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<CheckboxConfig, FieldControl<boolean, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [value, setValue] = useState<boolean | null>(null);
   const [disabled, setDisabled] = useState(false);
   const [errors, setErrors] = useState<Messages | null>(null);
@@ -163,7 +170,10 @@ export function Select({
   );
 }
 
-export function Message({ config, control }: ConfigBundle<MessageConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+export function Message({
+  config,
+  control,
+}: ConfigBundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);

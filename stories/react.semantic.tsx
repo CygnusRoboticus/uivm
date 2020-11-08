@@ -91,7 +91,7 @@ export function Text({
 export function Checkbox({
   config,
   control,
-}: ConfigBundle<CheckboxConfig, FieldControl<boolean>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<CheckboxConfig, FieldControl<boolean, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -118,7 +118,13 @@ export function Checkbox({
 export function Select({
   config,
   control,
-}: ConfigBundle<SelectConfig<unknown>, FieldControl<unknown | unknown[]>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<
+  SelectConfig<unknown>,
+  FieldControl<unknown | unknown[], CustomHints>,
+  CustomConfigs,
+  CustomRegistry,
+  CustomHints
+>) {
   const [state, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -127,7 +133,10 @@ export function Select({
   return <>asdf</>;
 }
 
-export function Message({ config, control }: ConfigBundle<MessageConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+export function Message({
+  config,
+  control,
+}: ConfigBundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [{ hints, messages, extras }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);

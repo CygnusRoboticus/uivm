@@ -23,6 +23,11 @@ export type ExecutableDefinition<TService, TValue> = {
   }>;
 }[keyof TService];
 
+export interface ExecutableDefinitionDefault {
+  name: string;
+  params?: Record<string, unknown>;
+}
+
 export type HinterDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TControl extends ItemControl<THints, TExtras>,

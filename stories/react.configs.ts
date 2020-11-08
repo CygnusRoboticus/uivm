@@ -1,7 +1,6 @@
 import { FieldConfig, GroupConfig, ItemConfig } from "../lib/configs";
 import { FieldControl, ItemControl } from "../lib/controls";
-import { AbstractHints, Executor } from "../lib/controls.types";
-import { ExecutableDefinition, SearchDefinition } from "../lib/executable";
+import { SearchDefinition, TriggerDefinition } from "../lib/executable";
 import { FieldTypeMap } from "../lib/typing";
 import { CustomRegistry } from "./registry";
 
@@ -24,7 +23,7 @@ export interface SelectConfig<T> extends FieldConfig<CustomRegistry> {
   type: "select";
   label?: string;
   placeholder?: string;
-  options: readonly SearchDefinition<CustomRegistry, FieldControl<unknown>, unknown, object>[];
+  options: readonly SearchDefinition<CustomRegistry, FieldControl<unknown, CustomHints>, T, object, CustomHints>[];
 }
 
 export interface FormGroupConfig extends GroupConfig<CustomConfigs, CustomRegistry> {
@@ -35,7 +34,7 @@ export interface ButtonConfig extends ItemConfig<CustomRegistry> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: ExecutableDefinition<CustomRegistry["triggers"], Executor<ItemControl, void>>;
+  trigger: TriggerDefinition<CustomRegistry, ItemControl<CustomHints>, CustomHints>;
 }
 
 export interface MessageConfig extends ItemConfig<CustomRegistry> {
