@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { of } from "rxjs";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
 import { Trigger } from "../lib/controls.types";
-import { ConfigBundle, getRegistryValue } from "../lib/visitor";
+import { createSearchObservable } from "../lib/search";
+import { OptionSingle, SearchResolver } from "../lib/executable";
+import { ConfigBundle, getRegistryValue, getRegistryValues } from "../lib/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
@@ -15,7 +18,7 @@ import {
   SelectConfig,
   TextConfig,
 } from "./react.configs";
-import { CustomRegistry } from "./registry";
+import { CustomRegistry, registry } from "./registry";
 
 export const SemanticComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -116,21 +119,53 @@ export function Checkbox({
 }
 
 export function Select({
+  id,
   config,
   control,
 }: ConfigBundle<
-  SelectConfig<unknown>,
-  FieldControl<unknown | unknown[], CustomHints>,
+  SelectConfig<string>,
+  FieldControl<string[], CustomHints>,
   CustomConfigs,
   CustomRegistry,
   CustomHints
 >) {
-  const [state, setState] = useState<typeof control["state"]>(control.state);
+  const [{ value, errors, disabled, hints }, setState] = useState(control.state);
+  const [options, setOptions] = useState<OptionSingle<string>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
+    const searchers = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      SearchResolver<typeof control, unknown, object, CustomHints>,
+      CustomHints
+    >(registry, "search", config, control, config.options);
+    createSearchObservable(searchers, of({ key: "", search: "", params: {}, control })).subscribe(setOptions);
   }, []);
 
-  return <>asdf</>;
+  return hints.hidden ? null : (
+    <SemanticForm.Select
+      required={config.validators?.some(v => v.name === "required")}
+      label={config.label}
+      value={value}
+      onChange={(_, e) => control.setValue(e.value as any)}
+      disabled={disabled}
+      options={options.map(o => ({
+        description: o.sublabel,
+        disabled: o.disabled,
+        icon: o.icon?.name,
+        text: o.label,
+        value: o.key ?? o.value,
+      }))}
+      error={
+        errors
+          ? {
+              content: Object.values(errors)[0].message,
+            }
+          : errors
+      }
+    />
+  );
 }
 
 export function Message({

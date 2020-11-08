@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "yarn start-storybook -p 6006",
-    "test": "jest"
+    "test": "jest",
+    "deploy-storybook": "storybook-to-ghpages"
   },
   "dependencies": {
     "fp-ts": "^2.8.3",
@@ -21,6 +22,7 @@
     "@storybook/addon-links": "^6.0.26",
     "@storybook/html": "^6.0.26",
     "@storybook/react": "^6.0.26",
+    "@storybook/storybook-deployer": "^2.8.7",
     "@types/jest": "^26.0.14",
     "babel-loader": "^8.1.0",
     "jest": "^26.5.2",

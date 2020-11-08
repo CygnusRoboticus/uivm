@@ -76,7 +76,7 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
       movie: "Parabellum",
       autofill: "",
       checkbox: false,
-      select: null,
+      select: 2,
     }),
   );
   const [state, setState] = useState(() => bundle.control.state);

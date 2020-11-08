@@ -103,7 +103,7 @@ export function Checkbox({
   config,
   control,
 }: ConfigBundle<CheckboxConfig, FieldControl<boolean, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
-  const [value, setValue] = useState<boolean | null>(null);
+  const [value, setValue] = useState<boolean>(false);
   const [disabled, setDisabled] = useState(false);
   const [errors, setErrors] = useState<Messages | null>(null);
 
