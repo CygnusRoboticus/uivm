@@ -9,7 +9,7 @@ describe("#bundleConfig", () => {
       type: "group",
       name: "group",
       fields: [{ type: "message" }],
-    };
+    } as const;
     const bundle = bundleConfig(config, registry);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);

@@ -7,9 +7,9 @@ import {
   AbstractExtras,
   AbstractHints,
   Disabler,
+  Executor,
   Hinter,
   KeyValueControls,
-  ObservableExecutor,
   Trigger,
   Validator,
 } from "./controls.types";
@@ -151,7 +151,7 @@ export class DefaultVisitor<
         typeof registry,
         typeof config,
         typeof control,
-        ObservableExecutor<typeof control, boolean>,
+        Executor<typeof control, boolean>,
         THints,
         TExtras
       >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints, TExtras>) =>
@@ -166,7 +166,7 @@ export class DefaultVisitor<
         typeof registry,
         typeof config,
         typeof control,
-        ObservableExecutor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>,
+        Executor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>,
         THints,
         TExtras
       >(registry, "extras", config, control, value as any);
@@ -174,7 +174,7 @@ export class DefaultVisitor<
         acc.push([key, source]);
       }
       return acc;
-    }, <[keyof TExtras, ObservableExecutor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>][]>[]);
+    }, <[keyof TExtras, Executor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>][]>[]);
     const extras = (c: ItemControl<THints, TExtras>) => {
       return combineLatest(extrasSource.map(([k, s]) => toObservable(s(c)).pipe(map(v => tuple(k, v))))).pipe(
         map(values =>
@@ -263,13 +263,13 @@ export interface ConfigBundle<
 export function bundleConfig<
   T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras,
   TValue = FormValue<T["fields"], TConfig, TTypes>,
-  TS = unknown,
-  TN = unknown,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown

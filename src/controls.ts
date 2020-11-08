@@ -18,7 +18,7 @@ import {
   Validator,
 } from "./controls.types";
 import { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
-import { notNullish } from "./utils";
+import { notNullish, toObservable } from "./utils";
 
 export abstract class BaseControl {
   protected _parent$ = new BehaviorSubject<BaseControl | null>(null);
@@ -135,7 +135,7 @@ export class ItemControl<
   updateExtras() {
     this.extrasSub?.unsubscribe();
     this.extrasSub = this._initialized$
-      .pipe(switchMap(() => (this.extraers ? this.extraers(this) : of({}))))
+      .pipe(switchMap(() => (this.extraers ? toObservable(this.extraers(this)) : of({}))))
       .subscribe(extras => this._extras$.next(extras));
   }
 
@@ -155,14 +155,14 @@ export class ItemControl<
 
   constructor(opts: ItemControlOptions<THints, TExtras> = {}, parent?: ItemControl<THints, TExtras>) {
     super(parent);
-    if (opts.hinters) {
-      this.setHinters(opts.hinters);
+    if (opts.hints) {
+      this.setHinters(opts.hints);
     }
-    if (opts.extraers) {
-      this.setExtraers(opts.extraers);
+    if (opts.extras) {
+      this.setExtraers(opts.extras);
     }
-    if (opts.messagers) {
-      this.setMessagers(opts.messagers);
+    if (opts.messages) {
+      this.setMessagers(opts.messages);
     }
 
     this.itemReady();

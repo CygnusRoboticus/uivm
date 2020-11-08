@@ -17,15 +17,15 @@ export interface FieldDataTypeDefinition {
 
 export interface FieldTypeMap<
   TConfig extends BaseItemConfig,
-  TS extends Partial<TConfig>,
-  TN extends Partial<TConfig>,
-  TB extends Partial<TConfig>,
+  TString extends Partial<TConfig>,
+  TNumber extends Partial<TConfig>,
+  TBoolean extends Partial<TConfig>,
   TArray extends Partial<TConfig>,
   TNull extends Partial<TConfig>
 > {
-  string: TS;
-  number: TN;
-  boolean: TB;
+  string: TString;
+  number: TNumber;
+  boolean: TBoolean;
   array: TArray;
   null: TNull;
 }
@@ -34,9 +34,9 @@ export interface FieldTypeMap<
 type FieldTypeType<
   T extends TConfig,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TS = unknown,
-  TN = unknown,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -66,9 +66,9 @@ type FieldTypeArrayable<T, U, V> = T extends U ? V[] : V;
 type FieldValue<
   T extends TConfig,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TS = unknown,
-  TN = unknown,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -81,9 +81,9 @@ type FieldValue<
 type MappedValues<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TS = unknown,
-  TN = unknown,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -100,9 +100,9 @@ type MappedValues<
 export type FormValue<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
-  TS = unknown,
-  TN = unknown,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -115,11 +115,11 @@ export type FormValue<
 type FieldControlType<
   T extends TConfig,
   TConfig extends BaseFieldConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
   THints extends AbstractHints,
   TExtras extends AbstractExtras,
-  TS = unknown,
-  TN = unknown,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -144,11 +144,11 @@ type FieldControlType<
 type MappedControls<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
   THints extends AbstractHints,
   TExtras extends AbstractExtras,
-  TS = unknown,
-  TN = unknown,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -168,11 +168,11 @@ type MappedControls<
 export type FormControls<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
   THints extends AbstractHints,
   TExtras extends AbstractExtras,
-  TS = unknown,
-  TN = unknown,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown
@@ -184,11 +184,11 @@ export type FormControls<
 export type FormControl<
   T extends readonly TConfig[],
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras,
-  TS = unknown,
-  TN = unknown,
+  TString = unknown,
+  TNumber = unknown,
   TB = unknown,
   TArray = unknown,
   TNull = unknown

@@ -1,13 +1,5 @@
 import { FieldControl, ItemControl } from "./controls";
-import {
-  AbstractHints,
-  AbstractExtras,
-  Executor,
-  Messages,
-  ObservableExecutor,
-  Trigger,
-  Validator,
-} from "./controls.types";
+import { AbstractHints, AbstractExtras, Executor, Messages, Trigger, Validator } from "./controls.types";
 import { SearchResolver } from "./search.types";
 import { BaseItemConfig } from "./primitives";
 import { Spread, WithOptional } from "./typing.utils";
@@ -33,21 +25,21 @@ export type HinterDefinition<
   TControl extends ItemControl<THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
-> = ExecutableDefinition<TRegistry["hints"], ObservableExecutor<TControl, boolean>>;
+> = ExecutableDefinition<TRegistry["hints"], Executor<TControl, boolean>>;
 export type ExtraDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TControl extends ItemControl<THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > = {
-  [key in keyof TExtras]?: ExecutableDefinition<TRegistry["extras"], ObservableExecutor<TControl, TExtras[key]>>;
+  [key in keyof TExtras]?: ExecutableDefinition<TRegistry["extras"], Executor<TControl, TExtras[key]>>;
 };
 export type MessagerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TControl extends ItemControl<THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
-> = ExecutableDefinition<TRegistry["messagers"], ObservableExecutor<TControl, Messages | null>>;
+> = ExecutableDefinition<TRegistry["messagers"], Executor<TControl, Messages | null>>;
 export type TriggerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TControl extends ItemControl<THints, TExtras>,
@@ -87,7 +79,7 @@ export interface ExecutableRegistry<
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > {
-  hints: ExecutableService<TConfig, TItemControl, ObservableExecutor<TItemControl, boolean>, THints, TExtras>;
+  hints: ExecutableService<TConfig, TItemControl, Executor<TItemControl, boolean>, THints, TExtras>;
   extras: ExecutableService<TConfig, TItemControl, unknown, THints, TExtras>;
   messagers: ExecutableService<TConfig, TItemControl, Validator<TItemControl>, THints, TExtras>;
   search: ExecutableService<
@@ -108,12 +100,12 @@ export interface FuzzyExecutableRegistry<
   TValidators = {},
   TSearches = {}
 > {
-  hints: FuzzyExecutableService<THints, ObservableExecutor<any, boolean>>;
-  extras: FuzzyExecutableService<TMessagers, ObservableExecutor<any, any>>;
-  messagers: FuzzyExecutableService<TMessagers, Validator<any>>;
-  search: FuzzyExecutableService<TSearches, SearchResolver<any, any, any, any, any>>;
-  triggers: FuzzyExecutableService<TTriggers, Trigger<any>>;
-  validators: FuzzyExecutableService<TValidators, Validator<any>>;
+  hints?: FuzzyExecutableService<THints, Executor<any, boolean>>;
+  extras?: FuzzyExecutableService<TMessagers, Executor<any, any>>;
+  messagers?: FuzzyExecutableService<TMessagers, Validator<any>>;
+  search?: FuzzyExecutableService<TSearches, SearchResolver<any, any, any, any, any>>;
+  triggers?: FuzzyExecutableService<TTriggers, Trigger<any>>;
+  validators?: FuzzyExecutableService<TValidators, Validator<any>>;
 }
 
 // Convenience type for partially overriding a registry

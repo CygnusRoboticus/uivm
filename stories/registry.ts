@@ -1,7 +1,7 @@
 import { combineLatest, of } from "rxjs";
 import { filter, map, switchMap, tap } from "rxjs/operators";
 import { FieldControl, ItemControl } from "../src/controls";
-import { Option } from "../src/executable";
+import { Option } from "../src/search.types";
 import { BaseItemConfig } from "../src/primitives";
 import { isGroupControl } from "../src/utils";
 

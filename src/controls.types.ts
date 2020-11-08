@@ -26,16 +26,15 @@ export type AbstractExtras = Record<string, unknown | undefined>;
 
 export type Observableish<TValue> = TValue | Promise<TValue> | Observable<TValue>;
 export type Executor<TControl extends BaseControl, TValue> = (control: TControl) => Observableish<TValue>;
-export type ObservableExecutor<TControl extends BaseControl, TValue> = (control: TControl) => Observable<TValue>;
 
 export type Validator<TControl extends BaseControl> = Executor<TControl, Messages | null>;
 export type Trigger<TControl extends BaseControl> = Executor<TControl, void>;
-export type Hinter<TControl extends BaseControl, THints extends AbstractHints = AbstractHints> = ObservableExecutor<
+export type Hinter<TControl extends BaseControl, THints extends AbstractHints = AbstractHints> = Executor<
   TControl,
   [keyof THints, boolean]
 >;
-export type Disabler<TControl extends BaseControl> = ObservableExecutor<TControl, boolean>;
-export type Extraer<TControl extends BaseControl, TExtras extends AbstractExtras = AbstractExtras> = ObservableExecutor<
+export type Disabler<TControl extends BaseControl> = Executor<TControl, boolean>;
+export type Extraer<TControl extends BaseControl, TExtras extends AbstractExtras = AbstractExtras> = Executor<
   TControl,
   Partial<TExtras>
 >;
@@ -44,9 +43,9 @@ export interface ItemControlOptions<
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > {
-  hinters?: Hinter<ItemControl<THints, TExtras>, THints>[];
-  extraers?: Extraer<ItemControl<THints, TExtras>, TExtras>;
-  messagers?: Validator<ItemControl<THints, TExtras>>[];
+  hints?: Hinter<ItemControl<THints, TExtras>, THints>[];
+  extras?: Extraer<ItemControl<THints, TExtras>, TExtras>;
+  messages?: Validator<ItemControl<THints, TExtras>>[];
 }
 
 export interface FieldControlOptions<

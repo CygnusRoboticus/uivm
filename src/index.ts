@@ -10,7 +10,6 @@ export {
   AbstractExtras,
   Observableish,
   Executor,
-  ObservableExecutor,
   Validator,
   Trigger,
   Hinter,

@@ -56,4 +56,11 @@ export type CustomHints = {
   hidden: boolean;
 } & Record<string, boolean>;
 
-export type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, never, never, never>;
+export type CustomConfigsTypes = FieldTypeMap<
+  CustomConfigs,
+  { type: "text" },
+  never,
+  { type: "checkbox" },
+  never,
+  never
+>;
