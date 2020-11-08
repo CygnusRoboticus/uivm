@@ -14,19 +14,20 @@ import {
   toArray,
 } from "rxjs/operators";
 import { GroupControl, ItemControl } from "./controls";
-import { AbstractHints } from "./controls.types";
+import { AbstractExtras, AbstractHints } from "./controls.types";
 import { SearchResolver } from "./executable";
 import { toObservable } from "./utils";
 import { readonlyArray as RAR } from "fp-ts";
 
 export function mergeSearchResolvers<
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TValue,
   TParams extends object,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints>[],
-): SearchResolver<TControl, TValue, TParams, THints> {
+  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
+): SearchResolver<TControl, TValue, TParams, THints, TExtras> {
   return {
     search: (s, c, p) =>
       searchResolvers.length
@@ -45,12 +46,13 @@ export function mergeSearchResolvers<
  * `key` property.
  */
 export function createSearchObservable<
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TValue,
   TParams extends object,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints>[],
+  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
   search$: Observable<{ search: string; control: TControl; params: TParams; key: string }>,
   delay = 500,
 ) {
@@ -74,12 +76,13 @@ export function createSearchObservable<
  * `key` property.
  */
 export function createResolveObservable<
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TValue,
   TParams extends object,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints>[],
+  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
   resolve$: Observable<{ values: TValue[]; control: TControl; params: TParams; key: string }>,
   delay = 500,
 ) {

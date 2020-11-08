@@ -1,15 +1,19 @@
 import { combineLatest, of } from "rxjs";
 import { filter, map, switchMap, tap } from "rxjs/operators";
 import { FieldControl, ItemControl } from "../lib/controls";
-import { ExecutableRegistry, Option } from "../lib/executable";
+import { Option } from "../lib/executable";
 import { BaseItemConfig } from "../lib/primitives";
-import { isFieldControl, isGroupControl } from "../lib/utils";
-import { CustomConfigs } from "./react.configs";
+import { isGroupControl } from "../lib/utils";
 
 export const registry = {
   messagers: {
     static(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
       return (c: ItemControl) => of({ static: { message } });
+    },
+  },
+  extras: {
+    static(config: BaseItemConfig, control: ItemControl, { value }: { value: unknown }) {
+      return (c: ItemControl) => of(value);
     },
   },
   triggers: {

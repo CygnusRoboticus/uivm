@@ -128,22 +128,23 @@ export function Select({
 }
 
 export function Message({ config, control }: ConfigBundle<MessageConfig, ItemControl, CustomConfigs, CustomRegistry>) {
-  const [{ hints, messages }, setState] = useState<typeof control["state"]>(control.state);
+  const [{ hints, messages, extras }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
   }, []);
 
   const arrayMessages = Object.values(messages ?? {}).map(m => m.message);
+  const chrome = extras.chrome ?? config.chrome;
 
   return hints.hidden ? null : (
     <SemanticMessage
       header={config.title}
       content={arrayMessages.length === 1 ? arrayMessages[0] : null}
       list={arrayMessages.length === 1 ? null : arrayMessages}
-      info={config.chrome === "info"}
-      error={config.chrome === "error"}
-      warning={config.chrome === "warning"}
-      success={config.chrome === "success"}
+      info={chrome === "info"}
+      error={chrome === "error"}
+      warning={chrome === "warning"}
+      success={chrome === "success"}
     />
   );
 }

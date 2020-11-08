@@ -14,10 +14,12 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
     fields: [
       {
         type: "message",
-        chrome: "info",
         messagers: [{ name: "static", params: { message: "You should enter 'John Wick'" } }],
         hints: {
           error: [{ name: "field", params: { field: "firstName", value: "John" } }],
+        },
+        extras: {
+          chrome: { name: "static", params: { value: "info" } },
         },
       },
       {
@@ -66,12 +68,6 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
     // const a = {
     //   a: 1,
   } as const;
-
-  const asdf: CustomConfigs = {
-    type: "form",
-    name: "form",
-    fields: [{ type: "text", name: "text", triggers: [{ name: "alert", params: { message: "skirts" } }] }],
-  };
 
   const [bundle] = useState(() =>
     bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry, {

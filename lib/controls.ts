@@ -2,8 +2,10 @@ import { array as AR, readonlyArray as RAR } from "fp-ts";
 import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import {
+  AbstractExtras,
   AbstractHints,
   Disabler,
+  Extraer,
   FieldControlOptions,
   FieldControlState,
   Hinter,
@@ -53,31 +55,44 @@ export abstract class BaseControl {
   }
 }
 
-export class ItemControl<THints extends AbstractHints = AbstractHints> extends BaseControl {
-  protected _hints$ = new BehaviorSubject({} as THints);
+export class ItemControl<
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends BaseControl {
+  protected _hints$ = new BehaviorSubject<Partial<THints>>({});
+  protected _extras$ = new BehaviorSubject<Partial<TExtras>>({});
   protected _messages$ = new BehaviorSubject<Messages | null>(null);
 
-  protected hinters: Hinter<ItemControl<THints>, THints>[] = [];
-  protected messagers: Validator<ItemControl<THints>>[] = [];
+  protected hinters: Hinter<ItemControl<THints, TExtras>, THints>[] = [];
+  protected messagers: Validator<ItemControl<THints, TExtras>>[] = [];
+  protected extraers: Extraer<ItemControl<THints, TExtras>, TExtras> | null = null;
 
   protected hintsSub?: Subscription;
   protected messagesSub?: Subscription;
+  protected extrasSub?: Subscription;
 
   get hints() {
     return this._hints$.getValue();
   }
+  get extras() {
+    return this._extras$.getValue();
+  }
   get messages() {
     return this._messages$.getValue();
   }
-  get state(): ItemControlState<THints> {
+  get state(): ItemControlState<THints, TExtras> {
     return {
       messages: this.messages,
       hints: this.hints,
+      extras: this.extras,
     };
   }
 
   get hints$() {
     return this._hints$.asObservable();
+  }
+  get extras$() {
+    return this._extras$.asObservable();
   }
   get messages$() {
     return this.__messages$;
@@ -87,9 +102,11 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
   }
 
   protected __messages$ = this._messages$.pipe(distinctUntilChanged());
-  protected _state$: Observable<ItemControlState<THints>> = combineLatest([this._hints$, this._messages$]).pipe(
-    map(([hints, messages]) => ({ hints, messages })),
-  );
+  protected _state$: Observable<ItemControlState<THints, TExtras>> = combineLatest([
+    this.hints$,
+    this.extras$,
+    this.messages$,
+  ]).pipe(map(([hints, extras, messages]) => ({ hints, extras, messages })));
 
   protected _initializer$ = new BehaviorSubject(false);
   protected _initialized$ = this._initializer$.pipe(filter(Boolean));
@@ -101,7 +118,9 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
     this.hintsSub?.unsubscribe();
     this.hintsSub = this._initialized$
       .pipe(
-        switchMap(() => extractSources<ItemControl<THints>, THints, [keyof THints, boolean]>(this, this.hinters)),
+        switchMap(() =>
+          extractSources<ItemControl<THints, TExtras>, THints, TExtras, [keyof THints, boolean]>(this, this.hinters),
+        ),
         map(flgs =>
           flgs.reduce((acc, [k, v]) => {
             acc[k] = (!!acc[k] || v) as THints[typeof k];
@@ -112,11 +131,20 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
       .subscribe(hints => this._hints$.next(hints));
   }
 
+  updateExtras() {
+    this.extrasSub?.unsubscribe();
+    this.extrasSub = this._initialized$
+      .pipe(switchMap(() => (this.extraers ? this.extraers(this) : of({}))))
+      .subscribe(extras => this._extras$.next(extras));
+  }
+
   updateMessages() {
     this.messagesSub?.unsubscribe();
     this.messagesSub = this._initialized$
       .pipe(
-        switchMap(() => extractSources<ItemControl<THints>, THints, Messages | null>(this, this.messagers)),
+        switchMap(() =>
+          extractSources<ItemControl<THints, TExtras>, THints, TExtras, Messages | null>(this, this.messagers),
+        ),
         map(AR.filter(notNullish)),
         map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
         distinctUntilChanged(),
@@ -124,10 +152,13 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
       .subscribe(messages => this._messages$.next(messages));
   }
 
-  constructor(opts: ItemControlOptions<THints> = {}, parent?: ItemControl<THints>) {
+  constructor(opts: ItemControlOptions<THints, TExtras> = {}, parent?: ItemControl<THints, TExtras>) {
     super(parent);
     if (opts.hinters) {
       this.setHinters(opts.hinters);
+    }
+    if (opts.extraers) {
+      this.setExtraers(opts.extraers);
     }
     if (opts.messagers) {
       this.setMessagers(opts.messagers);
@@ -144,21 +175,28 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
     this.parent?.update();
   }
 
-  setHinters(hinters: Hinter<ItemControl<THints>, THints>[]) {
+  setHinters(hinters: Hinter<ItemControl<THints, TExtras>, THints>[]) {
     this.hinters = hinters;
     this.updateHints();
   }
 
-  setMessagers(messagers: Validator<ItemControl<THints>>[]) {
+  setExtraers(extraers: Extraer<ItemControl<THints, TExtras>, TExtras> | null) {
+    this.extraers = extraers;
+    this.updateExtras();
+  }
+
+  setMessagers(messagers: Validator<ItemControl<THints, TExtras>>[]) {
     this.messagers = messagers;
     this.updateMessages();
   }
 
   dispose() {
     this.hintsSub?.unsubscribe();
+    this.extrasSub?.unsubscribe();
     this.messagesSub?.unsubscribe();
 
     this._hints$.complete();
+    this._extras$.complete();
     this._messages$.complete();
     this._initializer$.complete();
   }
@@ -175,9 +213,13 @@ export class ItemControl<THints extends AbstractHints = AbstractHints> extends B
   }
 }
 
-export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> extends ItemControl<THints> {
+export class FieldControl<
+  TValue,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends ItemControl<THints, TExtras> {
   protected initialValue: TValue;
-  protected _parent: FieldControl<unknown, THints> | null = null;
+  protected _parent: FieldControl<unknown, THints, TExtras> | null = null;
 
   // Internal values
   protected _value$: BehaviorSubject<TValue>;
@@ -193,9 +235,9 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
   protected _childrenTouched$ = new BehaviorSubject(false);
   protected _parentDisabled$ = new BehaviorSubject(false);
 
-  protected triggers: Trigger<FieldControl<TValue, THints>>[] = [];
-  protected disablers: Disabler<FieldControl<TValue, THints>>[] = [];
-  protected validators: Validator<FieldControl<TValue, THints>>[] = [];
+  protected triggers: Trigger<FieldControl<TValue, THints, TExtras>>[] = [];
+  protected disablers: Disabler<FieldControl<TValue, THints, TExtras>>[] = [];
+  protected validators: Validator<FieldControl<TValue, THints, TExtras>>[] = [];
 
   protected triggerSub?: Subscription;
   protected disablerSub?: Subscription;
@@ -222,7 +264,7 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
   get errors() {
     return this._errors$.getValue();
   }
-  get state(): FieldControlState<TValue, THints> {
+  get state(): FieldControlState<TValue, THints, TExtras> {
     return {
       value: this.value,
       errors: this.errors,
@@ -234,6 +276,7 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
 
       messages: this.messages,
       hints: this.hints,
+      extras: this.extras,
     };
   }
 
@@ -289,9 +332,9 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     map(v => !v),
     filter(Boolean),
   );
-  protected _state$: Observable<FieldControlState<TValue, THints>>;
+  protected _state$: Observable<FieldControlState<TValue, THints, TExtras>>;
 
-  constructor(value: TValue, opts: FieldControlOptions<TValue, THints> = {}) {
+  constructor(value: TValue, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
     super(opts);
     this._value$ = new BehaviorSubject(value);
     this.__value$ = this._value$.pipe(distinctUntilChanged());
@@ -321,13 +364,15 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
       this.errors$,
       this.messages$,
       this.hints$,
+      this.extras$,
       combineLatest([this.disabled$, this.valid$, this.pending$, this.dirty$, this.touched$]),
     ]).pipe(
-      map(([value, errors, messages, hints, [disabled, valid, pending, dirty, touched]]) => ({
+      map(([value, errors, messages, hints, extras, [disabled, valid, pending, dirty, touched]]) => ({
         value,
         errors,
         messages,
         hints,
+        extras,
         disabled,
         valid,
         pending,
@@ -353,17 +398,17 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     this.setDisablers([() => of(disabled)]);
   }
 
-  setTriggers(triggers: Trigger<FieldControl<TValue, THints>>[]) {
+  setTriggers(triggers: Trigger<FieldControl<TValue, THints, TExtras>>[]) {
     this.triggers = triggers;
     this.trigger();
   }
 
-  setDisablers(disablers: Disabler<FieldControl<TValue, THints>>[]) {
+  setDisablers(disablers: Disabler<FieldControl<TValue, THints, TExtras>>[]) {
     this.disablers = disablers;
     this.updateDisablers();
   }
 
-  setValidators(validators: Validator<FieldControl<TValue, THints>>[]) {
+  setValidators(validators: Validator<FieldControl<TValue, THints, TExtras>>[]) {
     this.validators = validators;
     this.validate();
   }
@@ -399,7 +444,12 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     this.validatorSub = combineLatest([this._enabled$, this._initialized$])
       .pipe(
         tap(() => this._pending$.next(true)),
-        switchMap(() => extractSources<FieldControl<TValue, THints>, THints, Messages | null>(this, this.validators)),
+        switchMap(() =>
+          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, Messages | null>(
+            this,
+            this.validators,
+          ),
+        ),
         map(msgs => msgs.filter(Boolean)),
         map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
         finalize(() => this._pending$.next(false)),
@@ -419,7 +469,9 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     this.triggerSub?.unsubscribe();
     this.triggerSub = this._initialized$
       .pipe(
-        switchMap(() => extractSources<FieldControl<TValue, THints>, THints, void>(this, this.triggers)),
+        switchMap(() =>
+          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, void>(this, this.triggers),
+        ),
         first(),
       )
       .subscribe();
@@ -429,7 +481,9 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     this.disablerSub?.unsubscribe();
     this.disablerSub = this._initialized$
       .pipe(
-        switchMap(() => extractSources<FieldControl<TValue, THints>, THints, boolean>(this, this.disablers)),
+        switchMap(() =>
+          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, boolean>(this, this.disablers),
+        ),
         map(disableds => disableds.some(Boolean)),
       )
       .subscribe(disabled => {
@@ -438,7 +492,7 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
       });
   }
 
-  get<TValue = unknown>(path: Array<string | number> | string): FieldControl<TValue, THints> | null {
+  get<TValue = unknown>(path: Array<string | number> | string): FieldControl<TValue, THints, TExtras> | null {
     return findControl(this, path, ".");
   }
 
@@ -465,7 +519,7 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
   }
 
   get children() {
-    return <FieldControl<unknown, THints>[]>[];
+    return <FieldControl<unknown, THints, TExtras>[]>[];
   }
 
   dispose() {
@@ -504,8 +558,8 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
 
 export type ArrayType<T> = T extends Array<infer R> ? R : never;
 
-export type KeyValueControls<TValue extends Obj, THints extends AbstractHints> = {
-  [k in keyof TValue]: FieldControl<TValue[k], THints>;
+export type KeyValueControls<TValue extends Obj, THints extends AbstractHints, TExtras extends AbstractExtras> = {
+  [k in keyof TValue]: FieldControl<TValue[k], THints, TExtras>;
 };
 
 export type KeyControlsValue<TControls extends Obj> = {
@@ -514,11 +568,12 @@ export type KeyControlsValue<TControls extends Obj> = {
 
 export class GroupControl<
   TValue extends KeyControlsValue<TControls>,
-  TControls extends KeyValueControls<TValue, THints>,
-  THints extends AbstractHints = AbstractHints
-> extends FieldControl<TValue, THints> {
-  constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints> = {}) {
-    super(reduceControls<TValue, THints>(controls), opts);
+  TControls extends KeyValueControls<TValue, THints, TExtras>,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends FieldControl<TValue, THints, TExtras> {
+  constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
+    super(reduceControls<TValue, THints, TExtras>(controls), opts);
     this.controls = controls;
     this.children.forEach(control => this.registerControl(control as TControls[keyof TControls]));
 
@@ -526,7 +581,7 @@ export class GroupControl<
   }
 
   get children() {
-    return Object.values(this.controls) as FieldControl<unknown, THints>[];
+    return Object.values(this.controls) as FieldControl<unknown, THints, TExtras>[];
   }
 
   setValue = (value: TValue) => {
@@ -562,12 +617,12 @@ export class GroupControl<
       return;
     }
 
-    const value = reduceControls<TValue, THints>(this.controls);
+    const value = reduceControls<TValue, THints, TExtras>(this.controls);
     this._value$.next(value);
     super.update();
   }
 
-  protected registerControl(control: ItemControl<THints>) {
+  protected registerControl(control: ItemControl<THints, TExtras>) {
     control.setParent(this);
   }
 
@@ -586,9 +641,10 @@ export class GroupControl<
 
 export class ArrayControl<
   TValue extends KeyControlsValue<TControls>,
-  TControls extends KeyValueControls<TValue, THints>,
-  THints extends AbstractHints = AbstractHints
-> extends FieldControl<TValue[], THints> {
+  TControls extends KeyValueControls<TValue, THints, TExtras>,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 
   get itemFactory() {
@@ -596,9 +652,9 @@ export class ArrayControl<
   }
 
   constructor(
-    protected _itemFactory: (value: TValue | null) => GroupControl<TValue, TControls, THints>,
+    protected _itemFactory: (value: TValue | null) => GroupControl<TValue, TControls, THints, TExtras>,
     value: TValue[] = [],
-    opts: FieldControlOptions<TValue[], THints> = {},
+    opts: FieldControlOptions<TValue[], THints, TExtras> = {},
   ) {
     super(value, opts);
     this.controls = value.map(v => this.itemFactory(v) as ReturnType<this["itemFactory"]>);
@@ -611,7 +667,7 @@ export class ArrayControl<
   }
 
   get children() {
-    return this.controls as FieldControl<unknown, THints>[];
+    return this.controls as FieldControl<unknown, THints, TExtras>[];
   }
 
   at(index: number) {
@@ -686,7 +742,7 @@ export class ArrayControl<
     this.push(...controls);
   }
 
-  protected registerControl(control: ItemControl<THints>) {
+  protected registerControl(control: ItemControl<THints, TExtras>) {
     control.setParent(this);
   }
 

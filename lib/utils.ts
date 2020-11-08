@@ -1,6 +1,6 @@
 import { from, isObservable, Observable, of } from "rxjs";
 import { BaseControl, FieldControl, GroupControl } from "./controls";
-import { AbstractHints } from "./controls.types";
+import { AbstractExtras, AbstractHints } from "./controls.types";
 import { Option, OptionMulti, OptionSingle } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
@@ -35,14 +35,18 @@ export function isArrayConfig<TConfig extends BaseItemConfig>(
   return isGroupConfig<TConfig>(config) && (config as any).array;
 }
 
-export function isFieldControl<TValue = unknown, THints extends AbstractHints = AbstractHints>(
-  control: BaseControl,
-): control is FieldControl<TValue, THints> {
+export function isFieldControl<
+  TValue = unknown,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+>(control: BaseControl): control is FieldControl<TValue, THints, TExtras> {
   return control instanceof FieldControl;
 }
-export function isGroupControl<TValue = unknown, THints extends AbstractHints = AbstractHints>(
-  control: BaseControl,
-): control is GroupControl<TValue, any, THints> {
+export function isGroupControl<
+  TValue = unknown,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+>(control: BaseControl): control is GroupControl<TValue, any, THints, TExtras> {
   return control instanceof GroupControl;
 }
 

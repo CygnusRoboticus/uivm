@@ -8,7 +8,8 @@ export interface Messages {
   };
 }
 
-export type AbstractHints = Record<string, boolean>;
+export type AbstractHints = Record<string, boolean | undefined>;
+export type AbstractExtras = Record<string, unknown | undefined>;
 
 export type Observableish<TValue> = TValue | Promise<TValue> | Observable<TValue>;
 export type Executor<TControl extends BaseControl, TValue> = (control: TControl) => Observableish<TValue>;
@@ -21,28 +22,48 @@ export type Hinter<TControl extends BaseControl, THints extends AbstractHints = 
   [keyof THints, boolean]
 >;
 export type Disabler<TControl extends BaseControl> = ObservableExecutor<TControl, boolean>;
+export type Extraer<TControl extends BaseControl, TExtras extends AbstractExtras = AbstractExtras> = ObservableExecutor<
+  TControl,
+  Partial<TExtras>
+>;
 
-export interface ItemControlOptions<THints extends AbstractHints = AbstractHints> {
-  hinters?: Hinter<ItemControl<THints>, THints>[];
-  messagers?: Validator<ItemControl<THints>>[];
+export interface ItemControlOptions<
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> {
+  hinters?: Hinter<ItemControl<THints, TExtras>, THints>[];
+  extraers?: Extraer<ItemControl<THints, TExtras>, TExtras>;
+  messagers?: Validator<ItemControl<THints, TExtras>>[];
 }
 
-export interface FieldControlOptions<TValue, THints extends AbstractHints> extends ItemControlOptions<THints> {
+export interface FieldControlOptions<
+  TValue,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends ItemControlOptions<THints, TExtras> {
   dirty?: boolean;
   touched?: boolean;
   disabled?: boolean;
 
-  triggers?: Trigger<FieldControl<TValue, THints>>[];
-  disablers?: Disabler<FieldControl<TValue, THints>>[];
-  validators?: Validator<FieldControl<TValue, THints>>[];
+  triggers?: Trigger<FieldControl<TValue, THints, TExtras>>[];
+  disablers?: Disabler<FieldControl<TValue, THints, TExtras>>[];
+  validators?: Validator<FieldControl<TValue, THints, TExtras>>[];
 }
 
-export interface ItemControlState<THints extends AbstractHints> {
-  hints: THints;
+export interface ItemControlState<
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> {
+  hints: Partial<THints>;
+  extras: Partial<TExtras>;
   messages: Messages | null;
 }
 
-export interface FieldControlState<TValue, THints extends AbstractHints> extends ItemControlState<THints> {
+export interface FieldControlState<
+  TValue,
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
+> extends ItemControlState<THints, TExtras> {
   value: TValue;
   errors: Messages | null;
   disabled: boolean;

@@ -1,58 +1,74 @@
+import { tuple } from "fp-ts/lib/function";
+import { combineLatest } from "rxjs";
 import { first, map } from "rxjs/operators";
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl, KeyValueControls } from "./controls";
-import { AbstractHints, Disabler, Hinter, ObservableExecutor, Trigger, Validator } from "./controls.types";
+import {
+  AbstractExtras,
+  AbstractHints,
+  Disabler,
+  Extraer,
+  Hinter,
+  ObservableExecutor,
+  Trigger,
+  Validator,
+} from "./controls.types";
 import { Executable, ExecutableDefinition, FuzzyExecutableRegistry, SearchResolver } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
 import { FieldTypeMap, FormControls, FormValue } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig, notNullish, toObservable } from "./utils";
-import { array as AR } from "fp-ts";
-import { combineLatest } from "rxjs";
 
 export interface Visitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
-  THints extends AbstractHints
+  THints extends AbstractHints,
+  TExtras extends AbstractExtras
 > {
-  itemInit: (config: ItemConfig<TRegistry, THints> & TConfig, children: ItemControl<THints>[]) => ItemControl<THints>;
-  fieldInit: (config: FieldConfig<TRegistry, THints> & TConfig, value?: any) => FieldControl<{}, THints>;
-  groupInit: (
-    config: GroupConfig<TConfig, TRegistry, THints> & TConfig,
-    bundled: KeyValueControls<{}, THints>,
-    children: ItemControl<THints>[],
-  ) => GroupControl<{}, {}, THints>;
-  arrayInit: (
-    config: ArrayConfig<TConfig, TRegistry, THints> & TConfig,
-    bundled: KeyValueControls<{}, THints>,
+  itemInit: (
+    config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
+    children: ItemControl<THints, TExtras>[],
+  ) => ItemControl<THints, TExtras>;
+  fieldInit: (
+    config: FieldConfig<TRegistry, THints, TExtras> & TConfig,
     value?: any,
-  ) => ArrayControl<{}, {}, THints>;
+  ) => FieldControl<{}, THints, TExtras>;
+  groupInit: (
+    config: GroupConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
+    bundled: KeyValueControls<{}, THints, TExtras>,
+    children: ItemControl<THints, TExtras>[],
+  ) => GroupControl<{}, {}, THints, TExtras>;
+  arrayInit: (
+    config: ArrayConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
+    bundled: KeyValueControls<{}, THints, TExtras>,
+    value?: any,
+  ) => ArrayControl<{}, {}, THints, TExtras>;
 
   itemComplete: (
-    control: ItemControl<THints>,
-    config: ItemConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: ItemControl<THints, TExtras>,
+    config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) => void;
   fieldComplete: (
-    control: FieldControl<TRegistry, THints>,
-    config: FieldConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: FieldControl<TRegistry, THints, TExtras>,
+    config: FieldConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) => void;
   groupComplete: (
-    control: GroupControl<{}, {}, THints>,
-    config: GroupConfig<TConfig, TRegistry, THints> & FieldConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: GroupControl<{}, {}, THints, TExtras>,
+    config: GroupConfig<TConfig, TRegistry, THints, TExtras> & FieldConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) => void;
   arrayComplete: (
-    control: ArrayControl<{}, {}, THints>,
-    config: ArrayConfig<TConfig, TRegistry, THints>,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: ArrayControl<{}, {}, THints, TExtras>,
+    config: ArrayConfig<TConfig, TRegistry, THints, TExtras>,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) => void;
 }
@@ -60,66 +76,73 @@ export interface Visitor<
 class DefaultVisitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
-  THints extends AbstractHints
-> implements Visitor<TConfig, TRegistry, THints> {
-  itemInit(config: ItemConfig<TRegistry, THints> & TConfig) {
-    return new ItemControl<THints>();
+  THints extends AbstractHints,
+  TExtras extends AbstractExtras
+> implements Visitor<TConfig, TRegistry, THints, TExtras> {
+  itemInit(config: ItemConfig<TRegistry, THints, TExtras> & TConfig) {
+    return new ItemControl<THints, TExtras>();
   }
-  fieldInit(config: FieldConfig<TRegistry, THints> & TConfig, value?: any) {
-    return new FieldControl<any, THints>(value ?? null);
+  fieldInit(config: FieldConfig<TRegistry, THints, TExtras> & TConfig, value?: any) {
+    return new FieldControl<any, THints, TExtras>(value ?? null);
   }
-  groupInit(config: GroupConfig<TConfig, TRegistry, THints> & TConfig, bundled: KeyValueControls<{}, THints>) {
-    return new GroupControl<{}, {}, THints>(bundled);
+  groupInit(
+    config: GroupConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
+    bundled: KeyValueControls<{}, THints, TExtras>,
+  ) {
+    return new GroupControl<{}, {}, THints, TExtras>(bundled);
   }
   arrayInit(
-    config: ArrayConfig<TConfig, TRegistry, THints> & TConfig,
-    bundled: KeyValueControls<{}, THints>,
+    config: ArrayConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
+    bundled: KeyValueControls<{}, THints, TExtras>,
     value?: any[],
   ) {
-    return new ArrayControl<{}, {}, THints>(() => new GroupControl<{}, {}, THints>(bundled), value ?? []);
+    return new ArrayControl<{}, {}, THints, TExtras>(
+      () => new GroupControl<{}, {}, THints, TExtras>(bundled),
+      value ?? [],
+    );
   }
 
   itemComplete(
-    control: ItemControl<THints>,
-    config: ItemConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: ItemControl<THints, TExtras>,
+    config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) {
     this.initItem(control, parent, config, registry);
   }
   fieldComplete(
-    control: FieldControl<TRegistry, THints>,
-    config: FieldConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: FieldControl<TRegistry, THints, TExtras>,
+    config: FieldConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) {
     this.initField(control, parent, config, registry);
   }
   groupComplete(
-    control: GroupControl<{}, {}, THints>,
-    config: GroupConfig<TConfig, TRegistry, THints> & FieldConfig<TRegistry, THints> & TConfig,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: GroupControl<{}, {}, THints, TExtras>,
+    config: GroupConfig<TConfig, TRegistry, THints, TExtras> & FieldConfig<TRegistry, THints, TExtras> & TConfig,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) {
     this.initField(control, parent, config, registry);
   }
   arrayComplete(
-    control: ArrayControl<{}, {}, THints>,
-    config: ArrayConfig<TConfig, TRegistry, THints>,
-    parent: GroupControl<{}, {}, THints> | null,
-    root: GroupControl<{}, {}, THints>,
+    control: ArrayControl<{}, {}, THints, TExtras>,
+    config: ArrayConfig<TConfig, TRegistry, THints, TExtras>,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    root: GroupControl<{}, {}, THints, TExtras>,
     registry: TRegistry,
   ) {
     this.initField(control, parent, config, registry);
   }
 
   initItem(
-    control: ItemControl<THints>,
-    parent: GroupControl<{}, {}, THints> | null,
-    config: ItemConfig<TRegistry, THints>,
+    control: ItemControl<THints, TExtras>,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    config: ItemConfig<TRegistry, THints, TExtras>,
     registry: TRegistry,
   ) {
     const hints = Object.entries(config.hints ?? {}).reduce((acc, [key, value]) => {
@@ -128,23 +151,51 @@ class DefaultVisitor<
         typeof config,
         typeof control,
         ObservableExecutor<typeof control, boolean>,
-        THints
-      >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints>) =>
+        THints,
+        TExtras
+      >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints, TExtras>) =>
         toObservable(s(c)).pipe(map(v => [key, v] as [keyof THints, boolean])),
       );
       acc.push(...sources);
       return acc;
-    }, <Hinter<ItemControl<THints>, THints>[]>[]);
+    }, <Hinter<ItemControl<THints, TExtras>, THints>[]>[]);
+
+    const extrasSource = Object.entries(config.extras ?? {}).reduce((acc, [key, value]) => {
+      const source = getRegistryValue<
+        typeof registry,
+        typeof config,
+        typeof control,
+        ObservableExecutor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>,
+        THints,
+        TExtras
+      >(registry, "extras", config, control, value as any);
+      if (source) {
+        acc.push([key, source]);
+      }
+      return acc;
+    }, <[keyof TExtras, ObservableExecutor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>][]>[]);
+    const extras = (c: ItemControl<THints, TExtras>) => {
+      return combineLatest(extrasSource.map(([k, s]) => toObservable(s(c)).pipe(map(v => tuple(k, v))))).pipe(
+        map(values =>
+          values.reduce((acc, [k, v]) => {
+            acc[k] = v;
+            return acc;
+          }, <Partial<TExtras>>{}),
+        ),
+      );
+    };
 
     const messages = getRegistryValues<
       typeof registry,
       typeof config,
       typeof control,
       Validator<typeof control>,
-      THints
+      THints,
+      TExtras
     >(registry, "messagers", config, control, (config.messagers ?? []) as any);
 
     control.setHinters(hints);
+    control.setExtraers(extras);
     control.setMessagers(messages);
 
     if (!control.parent && parent) {
@@ -153,9 +204,9 @@ class DefaultVisitor<
   }
 
   initField(
-    control: FieldControl<any, THints>,
-    parent: GroupControl<{}, {}, THints> | null,
-    config: FieldConfig<TRegistry, THints>,
+    control: FieldControl<any, THints, TExtras>,
+    parent: GroupControl<{}, {}, THints, TExtras> | null,
+    config: FieldConfig<TRegistry, THints, TExtras>,
     registry: TRegistry,
   ) {
     this.initItem(control, parent, config, registry);
@@ -165,7 +216,8 @@ class DefaultVisitor<
       typeof config,
       typeof control,
       Disabler<typeof control>,
-      THints
+      THints,
+      TExtras
     >(registry, "hints", config, control, config.disablers ?? ([] as any));
 
     const validators = getRegistryValues<
@@ -173,16 +225,18 @@ class DefaultVisitor<
       typeof config,
       typeof control,
       Validator<typeof control>,
-      THints
+      THints,
+      TExtras
     >(registry, "validators", config, control, config.validators ?? ([] as any));
 
-    const triggers = getRegistryValues<typeof registry, typeof config, typeof control, Trigger<typeof control>, THints>(
-      registry,
-      "triggers",
-      config,
-      control,
-      config.triggers ?? ([] as any),
-    );
+    const triggers = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      Trigger<typeof control>,
+      THints,
+      TExtras
+    >(registry, "triggers", config, control, config.triggers ?? ([] as any));
 
     control.setDisablers(disablers);
     control.setTriggers(triggers);
@@ -192,16 +246,17 @@ class DefaultVisitor<
 
 export interface ConfigBundle<
   T extends TConfig,
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 > {
   id: string;
   registry: TRegistry;
   control: TControl;
   config: T;
-  children: ConfigBundle<TConfig, ItemControl<THints>, TConfig, TRegistry, THints>[];
+  children: ConfigBundle<TConfig, ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>[];
 }
 
 export function bundleConfig<
@@ -210,6 +265,7 @@ export function bundleConfig<
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras,
   TValue = FormValue<T["fields"], TConfig, TTypes>,
   TS = unknown,
   TN = unknown,
@@ -220,18 +276,20 @@ export function bundleConfig<
   config: T,
   registry: TRegistry,
   value?: TValue,
-  visitor: Visitor<TConfig, TRegistry, THints> = new DefaultVisitor<TConfig, TRegistry, THints>(),
+  visitor: Visitor<TConfig, TRegistry, THints, TExtras> = new DefaultVisitor<TConfig, TRegistry, THints, TExtras>(),
 ) {
   const bundle = bundleConfig2<
     GroupControl<
       // @ts-ignore
       TValue,
-      FormControls<T["fields"], TConfig, TTypes, THints>,
-      THints
+      FormControls<T["fields"], TConfig, TTypes, THints, TExtras>,
+      THints,
+      TExtras
     >,
     TConfig,
     TRegistry,
-    THints
+    THints,
+    TExtras
   >(config.type, config, value, registry, visitor);
   completeConfig2(bundle, null, bundle, registry, visitor);
   return bundle;
@@ -240,11 +298,12 @@ export function bundleConfig<
 export function getRegistryMethods<
   TRegistry extends FuzzyExecutableRegistry,
   TValue,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(registry: TRegistry, kind: keyof TRegistry, defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[]) {
   return defs
     .map(def => {
-      const method = getRegistryMethod<TRegistry, TValue, THints>(registry, kind, def);
+      const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
       return method ? { method, def } : null;
     })
     .filter(notNullish);
@@ -253,12 +312,13 @@ export function getRegistryMethods<
 export function getRegistryMethod<
   TRegistry extends FuzzyExecutableRegistry,
   TValue,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
   def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
-): Executable<BaseItemConfig, ItemControl<THints>, any, TValue, THints> | null {
+): Executable<BaseItemConfig, ItemControl<THints, TExtras>, any, TValue, THints, TExtras> | null {
   const method = (registry[kind] as any)?.[def.name];
   if (method && registry[kind]) {
     return method.bind(registry[kind]);
@@ -269,9 +329,10 @@ export function getRegistryMethod<
 export function getRegistryValues<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig,
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TValue,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -279,16 +340,17 @@ export function getRegistryValues<
   control: TControl,
   defs: readonly ExecutableDefinition<TRegistry[typeof kind], TValue>[],
 ): TValue[] {
-  const methods = getRegistryMethods<TRegistry, TValue, THints>(registry, kind, defs);
+  const methods = getRegistryMethods<TRegistry, TValue, THints, TExtras>(registry, kind, defs);
   return methods.map(({ method, def }) => method(config, control, (def as any).params));
 }
 
 export function getRegistryValue<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig,
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TValue,
-  THints extends AbstractHints = AbstractHints
+  THints extends AbstractHints = AbstractHints,
+  TExtras extends AbstractExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -296,26 +358,34 @@ export function getRegistryValue<
   control: TControl,
   def: ExecutableDefinition<TRegistry[typeof kind], TValue>,
 ): TValue | null {
-  const method = getRegistryMethod<TRegistry, TValue, THints>(registry, kind, def);
+  const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
   return method ? method(config, control, (def as any).params) : null;
 }
 
 function completeConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
-  THints extends AbstractHints
+  THints extends AbstractHints,
+  TExtras extends AbstractExtras
 >(
-  bundle: ConfigBundle<TConfig, ItemControl<THints>, TConfig, TRegistry, THints>,
-  parentBundle: ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints> | null,
-  rootBundle: ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints>,
+  bundle: ConfigBundle<TConfig, ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>,
+  parentBundle: ConfigBundle<
+    TConfig,
+    GroupControl<any, any, THints, TExtras>,
+    TConfig,
+    TRegistry,
+    THints,
+    TExtras
+  > | null,
+  rootBundle: ConfigBundle<TConfig, GroupControl<any, any, THints, TExtras>, TConfig, TRegistry, THints, TExtras>,
   registry: TRegistry,
-  visitor: Visitor<TConfig, TRegistry, THints>,
+  visitor: Visitor<TConfig, TRegistry, THints, TExtras>,
 ) {
   const { config, control, children } = bundle;
   children.forEach(c =>
     completeConfig2(
       c,
-      bundle as ConfigBundle<TConfig, GroupControl<any, any, THints>, TConfig, TRegistry, THints>,
+      bundle as ConfigBundle<TConfig, GroupControl<any, any, THints, TExtras>, TConfig, TRegistry, THints, TExtras>,
       rootBundle,
       registry,
       visitor,
@@ -335,21 +405,22 @@ function completeConfig2<
 }
 
 function bundleConfig2<
-  TControl extends ItemControl<THints>,
+  TControl extends ItemControl<THints, TExtras>,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
-  THints extends AbstractHints
+  THints extends AbstractHints,
+  TExtras extends AbstractExtras
 >(
   id: string,
   config: TConfig,
   value: any | undefined,
   registry: TRegistry,
-  visitor: Visitor<TConfig, TRegistry, THints>,
-): ConfigBundle<TConfig, TControl, TConfig, TRegistry, THints> {
+  visitor: Visitor<TConfig, TRegistry, THints, TExtras>,
+): ConfigBundle<TConfig, TControl, TConfig, TRegistry, THints, TExtras> {
   if (isGroupConfig<TConfig>(config)) {
     const items = config.fields.map((f, i) => {
       if (isFieldConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
+        const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
           `${id}-${f.name}`,
           f,
           value?.[f.name],
@@ -358,7 +429,7 @@ function bundleConfig2<
         );
         return { controls: { [f.name]: bundle.control }, config: f, items: [bundle] };
       } else if (isGroupConfig<TConfig>(f)) {
-        const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
+        const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
           `${id}-${i}`,
           { ...f, name: "group" },
           value,
@@ -367,13 +438,13 @@ function bundleConfig2<
         );
         return {
           controls: {
-            ...(bundle.control as GroupControl<{}, {}, THints>).controls,
+            ...(bundle.control as GroupControl<{}, {}, THints, TExtras>).controls,
           },
           config: f,
           items: [bundle],
         };
       }
-      const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
+      const bundle = bundleConfig2<ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>(
         `${id}-${i}`,
         f,
         value,
