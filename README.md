@@ -90,12 +90,7 @@ const bundle = bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, ty
   },
 });
 
-bundle.control.state$.subscribe(s => {
-  console.log(s);
-  document.getElementById("app").innerHTML = `
-    <pre>${JSON.stringify(s, null, 2)}</pre>
-  `;
-});
+bundle.control.state$.subscribe(console.log);
 ```
 
 ## Demo
