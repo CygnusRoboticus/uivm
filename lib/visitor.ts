@@ -15,7 +15,7 @@ export interface Visitor<
   THints extends AbstractHints
 > {
   itemInit: (config: ItemConfig<TRegistry, THints> & TConfig, children: ItemControl<THints>[]) => ItemControl<THints>;
-  fieldInit: (config: FieldConfig<TRegistry, THints> & TConfig) => FieldControl<{}, THints>;
+  fieldInit: (config: FieldConfig<TRegistry, THints> & TConfig, value?: any) => FieldControl<{}, THints>;
   groupInit: (
     config: GroupConfig<TConfig, TRegistry, THints> & TConfig,
     bundled: KeyValueControls<{}, THints>,
@@ -24,6 +24,7 @@ export interface Visitor<
   arrayInit: (
     config: ArrayConfig<TConfig, TRegistry, THints> & TConfig,
     bundled: KeyValueControls<{}, THints>,
+    value?: any,
   ) => ArrayControl<{}, {}, THints>;
 
   itemComplete: (
@@ -64,14 +65,18 @@ class DefaultVisitor<
   itemInit(config: ItemConfig<TRegistry, THints> & TConfig) {
     return new ItemControl<THints>();
   }
-  fieldInit(config: FieldConfig<TRegistry, THints> & TConfig) {
-    return new FieldControl<any, THints>(null);
+  fieldInit(config: FieldConfig<TRegistry, THints> & TConfig, value?: any) {
+    return new FieldControl<any, THints>(value ?? null);
   }
   groupInit(config: GroupConfig<TConfig, TRegistry, THints> & TConfig, bundled: KeyValueControls<{}, THints>) {
     return new GroupControl<{}, {}, THints>(bundled);
   }
-  arrayInit(config: ArrayConfig<TConfig, TRegistry, THints> & TConfig, bundled: KeyValueControls<{}, THints>) {
-    return new ArrayControl<{}, {}, THints>(() => new GroupControl<{}, {}, THints>(bundled));
+  arrayInit(
+    config: ArrayConfig<TConfig, TRegistry, THints> & TConfig,
+    bundled: KeyValueControls<{}, THints>,
+    value?: any[],
+  ) {
+    return new ArrayControl<{}, {}, THints>(() => new GroupControl<{}, {}, THints>(bundled), value ?? []);
   }
 
   itemComplete(
@@ -205,6 +210,7 @@ export function bundleConfig<
   TTypes extends FieldTypeMap<TConfig, TS, TN, TB, TArray, TNull>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
+  TValue = FormValue<T["fields"], TConfig, TTypes>,
   TS = unknown,
   TN = unknown,
   TB = unknown,
@@ -213,19 +219,20 @@ export function bundleConfig<
 >(
   config: T,
   registry: TRegistry,
+  value?: TValue,
   visitor: Visitor<TConfig, TRegistry, THints> = new DefaultVisitor<TConfig, TRegistry, THints>(),
 ) {
   const bundle = bundleConfig2<
     GroupControl<
       // @ts-ignore
-      FormValue<T["fields"], TConfig, TTypes>,
+      TValue,
       FormControls<T["fields"], TConfig, TTypes, THints>,
       THints
     >,
     TConfig,
     TRegistry,
     THints
-  >(config.type, config, registry, visitor);
+  >(config.type, config, value, registry, visitor);
   completeConfig2(bundle, null, bundle, registry, visitor);
   return bundle;
 }
@@ -335,6 +342,7 @@ function bundleConfig2<
 >(
   id: string,
   config: TConfig,
+  value: any | undefined,
   registry: TRegistry,
   visitor: Visitor<TConfig, TRegistry, THints>,
 ): ConfigBundle<TConfig, TControl, TConfig, TRegistry, THints> {
@@ -344,6 +352,7 @@ function bundleConfig2<
         const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
           `${id}-${f.name}`,
           f,
+          value?.[f.name],
           registry,
           visitor,
         );
@@ -352,6 +361,7 @@ function bundleConfig2<
         const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
           `${id}-${i}`,
           { ...f, name: "group" },
+          value,
           registry,
           visitor,
         );
@@ -363,7 +373,13 @@ function bundleConfig2<
           items: [bundle],
         };
       }
-      const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(`${id}-${i}`, f, registry, visitor);
+      const bundle = bundleConfig2<ItemControl<THints>, TConfig, TRegistry, THints>(
+        `${id}-${i}`,
+        f,
+        value,
+        registry,
+        visitor,
+      );
       return { controls: {}, config: f, items: [bundle] };
     });
 
@@ -371,7 +387,7 @@ function bundleConfig2<
     const children = items.reduce((acc, f) => [...acc, ...f.items], <typeof items[0]["items"]>[]);
 
     if (isArrayConfig<TConfig>(config)) {
-      const control = visitor.arrayInit(config as any, controls);
+      const control = visitor.arrayInit(config as any, controls, value);
       return {
         id: `${id}-${config.name}`,
         registry,
@@ -406,7 +422,7 @@ function bundleConfig2<
       };
     }
   } else if (isFieldConfig<TConfig>(config)) {
-    const control = visitor.fieldInit(config as any);
+    const control = visitor.fieldInit(config as any, value);
     return {
       id: `${id}-${config.name}`,
       registry,

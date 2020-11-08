@@ -63,6 +63,6 @@ export type CustomConfigs =
 
 export type CustomHints = {
   hidden: boolean;
-};
+} & Record<string, boolean>;
 
 export type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, never, never, never>;

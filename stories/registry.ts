@@ -23,9 +23,9 @@ export const registry = {
         return combineLatest([c.root$.pipe(filter(isGroupControl)), c.value$]).pipe(
           tap(([root]) => {
             const dependent = root.get(field);
-            if (dependent) {
+            if (dependent && c.value) {
               const value = typeof c.value === "string" ? c.value : "";
-              dependent.setValue(regex && replace ? value.replace(regex, replace) : value);
+              dependent.reset(regex && replace ? value.replace(regex, replace) : value);
             }
           }),
           map(() => {}),

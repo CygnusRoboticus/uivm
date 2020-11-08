@@ -67,16 +67,24 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
     //   a: 1,
   } as const;
 
+  const asdf: CustomConfigs = {
+    type: "form",
+    name: "form",
+    fields: [{ type: "text", name: "text", triggers: [{ name: "alert", params: { message: "skirts" } }] }],
+  };
+
   const [bundle] = useState(() =>
-    bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry),
-  );
-  const [state, setState] = useState(() => bundle.control.state);
-  useEffect(() => {
-    bundle.control.patchValue({
+    bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry, {
       firstName: "John",
       lastName: "Wick",
       movie: "Parabellum",
-    });
+      autofill: "",
+      checkbox: false,
+      select: null,
+    }),
+  );
+  const [state, setState] = useState(() => bundle.control.state);
+  useEffect(() => {
     bundle.control.state$.subscribe(setState);
     return () => bundle.control.dispose();
   }, []);

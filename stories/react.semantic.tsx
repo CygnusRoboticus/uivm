@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
-import { AbstractHints, Trigger } from "../lib/controls.types";
-import { Executable } from "../lib/executable";
-import { ConfigBundle, getRegistryMethod, getRegistryValue } from "../lib/visitor";
+import { Trigger } from "../lib/controls.types";
+import { ConfigBundle, getRegistryValue } from "../lib/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
   CustomConfigs,
+  CustomHints,
   FormConfig,
   FormGroupConfig,
   MessageConfig,
@@ -30,7 +30,7 @@ export const SemanticComponentMap = new Map<CustomConfigs["type"], React.Compone
 export function Fields({
   children,
 }: {
-  children: ConfigBundle<CustomConfigs, ItemControl, CustomConfigs, CustomRegistry>[];
+  children: ConfigBundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>[];
 }) {
   return (
     <>
@@ -50,7 +50,7 @@ export function Form({
   control,
   config,
   children,
-}: ConfigBundle<FormConfig, GroupControl<{}, {}>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   return (
     <SemanticForm>
       <Fields children={children}></Fields>
@@ -61,7 +61,7 @@ export function Form({
 export function Text({
   config,
   control,
-}: ConfigBundle<TextConfig, FieldControl<string | null>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<TextConfig, FieldControl<string | null, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -152,7 +152,7 @@ export function FormGroup({
   config,
   control,
   children,
-}: ConfigBundle<FormGroupConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   return (
     <SemanticForm.Group>
       <Fields children={children}></Fields>
@@ -164,14 +164,14 @@ export function Button({
   config,
   control,
   registry,
-}: ConfigBundle<ButtonConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
   }, []);
 
   const [trigger] = useState(() =>
-    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>>(
+    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>, CustomHints>(
       registry,
       "triggers",
       config,

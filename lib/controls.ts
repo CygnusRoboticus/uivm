@@ -381,7 +381,11 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints> 
     this.setValue(value);
   };
 
-  reset = () => {
+  reset = (value?: TValue) => {
+    if (value !== undefined) {
+      this.initialValue = value;
+    }
+
     this._value$.next(this.initialValue);
     this._dirty$.next(false);
     this._touched$.next(false);
@@ -543,8 +547,14 @@ export class GroupControl<
     });
   };
 
-  reset = () => {
-    this.children.forEach(control => control.reset());
+  reset = (value?: Partial<TValue>) => {
+    Object.keys(this.controls).forEach(name => {
+      const control = this.get(name);
+      if (control) {
+        const v = value?.[name as keyof TValue] ?? null;
+        control.reset(v);
+      }
+    });
   };
 
   update() {

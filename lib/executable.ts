@@ -155,8 +155,8 @@ export interface SearchResolver<
   TControl extends ItemControl<THints>,
   TValue,
   TParams extends object,
-  THints extends AbstractHints
+  THints extends AbstractHints = AbstractHints
 > {
-  search(search: string, control: TControl, params: TParams): Observableish<readonly Option<TValue>[]>;
-  resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly Option<TValue>[]>;
+  search(search: string, control: TControl, params: TParams): Observableish<readonly TValue[]>;
+  resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TValue[]>;
 }

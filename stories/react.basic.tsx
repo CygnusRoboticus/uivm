@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { FieldControl, GroupControl, ItemControl } from "../lib/controls";
 import { Messages, Trigger } from "../lib/controls.types";
-import { OptionSingle } from "../lib/executable";
-import { ConfigBundle, getRegistryMethod, getRegistryMethods } from "../lib/visitor";
+import { OptionSingle, SearchResolver } from "../lib/executable";
+import { ConfigBundle, getRegistryMethod, getRegistryValue, getRegistryValues } from "../lib/visitor";
 import {
   ButtonConfig,
   CheckboxConfig,
   CustomConfigs,
+  CustomHints,
   FormConfig,
   FormGroupConfig,
   MessageConfig,
@@ -14,6 +15,8 @@ import {
   TextConfig,
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
+import { createSearchObservable } from "../lib/search";
+import { of } from "rxjs";
 
 export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -28,7 +31,7 @@ export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentF
 export function Fields({
   children,
 }: {
-  children: ConfigBundle<CustomConfigs, ItemControl, CustomConfigs, CustomRegistry>[];
+  children: ConfigBundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>[];
 }) {
   return (
     <>
@@ -53,7 +56,7 @@ export function Form({
   control,
   config,
   children,
-}: ConfigBundle<FormConfig, GroupControl<{}, {}>, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   return (
     <form>
       <Fields children={children}></Fields>
@@ -123,15 +126,22 @@ export function Select({
   config,
   control,
   registry,
-}: ConfigBundle<SelectConfig<unknown>, FieldControl<string>, CustomConfigs, CustomRegistry>) {
-  const [{ value, errors, disabled }, setState] = useState(control.state);
+}: ConfigBundle<SelectConfig<unknown>, FieldControl<string, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+  const [{ value, errors, disabled, hints }, setState] = useState(control.state);
   const [options, setOptions] = useState<OptionSingle<string>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
-    const searchers = getRegistryMethods(registry, "search", config.options);
+    const searchers = getRegistryValues<
+      typeof registry,
+      typeof config,
+      typeof control,
+      SearchResolver<typeof control, unknown, object, CustomHints>,
+      CustomHints
+    >(registry, "search", config, control, config.options);
+    createSearchObservable(searchers, of({ key: "", search: "", params: {}, control })).subscribe(setOptions);
   }, []);
 
-  return (
+  return hints.hidden ? null : (
     <div>
       {config.label ? <label htmlFor={id}>{config.label}</label> : null}
       <br />
@@ -177,7 +187,7 @@ export function FormGroup({
   config,
   control,
   children,
-}: ConfigBundle<FormGroupConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
   return (
     <>
       <Fields children={children}></Fields>
@@ -189,15 +199,24 @@ export function Button({
   config,
   control,
   registry,
-}: ConfigBundle<ButtonConfig, ItemControl, CustomConfigs, CustomRegistry>) {
+}: ConfigBundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+  const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
+  useEffect(() => {
+    control.state$.subscribe(setState);
+  }, []);
+
   const [trigger] = useState(() =>
-    getRegistryMethod<typeof registry, Trigger<ItemControl>>(registry, "triggers", config.trigger),
+    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>, CustomHints>(
+      registry,
+      "triggers",
+      config,
+      control,
+      config.trigger,
+    ),
   );
-  return (
-    <button
-      type={config.submit ? "submit" : "button"}
-      onClick={() => trigger(config, control, config.trigger.params)(control)}
-    >
+
+  return hints.hidden ? null : (
+    <button type={config.submit ? "submit" : "button"} onClick={() => trigger(control)}>
       {config.label}
     </button>
   );
