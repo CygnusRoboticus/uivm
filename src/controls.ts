@@ -1,5 +1,5 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
+import { BehaviorSubject, combineLatest, Observable, of, Subject, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import {
   AbstractExtras,
@@ -230,7 +230,7 @@ export class FieldControl<
   protected _touched$ = new BehaviorSubject(false);
   protected _errors$ = new BehaviorSubject<Messages | null>(null);
 
-  protected _childrenValid$ = new BehaviorSubject(true);
+  protected _validChildren$ = new BehaviorSubject(true);
   protected _childrenDirty$ = new BehaviorSubject(false);
   protected _childrenPending$ = new BehaviorSubject(false);
   protected _childrenTouched$ = new BehaviorSubject(false);
@@ -251,7 +251,10 @@ export class FieldControl<
     return this._disabled$.getValue() || this._parentDisabled$.getValue();
   }
   get valid() {
-    return !this._errors$.getValue() && this._childrenValid$.getValue();
+    return !this._errors$.getValue() && this._validChildren$.getValue();
+  }
+  get validChildren() {
+    return this._validChildren$.getValue();
   }
   get pending() {
     return this._pending$.getValue() || this._childrenPending$.getValue();
@@ -312,7 +315,7 @@ export class FieldControl<
     map(([d, pd]) => d || pd),
     distinctUntilChanged(),
   );
-  protected __valid$ = combineLatest([this._errors$, this._childrenValid$]).pipe(
+  protected __valid$ = combineLatest([this._errors$, this._validChildren$]).pipe(
     map(([e, cv]) => !e && cv),
     distinctUntilChanged(),
   );
@@ -516,7 +519,7 @@ export class FieldControl<
     this._childrenDirty$.next(status.dirty);
     this._childrenPending$.next(status.pending);
     this._childrenTouched$.next(status.touched);
-    this._childrenValid$.next(status.valid);
+    this._validChildren$.next(status.valid);
     this._parentDisabled$.next(this._parent?.disabled ?? false);
     super.update();
   }
@@ -539,7 +542,7 @@ export class FieldControl<
     this._childrenDirty$.complete();
     this._childrenPending$.complete();
     this._childrenTouched$.complete();
-    this._childrenValid$.complete();
+    this._validChildren$.complete();
     this._parentDisabled$.complete();
 
     super.dispose();
@@ -595,11 +598,15 @@ export class GroupControl<
     });
   };
 
-  reset = (value?: Partial<TValue>) => {
+  reset = (value?: TValue) => {
+    if (value !== undefined) {
+      this.initialValue = value;
+    }
+
     Object.keys(this.controls).forEach(name => {
       const control = this.get(name);
       if (control) {
-        const v = value?.[name as keyof TValue] ?? null;
+        const v = value?.[name as keyof TValue];
         control.reset(v);
       }
     });
@@ -667,19 +674,29 @@ export class ArrayControl<
     return this.controls[index];
   }
 
-  push(...items: ReturnType<this["itemFactory"]>[]) {
+  push = (...items: ReturnType<this["itemFactory"]>[]) => {
     this.controls.push(...items);
     items.map(control => this.registerControl(control));
-  }
+    this.update();
+  };
 
-  insert(index: number, item: ReturnType<this["itemFactory"]>) {
+  add = (...value: TValue[]) => {
+    const controls = (value.length ? value.map(v => this.itemFactory(v)) : [this.itemFactory(null)]) as ReturnType<
+      this["itemFactory"]
+    >[];
+    this.push(...controls);
+  };
+
+  insert = (index: number, item: ReturnType<this["itemFactory"]>) => {
     this.controls.splice(index, 0, item);
     this.registerControl(item);
-  }
+    this.update();
+  };
 
-  removeAt(index: number) {
+  removeAt = (index: number) => {
     this.controls.splice(index, 1);
-  }
+    this.update();
+  };
 
   setValue = (value: TValue[]) => {
     this.resize(value.length);
@@ -700,9 +717,13 @@ export class ArrayControl<
     });
   };
 
-  reset = () => {
+  reset = (value?: TValue[]) => {
+    if (value !== undefined) {
+      this.initialValue = value;
+    }
+
     this.resize(this.initialValue.length);
-    this.controls.forEach(control => control.reset());
+    this.controls.forEach((control, i) => control.reset(this.initialValue[i]));
   };
 
   getRawValue(): TValue[] {

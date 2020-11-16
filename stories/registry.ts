@@ -6,11 +6,6 @@ import { BaseItemConfig } from "../src/primitives";
 import { isGroupControl } from "../src/utils";
 
 export const registry = {
-  messagers: {
-    static(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
-      return (c: ItemControl) => of({ static: { message } });
-    },
-  },
   extras: {
     static(config: BaseItemConfig, control: ItemControl, { value }: { value: unknown }) {
       return (c: ItemControl) => of(value);
@@ -60,6 +55,9 @@ export const registry = {
     },
   },
   validators: {
+    static(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
+      return (c: ItemControl) => of({ static: { message } });
+    },
     required(config: BaseItemConfig, control: ItemControl, params?: { message?: string }) {
       return (c: FieldControl<unknown>) => {
         if (c.value === undefined || c.value === null || c.value === "" || (Array.isArray(c.value) && c.value.length)) {

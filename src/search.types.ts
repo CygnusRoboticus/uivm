@@ -5,7 +5,7 @@ import { AbstractHints, AbstractExtras, Observableish } from "./controls.types";
 export interface OptionSingle<T = unknown> {
   label: string;
   /**
-   * Unique identifier for value, useful when value is a complex type
+   * Unique identifier for value. Allows comparisons to be made when values are a complex type.
    */
   key?: string;
   value: T;
@@ -20,10 +20,10 @@ export interface OptionSingle<T = unknown> {
 export interface OptionMulti<T = unknown, U = unknown> {
   label: string;
   /**
-   * Value to uniquely identify group; not used in selection.
+   * Unique identifer for group.
    */
   key: string;
-  icon?: string;
+  icon?: { name: string; color?: string; tooltip?: string };
   options: Option<T>[];
 
   [key: string]: unknown;
@@ -33,11 +33,12 @@ export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;
 
 export interface SearchResolver<
   TControl extends ItemControl<THints, TExtras>,
+  TOption,
   TValue,
-  TParams extends object,
+  TParams extends object = any,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > {
-  search(search: string, control: TControl, params: TParams): Observableish<readonly TValue[]>;
-  resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TValue[]>;
+  search(search: string, control: TControl, params: TParams): Observableish<readonly TOption[]>;
+  resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;
 }

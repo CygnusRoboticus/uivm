@@ -8,16 +8,12 @@ import { registry } from "./registry";
 
 function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactory<any, any> }) {
   const config = {
-    // const config: CustomConfigs = {
     type: "form",
     name: "form",
     fields: [
       {
         type: "message",
         messagers: [{ name: "static", params: { message: "You should enter 'John Wick'" } }],
-        hints: {
-          error: [{ name: "field", params: { field: "firstName", value: "John" } }],
-        },
         extras: {
           chrome: { name: "static", params: { value: "info" } },
         },
@@ -64,9 +60,6 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
       { label: "Checkbox", type: "checkbox", name: "checkbox" },
       { type: "button", label: "Click", trigger: { name: "alert", params: { message: "I'm an alert alright" } } },
     ],
-    // };
-    // const a = {
-    //   a: 1,
   } as const;
 
   const [bundle] = useState(() =>

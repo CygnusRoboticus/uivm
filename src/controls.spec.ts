@@ -35,6 +35,16 @@ describe("controls", () => {
     form.dispose();
   });
 
+  test("compiles", () => {
+    const {
+      field1: _,
+      field2: __,
+      group1: { field3: ___ },
+      array1: [{ groupField1: ____ }],
+    } = form.value;
+    expect(true).toBeTruthy();
+  });
+
   test("value is updated", () => {
     expect(form.value).toEqual({
       array1: [{ groupField1: "shirts" }],

@@ -8,13 +8,14 @@ import { readonlyArray as RAR } from "fp-ts";
 
 export function mergeSearchResolvers<
   TControl extends ItemControl<THints, TExtras>,
+  TOption,
   TValue,
   TParams extends object,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
-): SearchResolver<TControl, TValue, TParams, THints, TExtras> {
+  searchResolvers: SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
+): SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras> {
   return {
     search: (s, c, p) =>
       searchResolvers.length
@@ -34,26 +35,31 @@ export function mergeSearchResolvers<
  */
 export function createSearchObservable<
   TControl extends ItemControl<THints, TExtras>,
+  TOption,
   TValue,
   TParams extends object,
+  TInput extends { search: string; control: TControl; params: TParams; key: string },
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
-  search$: Observable<{ search: string; control: TControl; params: TParams; key: string }>,
+  search$: Observable<TInput>,
+  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
   delay = 500,
 ) {
-  const merged = mergeSearchResolvers(searchResolvers);
   return search$.pipe(
     groupBy(params => params.key),
     map(group =>
       group.pipe(
         debounceTime(delay),
-        switchMap(params => merged.search(params.search, params.control, params.params)),
+        switchMap(params => {
+          const merged = mergeSearchResolvers(resolversFn(params));
+          return toObservable(merged.search(params.search, params.control, params.params)).pipe(
+            map(result => ({ result, ...params })),
+          );
+        }),
       ),
     ),
     mergeAll(),
-    share(),
   );
 }
 
@@ -64,16 +70,17 @@ export function createSearchObservable<
  */
 export function createResolveObservable<
   TControl extends ItemControl<THints, TExtras>,
+  TOption,
   TValue,
   TParams extends object,
+  TInput extends { values: TValue[]; control: TControl; params: TParams; key: string },
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 >(
-  searchResolvers: SearchResolver<TControl, TValue, TParams, THints, TExtras>[],
-  resolve$: Observable<{ values: TValue[]; control: TControl; params: TParams; key: string }>,
+  resolve$: Observable<TInput>,
+  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
   delay = 500,
 ) {
-  const merged = mergeSearchResolvers(searchResolvers);
   return resolve$.pipe(
     groupBy(params => params.key),
     map(group =>
@@ -82,16 +89,21 @@ export function createResolveObservable<
         filter(params => !!params.length),
         map(params =>
           params.reduce((acc, p) => ({
+            ...p,
             values: acc.values.concat(p.values),
             control: p.control,
             params: p.params,
             key: p.key,
           })),
         ),
-        switchMap(params => merged.resolve(params.values, params.control, params.params)),
+        switchMap(params => {
+          const merged = mergeSearchResolvers(resolversFn(params));
+          return toObservable(merged.resolve(params.values, params.control, params.params)).pipe(
+            map(result => ({ result, ...params })),
+          );
+        }),
       ),
     ),
     mergeAll(),
-    share(),
   );
 }

@@ -35,6 +35,7 @@ export {
   FuzzyExecutableRegistry,
   ExecutableRegistryOverride,
   ExecutableService,
+  FuzzyExecutableService,
 } from "./executable";
 export { BaseItemConfig, BaseFieldConfig, BaseGroupConfig, BaseArrayConfig } from "./primitives";
 export { mergeSearchResolvers, createSearchObservable, createResolveObservable } from "./search";
@@ -49,9 +50,6 @@ export {
   isArrayConfig,
   isFieldControl,
   isGroupControl,
-  isOptionSingle,
-  isOptionMulti,
-  flattenOptions,
 } from "./utils";
 export { Visitor, DefaultVisitor, ConfigBundle, bundleConfig } from "./visitor";
 export { getRegistryMethods, getRegistryMethod, getRegistryValues, getRegistryValue } from "./visitor.utils";

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { of } from "rxjs";
+import { map } from "rxjs/operators";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
 import { FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Trigger } from "../src/controls.types";
 import { createSearchObservable } from "../src/search";
-import { OptionSingle, SearchResolver } from "../src/search.types";
+import { OptionSingle, SearchResolver, Option } from "../src/search.types";
 import { ConfigBundle } from "../src/visitor";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
@@ -131,17 +132,18 @@ export function Select({
   CustomHints
 >) {
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
-  const [options, setOptions] = useState<OptionSingle<string>[]>([]);
+  const [options, setOptions] = useState<readonly OptionSingle<string>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
       typeof registry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, unknown, object, CustomHints>,
-      CustomHints
+      SearchResolver<typeof control, OptionSingle<string>, string>
     >(registry, "search", config, control, config.options);
-    createSearchObservable(searchers, of({ key: "", search: "", params: {}, control })).subscribe(setOptions);
+    createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers)
+      .pipe(map(o => o.result))
+      .subscribe(setOptions);
   }, []);
 
   return hints.hidden ? null : (
@@ -156,7 +158,7 @@ export function Select({
         disabled: o.disabled,
         icon: o.icon?.name,
         text: o.label,
-        value: o.key ?? o.value,
+        value: o.value,
       }))}
       error={
         errors

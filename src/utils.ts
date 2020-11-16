@@ -49,21 +49,3 @@ export function isGroupControl<
 >(control: BaseControl): control is GroupControl<TValue, any, THints, TExtras> {
   return control instanceof GroupControl;
 }
-
-export function isOptionSingle<T>(o: Option<T>): o is OptionSingle<T> {
-  return !(o as any).options;
-}
-export function isOptionMulti<T, U = T>(o: Option<T>): o is OptionMulti<T, U> {
-  return Array.isArray((o as any).options);
-}
-
-export function flattenOptions<T>(options: Option<T>[]): OptionSingle<T>[] {
-  return options.reduce((acc, o) => {
-    if (isOptionMulti(o)) {
-      acc.push(...flattenOptions(o.options));
-    } else {
-      acc.push(o);
-    }
-    return acc;
-  }, <OptionSingle<T>[]>[]);
-}
