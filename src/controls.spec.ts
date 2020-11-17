@@ -11,6 +11,7 @@ describe("controls", () => {
     new GroupControl({
       field1: new FieldControl("pants"),
       field2: new FieldControl("skirts"),
+      // @ts-ignore
       group1: new GroupControl({
         field3: new FieldControl("shorts"),
       }),
@@ -39,6 +40,7 @@ describe("controls", () => {
     const {
       field1: _,
       field2: __,
+      // @ts-ignore
       group1: { field3: ___ },
       array1: [{ groupField1: ____ }],
     } = form.value;
