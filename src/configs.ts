@@ -4,7 +4,6 @@ import {
   ExtraDefinition,
   FuzzyExecutableRegistry,
   HinterDefinition,
-  MessagerDefinition,
   TriggerDefinition,
   ValidatorDefinition,
 } from "./executable";
@@ -12,26 +11,26 @@ import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } fro
 import { FieldDataTypeDefinition } from "./typing";
 
 export interface ItemConfig<
-  TRegistry extends FuzzyExecutableRegistry,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > extends BaseItemConfig {
   hints?: {
-    [hint in keyof THints]: readonly HinterDefinition<TRegistry, ItemControl<THints, TExtras>, THints, TExtras>[];
+    [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>[];
   };
-  extras?: ExtraDefinition<TRegistry, ItemControl<THints, TExtras>, THints, TExtras>;
-  messagers?: readonly MessagerDefinition<TRegistry, ItemControl<THints, TExtras>, THints, TExtras>[];
+  extras?: ExtraDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>;
+  messagers?: readonly ValidatorDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>[];
 }
 
 export interface FieldConfig<
-  TRegistry extends FuzzyExecutableRegistry,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
-  disablers?: readonly HinterDefinition<TRegistry, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
-  triggers?: readonly TriggerDefinition<TRegistry, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
-  validators?: readonly ValidatorDefinition<TRegistry, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
+  disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
+  triggers?: readonly TriggerDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
+  validators?: readonly ValidatorDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
   dataType?: FieldDataTypeDefinition;
 }
 

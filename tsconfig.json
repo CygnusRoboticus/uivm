@@ -13,5 +13,5 @@
     "outDir": "./lib"
   },
   "include": ["src"],
-  "exclude": ["./stories/**", "node_modules", "**/*.spec.ts", "**/__tests__/*"]
+  "exclude": ["./stories/**", "node_modules", "**/*.spec.ts"]
 }

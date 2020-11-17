@@ -193,7 +193,7 @@ export class DefaultVisitor<
       Validator<typeof control>,
       THints,
       TExtras
-    >(registry, "messagers", config, control, (config.messagers ?? []) as any);
+    >(registry, "validators", config, control, (config.messagers ?? []) as any);
 
     control.setHinters(hints);
     control.setExtraers(extras);
@@ -263,16 +263,11 @@ export interface ConfigBundle<
 export function bundleConfig<
   T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TB, TArray, TNull>,
+  TTypes extends FieldTypeMap<TConfig, any, any, any, any, any>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras,
-  TValue = FormValue<T["fields"], TConfig, TTypes>,
-  TString = unknown,
-  TNumber = unknown,
-  TB = unknown,
-  TArray = unknown,
-  TNull = unknown
+  TValue = FormValue<T["fields"], TConfig, TTypes, THints, TExtras>
 >(
   config: T,
   registry: TRegistry,

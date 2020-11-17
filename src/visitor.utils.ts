@@ -12,7 +12,7 @@ export function getRegistryMethods<
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
-  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
+  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue, any, any> | ExecutableDefinitionDefault)[],
 ) {
   return defs
     .map(def => {
@@ -30,7 +30,7 @@ export function getRegistryMethod<
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue, any, any> | ExecutableDefinitionDefault,
 ): Executable<BaseItemConfig, ItemControl<THints, TExtras>, any, TValue, THints, TExtras> | null {
   const method = (registry[kind] as any)?.[def.name];
   if (method && registry[kind]) {
@@ -51,7 +51,7 @@ export function getRegistryValues<
   kind: keyof TRegistry,
   config: TConfig,
   control: TControl,
-  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault)[],
+  defs: readonly (ExecutableDefinition<TRegistry[typeof kind], TValue, any, any> | ExecutableDefinitionDefault)[],
 ): TValue[] {
   const methods = getRegistryMethods<TRegistry, TValue, THints, TExtras>(registry, kind, defs);
   return methods.map(({ method, def }) => method(config, control, (def as any).params));
@@ -69,7 +69,7 @@ export function getRegistryValue<
   kind: keyof TRegistry,
   config: TConfig,
   control: TControl,
-  def: ExecutableDefinition<TRegistry[typeof kind], TValue> | ExecutableDefinitionDefault,
+  def: ExecutableDefinition<TRegistry[typeof kind], TValue, any, any> | ExecutableDefinitionDefault,
 ): TValue | null {
   const method = getRegistryMethod<TRegistry, TValue, THints, TExtras>(registry, kind, def);
   return method ? method(config, control, (def as any).params) : null;

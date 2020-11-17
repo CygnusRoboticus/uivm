@@ -1,5 +1,6 @@
 import { Subject } from "rxjs";
-import { toArray } from "rxjs/operators";
+import { readonlyArray as RAR } from "fp-ts";
+import { map, toArray } from "rxjs/operators";
 import { createResolveObservable, createSearchObservable } from "./search";
 
 function tick(delay = 0) {
@@ -10,13 +11,13 @@ describe("createSearchObservable", () => {
   let obs: Subject<{ search: string; control: any; params: object; key: string }>;
 
   beforeEach(() => {
-    obs = new Subject<{ search: string; control: any; params: object; key: string }>();
+    obs = new Subject();
   });
 
   test("delays correctly", async done => {
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
-    const searchObs = createSearchObservable(resolvers, obs, 500);
-    searchObs.pipe(toArray()).subscribe(v => {
+    const searchObs = createSearchObservable(obs, () => resolvers, 500);
+    searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
       expect(v).toEqual([["pants3"], ["pants4"]]);
       done();
     });
@@ -32,10 +33,9 @@ describe("createSearchObservable", () => {
   });
 
   test("groups identical search operations", async done => {
-    const obs = new Subject<{ search: string; control: any; params: object; key: string }>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
-    const searchObs = createSearchObservable(resolvers, obs);
-    searchObs.pipe(toArray()).subscribe(v => {
+    const searchObs = createSearchObservable(obs, () => resolvers);
+    searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
       expect(v).toEqual([["skirts2"], ["pants4"]]);
       done();
     });
@@ -52,17 +52,16 @@ describe("createSearchObservable", () => {
 });
 
 describe("createResolveObservable", () => {
-  let obs: Subject<{ search: string; control: any; params: object; key: string }>;
+  let obs: Subject<{ values: string[]; control: any; params: object; key: string }>;
 
   beforeEach(() => {
-    obs = new Subject<{ search: string; control: any; params: object; key: string }>();
+    obs = new Subject();
   });
 
   test("groups identical resolve operations", async done => {
-    const obs = new Subject<{ values: string[]; control: any; params: object; key: string }>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
-    const searchObs = createResolveObservable(resolvers, obs);
-    searchObs.pipe(toArray()).subscribe(v => {
+    const searchObs = createResolveObservable(obs, () => resolvers);
+    searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
       expect(v).toEqual([["pants", "skirts", "shorts"], ["skirts"], ["pants"]]);
       done();
     });
