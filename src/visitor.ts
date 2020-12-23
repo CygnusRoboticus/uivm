@@ -13,11 +13,10 @@ import {
   Trigger,
   Validator,
 } from "./controls.types";
-import { getRegistryValue, getRegistryValues } from "./visitor.utils";
 import { FuzzyExecutableRegistry } from "./executable";
 import { BaseGroupConfig, BaseItemConfig } from "./primitives";
-import { FieldTypeMap, FormControls, FormValue } from "./typing";
 import { isArrayConfig, isFieldConfig, isGroupConfig, toObservable } from "./utils";
+import { getRegistryValue, getRegistryValues } from "./visitor.utils";
 
 export interface Visitor<
   TConfig extends BaseItemConfig,
@@ -263,11 +262,11 @@ export interface ConfigBundle<
 export function bundleConfig<
   T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, any, any, any, any, any>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras extends AbstractExtras = AbstractExtras,
-  TValue = FormValue<T["fields"], TConfig, TTypes, THints, TExtras>
+  TControls = any,
+  TValue = any
 >(
   config: T,
   registry: TRegistry,
@@ -278,7 +277,7 @@ export function bundleConfig<
     GroupControl<
       // @ts-ignore
       TValue,
-      FormControls<T["fields"], TConfig, TTypes, THints, TExtras>,
+      TControls,
       THints,
       TExtras
     >,

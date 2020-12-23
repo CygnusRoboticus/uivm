@@ -8,7 +8,6 @@ import {
   ValidatorDefinition,
 } from "./executable";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
-import { FieldDataTypeDefinition } from "./typing";
 
 export interface ItemConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
@@ -31,7 +30,6 @@ export interface FieldConfig<
   disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
   triggers?: readonly TriggerDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
   validators?: readonly ValidatorDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
-  dataType?: FieldDataTypeDefinition;
 }
 
 export type GroupConfig<
