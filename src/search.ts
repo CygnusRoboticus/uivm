@@ -1,10 +1,10 @@
+import { readonlyArray as RAR } from "fp-ts";
 import { combineLatest, Observable, of } from "rxjs";
-import { bufferTime, debounceTime, filter, groupBy, map, mergeAll, share, switchMap } from "rxjs/operators";
+import { bufferTime, debounceTime, filter, groupBy, map, mergeAll, switchMap } from "rxjs/operators";
 import { ItemControl } from "./controls";
 import { AbstractExtras, AbstractHints } from "./controls.types";
 import { SearchResolver } from "./search.types";
 import { toObservable } from "./utils";
-import { readonlyArray as RAR } from "fp-ts";
 
 export function mergeSearchResolvers<
   TControl extends ItemControl<THints, TExtras>,
@@ -12,7 +12,7 @@ export function mergeSearchResolvers<
   TValue,
   TParams extends object,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   searchResolvers: SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
 ): SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras> {
@@ -40,7 +40,7 @@ export function createSearchObservable<
   TParams extends object,
   TInput extends { search: string; control: TControl; params: TParams; key: string },
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   search$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
@@ -75,7 +75,7 @@ export function createResolveObservable<
   TParams extends object,
   TInput extends { values: TValue[]; control: TControl; params: TParams; key: string },
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   resolve$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],

@@ -14,7 +14,7 @@ import {
   Validator,
 } from "./controls.types";
 import { FuzzyExecutableRegistry } from "./executable";
-import { BaseGroupConfig, BaseItemConfig } from "./primitives";
+import { BaseItemConfig } from "./primitives";
 import { isArrayConfig, isFieldConfig, isGroupConfig, toObservable } from "./utils";
 import { getRegistryValue, getRegistryValues } from "./visitor.utils";
 
@@ -22,7 +22,7 @@ export interface Visitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
-  TExtras extends AbstractExtras
+  TExtras
 > {
   itemInit: (
     config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
@@ -77,7 +77,7 @@ export class DefaultVisitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
-  TExtras extends AbstractExtras
+  TExtras
 > implements Visitor<TConfig, TRegistry, THints, TExtras> {
   itemInit(config: ItemConfig<TRegistry, THints, TExtras> & TConfig) {
     return new ItemControl<THints, TExtras>();
@@ -170,7 +170,7 @@ export class DefaultVisitor<
         TExtras
       >(registry, "extras", config, control, value as any);
       if (source) {
-        acc.push([key, source]);
+        acc.push([key as keyof TExtras, source]);
       }
       return acc;
     }, <[keyof TExtras, Executor<ItemControl<THints, TExtras>, TExtras[keyof TExtras]>][]>[]);
@@ -250,7 +250,7 @@ export interface ConfigBundle<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > {
   id: string;
   registry: TRegistry;
@@ -260,15 +260,14 @@ export interface ConfigBundle<
 }
 
 export function bundleConfig<
-  T extends TConfig & BaseGroupConfig<TConfig>,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras,
-  TControls = any,
-  TValue = any
+  TExtras = AbstractExtras,
+  TValue = any,
+  TControls = any
 >(
-  config: T,
+  config: TConfig,
   registry: TRegistry,
   value?: TValue,
   visitor: Visitor<TConfig, TRegistry, THints, TExtras> = new DefaultVisitor<TConfig, TRegistry, THints, TExtras>(),
@@ -294,7 +293,7 @@ function completeConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
-  TExtras extends AbstractExtras
+  TExtras
 >(
   bundle: ConfigBundle<TConfig, ItemControl<THints, TExtras>, TConfig, TRegistry, THints, TExtras>,
   parentBundle: ConfigBundle<
@@ -337,7 +336,7 @@ function bundleConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
-  TExtras extends AbstractExtras
+  TExtras
 >(
   id: string,
   config: TConfig,

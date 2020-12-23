@@ -1,7 +1,6 @@
 import { from, isObservable, Observable, of } from "rxjs";
 import { BaseControl, FieldControl, GroupControl } from "./controls";
 import { AbstractExtras, AbstractHints } from "./controls.types";
-import { Option, OptionMulti, OptionSingle } from "./search.types";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export function notNullish<T>(value: T | null | undefined): value is T {
@@ -38,14 +37,14 @@ export function isArrayConfig<TConfig extends BaseItemConfig>(
 export function isFieldControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(control: BaseControl): control is FieldControl<TValue, THints, TExtras> {
   return control instanceof FieldControl;
 }
 export function isGroupControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(control: BaseControl): control is GroupControl<TValue, any, THints, TExtras> {
   return control instanceof GroupControl;
 }

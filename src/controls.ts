@@ -1,5 +1,5 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
-import { BehaviorSubject, combineLatest, Observable, of, Subject, Subscription } from "rxjs";
+import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import {
   AbstractExtras,
@@ -56,10 +56,7 @@ export abstract class BaseControl {
   }
 }
 
-export class ItemControl<
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
-> extends BaseControl {
+export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> extends BaseControl {
   protected _hints$ = new BehaviorSubject<Partial<THints>>({});
   protected _extras$ = new BehaviorSubject<Partial<TExtras>>({});
   protected _messages$ = new BehaviorSubject<Messages | null>(null);
@@ -217,7 +214,7 @@ export class ItemControl<
 export class FieldControl<
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > extends ItemControl<THints, TExtras> {
   protected initialValue: TValue;
   protected _parent: FieldControl<unknown, THints, TExtras> | null = null;
@@ -566,7 +563,7 @@ export class GroupControl<
   TValue extends KeyControlsValue<TControls>,
   TControls extends KeyValueControls<TValue, THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > extends FieldControl<TValue, THints, TExtras> {
   constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
     super(reduceControls<TValue, THints, TExtras>(controls), opts);
@@ -643,7 +640,7 @@ export class ArrayControl<
   TValue extends KeyControlsValue<TControls>,
   TControls extends KeyValueControls<TValue, THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 

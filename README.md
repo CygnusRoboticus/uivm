@@ -80,7 +80,7 @@ interface CheckboxConfig extends FieldConfig<typeof registry> {
 type CustomConfigs = CustomGroupConfig | TextConfig | CheckboxConfig;
 type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, { type: "checkbox" }, never, never>;
 
-const bundle = bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry, {
+const bundle = bundleConfig<CustomConfigs, typeof registry>(config, registry, {
   firstName: "John",
   lastName: "Wick",
   group: {

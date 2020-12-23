@@ -1,8 +1,9 @@
 import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
+import { AbstractExtras, AbstractHints } from "../src/controls.types";
 import { bundleConfig } from "../src/visitor";
 import { Fields as BasicFields } from "./react.basic";
-import { CustomConfigs, CustomConfigsTypes } from "./react.configs";
+import { CustomConfigs } from "./react.configs";
 import { Fields as SemanticFields } from "./react.semantic";
 import { registry } from "./registry";
 
@@ -63,7 +64,20 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
   } as const;
 
   const [bundle] = useState(() =>
-    bundleConfig<typeof config, CustomConfigs, CustomConfigsTypes, typeof registry>(config, registry, {
+    bundleConfig<
+      CustomConfigs,
+      typeof registry,
+      AbstractHints,
+      AbstractExtras,
+      {
+        firstName: string;
+        lastName: string;
+        movie: string;
+        autofill: string;
+        checkbox: boolean;
+        select: number;
+      }
+    >(config, registry, {
       firstName: "John",
       lastName: "Wick",
       movie: "Parabellum",

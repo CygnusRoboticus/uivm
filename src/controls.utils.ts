@@ -3,11 +3,11 @@ import { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } fr
 import { AbstractExtras, AbstractHints, Executor, KeyValueControls, Obj } from "./controls.types";
 import { toObservable } from "./utils";
 
-export function findControl<
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
->(control: FieldControl<any, THints, TExtras>, path: (string | number)[] | string, delimiter = ".") {
+export function findControl<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>(
+  control: FieldControl<any, THints, TExtras>,
+  path: (string | number)[] | string,
+  delimiter = ".",
+) {
   if (path == null) {
     return null;
   }
@@ -32,7 +32,7 @@ export function findControl<
   return found as FieldControl<TValue, THints, TExtras>;
 }
 
-export function reduceControls<TValue, THints extends AbstractHints, TExtras extends AbstractExtras>(
+export function reduceControls<TValue, THints extends AbstractHints, TExtras>(
   controls: KeyValueControls<TValue, THints, TExtras>,
 ) {
   return reduceChildren<TValue, TValue, THints, TExtras>(
@@ -45,7 +45,7 @@ export function reduceControls<TValue, THints extends AbstractHints, TExtras ext
   );
 }
 
-function reduceChildren<T, TValue, THints extends AbstractHints, TExtras extends AbstractExtras>(
+function reduceChildren<T, TValue, THints extends AbstractHints, TExtras>(
   controls: KeyValueControls<TValue, THints, TExtras>,
   initValue: T,
   predicate: Function,
@@ -57,7 +57,7 @@ function reduceChildren<T, TValue, THints extends AbstractHints, TExtras extends
   return res;
 }
 
-function forEachChild<TValue extends Obj, THints extends AbstractHints, TExtras extends AbstractExtras>(
+function forEachChild<TValue extends Obj, THints extends AbstractHints, TExtras>(
   controls: KeyValueControls<TValue, THints, TExtras>,
   predicate: (v: typeof controls[typeof k], k: keyof TValue) => void,
 ) {
@@ -76,7 +76,7 @@ export function traverseParents(control: BaseControl) {
 export function extractSources<
   TControl extends ItemControl<THints, TExtras>,
   THints extends AbstractHints,
-  TExtras extends AbstractExtras,
+  TExtras,
   TValue
 >(control: TControl, executors: Executor<TControl, TValue>[]) {
   const obs = executors.map(v => toObservable(v(control)));

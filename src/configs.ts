@@ -12,7 +12,7 @@ import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } fro
 export interface ItemConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > extends BaseItemConfig {
   hints?: {
     [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>[];
@@ -24,7 +24,7 @@ export interface ItemConfig<
 export interface FieldConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
   disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
@@ -36,12 +36,12 @@ export type GroupConfig<
   TConfig extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ItemConfig<TRegistry, THints, TExtras> & BaseGroupConfig<TConfig>;
 
 export type ArrayConfig<
   TConfig extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = FieldConfig<TRegistry, THints, TExtras> & BaseArrayConfig<TConfig>;

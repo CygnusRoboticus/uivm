@@ -1,5 +1,5 @@
 import { ItemControl } from "./controls";
-import { AbstractHints, AbstractExtras, Observableish } from "./controls.types";
+import { AbstractExtras, AbstractHints, Observableish } from "./controls.types";
 
 // Search resolver specific types
 export interface OptionSingle<T = unknown> {
@@ -37,7 +37,7 @@ export interface SearchResolver<
   TValue,
   TParams extends object = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > {
   search(search: string, control: TControl, params: TParams): Observableish<readonly TOption[]>;
   resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;

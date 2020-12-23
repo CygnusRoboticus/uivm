@@ -1,6 +1,6 @@
 import { ItemControl } from "./controls";
 import { AbstractExtras, AbstractHints } from "./controls.types";
-import { Executable, ExecutableDefinitionDefault, ExecutableDefinition, FuzzyExecutableRegistry } from "./executable";
+import { Executable, ExecutableDefinition, ExecutableDefinitionDefault, FuzzyExecutableRegistry } from "./executable";
 import { BaseItemConfig } from "./primitives";
 import { notNullish } from "./utils";
 
@@ -8,7 +8,7 @@ export function getRegistryMethods<
   TRegistry extends FuzzyExecutableRegistry,
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -26,7 +26,7 @@ export function getRegistryMethod<
   TRegistry extends FuzzyExecutableRegistry,
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -45,7 +45,7 @@ export function getRegistryValues<
   TControl extends ItemControl<THints, TExtras>,
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -63,7 +63,7 @@ export function getRegistryValue<
   TControl extends ItemControl<THints, TExtras>,
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 >(
   registry: TRegistry,
   kind: keyof TRegistry,

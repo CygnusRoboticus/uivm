@@ -1,7 +1,7 @@
 import { FieldControl, ItemControl } from "./controls";
-import { AbstractHints, AbstractExtras, Executor, Messages, Trigger, Validator } from "./controls.types";
-import { SearchResolver } from "./search.types";
+import { AbstractExtras, AbstractHints, Executor, Messages, Trigger, Validator } from "./controls.types";
 import { BaseItemConfig } from "./primitives";
+import { SearchResolver } from "./search.types";
 import { Spread, WithOptional } from "./typing.utils";
 
 // Executable definitions, these are the objects placed on configs
@@ -11,7 +11,7 @@ export type ExecutableDefinition<
   TConfig extends BaseItemConfig,
   TControl extends ItemControl<THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = {
   [k in keyof TService]: {
     name: TService[k] extends (config: TConfig, control: TControl, params: any) => TValue ? k : never;
@@ -30,14 +30,14 @@ export type HinterDefinition<
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ExecutableDefinition<TRegistry["hints"], Executor<TControl, boolean>, TConfig, TControl, THints, TExtras>;
 export type ExtraDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = {
   [key in keyof TExtras]?: ExecutableDefinition<
     TRegistry["extras"],
@@ -53,7 +53,7 @@ export type MessagerDefinition<
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ExecutableDefinition<
   TRegistry["validators"],
   Executor<TControl, Messages | null>,
@@ -67,14 +67,14 @@ export type TriggerDefinition<
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ExecutableDefinition<TRegistry["triggers"], Trigger<TControl>, TConfig, TControl, THints, TExtras>;
 export type ValidatorDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ExecutableDefinition<
   TRegistry["validators"],
   Executor<TControl, Messages | null>,
@@ -91,7 +91,7 @@ export type SearchDefinition<
   TConfig extends BaseItemConfig = any,
   TControl extends ItemControl<THints, TExtras> = any,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = ExecutableDefinition<
   TRegistry["search"],
   SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>,
@@ -108,7 +108,7 @@ export type Executable<
   TParams,
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > = (config: TConfig, c: TControl, params: TParams, ...args: any[]) => TValue;
 
 // Registry definitions, fuzzy is used for mixed services where only some properties return the expected type
@@ -117,7 +117,7 @@ export interface ExecutableRegistry<
   TItemControl extends ItemControl<THints, TExtras>,
   TFieldControl extends FieldControl<any, THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > {
   hints: ExecutableService<TConfig, TItemControl, Executor<TItemControl, boolean>, THints, TExtras>;
   extras: ExecutableService<TConfig, TItemControl, unknown, THints, TExtras>;
@@ -157,7 +157,7 @@ export interface ExecutableService<
   TControl extends ItemControl<THints, TExtras>,
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras extends AbstractExtras = AbstractExtras
+  TExtras = AbstractExtras
 > {
   [name: string]: Executable<TConfig, TControl, any, TValue, THints, TExtras>;
 }
