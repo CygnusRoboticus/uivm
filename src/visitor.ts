@@ -19,6 +19,10 @@ import { isArrayConfig, isFieldConfig, isGroupConfig, toObservable } from "./uti
 import { getRegistryValue, getRegistryValues } from "./visitor.utils";
 
 export interface Visitor<
+  TItemControl,
+  TFieldControl,
+  TGroupControl,
+  TArrayControl,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
@@ -27,34 +31,31 @@ export interface Visitor<
   itemInit: (
     config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
     children: ItemControl<THints, TExtras>[],
-  ) => ItemControl<THints, TExtras>;
-  fieldInit: (
-    config: FieldConfig<TRegistry, THints, TExtras> & TConfig,
-    value?: any,
-  ) => FieldControl<{}, THints, TExtras>;
+  ) => TItemControl;
+  fieldInit: (config: FieldConfig<TRegistry, THints, TExtras> & TConfig, value?: any) => TFieldControl;
   groupInit: (
     config: GroupConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
     bundled: KeyValueControls<{}, THints, TExtras>,
-    children: ItemControl<THints, TExtras>[],
-  ) => GroupControl<{}, {}, THints, TExtras>;
+    children: TItemControl[],
+  ) => TGroupControl;
   arrayInit: (
     config: ArrayConfig<TConfig, TRegistry, THints, TExtras> & TConfig,
     bundled: KeyValueControls<{}, THints, TExtras>,
     value?: any,
-  ) => ArrayControl<{}, {}, THints, TExtras>;
+  ) => TArrayControl;
 
   itemComplete: (
-    control: ItemControl<THints, TExtras>,
+    control: TItemControl,
     config: ItemConfig<TRegistry, THints, TExtras> & TConfig,
-    parent: GroupControl<{}, {}, THints, TExtras> | null,
-    root: GroupControl<{}, {}, THints, TExtras>,
+    parent: TGroupControl | null,
+    root: TGroupControl,
     registry: TRegistry,
   ) => void;
   fieldComplete: (
-    control: FieldControl<TRegistry, THints, TExtras>,
+    control: TFieldControl,
     config: FieldConfig<TRegistry, THints, TExtras> & TConfig,
-    parent: GroupControl<{}, {}, THints, TExtras> | null,
-    root: GroupControl<{}, {}, THints, TExtras>,
+    parent: TGroupControl | null,
+    root: TGroupControl,
     registry: TRegistry,
   ) => void;
   groupComplete: (
@@ -78,7 +79,17 @@ export class DefaultVisitor<
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
   TExtras
-> implements Visitor<TConfig, TRegistry, THints, TExtras> {
+> implements
+    Visitor<
+      ItemControl<THints, TExtras>,
+      FieldControl<any, THints, TExtras>,
+      GroupControl<{}, {}, THints, TExtras>,
+      ArrayControl<{}, {}, THints, TExtras>,
+      TConfig,
+      TRegistry,
+      THints,
+      TExtras
+    > {
   itemInit(config: ItemConfig<TRegistry, THints, TExtras> & TConfig) {
     return new ItemControl<THints, TExtras>();
   }
@@ -246,7 +257,7 @@ export class DefaultVisitor<
 
 export interface ConfigBundle<
   T extends TConfig,
-  TControl extends ItemControl<THints, TExtras>,
+  TControl,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
@@ -262,16 +273,26 @@ export interface ConfigBundle<
 export function bundleConfig<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
+  TItemControl,
+  TFieldControl,
+  TGroupControl,
+  TArrayControl,
+  TVisitor extends Visitor<
+    TItemControl,
+    TFieldControl,
+    TGroupControl,
+    TArrayControl,
+    TConfig,
+    TRegistry,
+    THints,
+    TExtras
+  >,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
   TValue = any,
   TControls = any
->(
-  config: TConfig,
-  registry: TRegistry,
-  value?: TValue,
-  visitor: Visitor<TConfig, TRegistry, THints, TExtras> = new DefaultVisitor<TConfig, TRegistry, THints, TExtras>(),
-) {
+>(config: TConfig, registry: TRegistry, value?: TValue, visitor?: TVisitor) {
+  visitor = visitor ?? (new DefaultVisitor<TConfig, TRegistry, THints, TExtras>() as any);
   const bundle = bundleConfig2<
     GroupControl<
       // @ts-ignore
@@ -292,6 +313,20 @@ export function bundleConfig<
 function completeConfig2<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
+  TItemControl,
+  TFieldControl,
+  TGroupControl,
+  TArrayControl,
+  TVisitor extends Visitor<
+    TItemControl,
+    TFieldControl,
+    TGroupControl,
+    TArrayControl,
+    TConfig,
+    TRegistry,
+    THints,
+    TExtras
+  >,
   THints extends AbstractHints,
   TExtras
 >(
@@ -306,7 +341,7 @@ function completeConfig2<
   > | null,
   rootBundle: ConfigBundle<TConfig, GroupControl<any, any, THints, TExtras>, TConfig, TRegistry, THints, TExtras>,
   registry: TRegistry,
-  visitor: Visitor<TConfig, TRegistry, THints, TExtras>,
+  visitor: TVisitor,
 ) {
   const { config, control, children } = bundle;
   children.forEach(c =>
@@ -320,19 +355,19 @@ function completeConfig2<
   );
 
   if (isFieldConfig<TConfig>(config)) {
-    if (isArrayConfig<TConfig>(config) && control instanceof FieldControl) {
+    if (isArrayConfig<TConfig>(config)) {
       visitor.arrayComplete(control as any, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
-    } else if (isGroupConfig<TConfig>(config) && control instanceof GroupControl) {
-      visitor.groupComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
-    } else if (control instanceof FieldControl) {
-      visitor.fieldComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
+    } else if (isGroupConfig<TConfig>(config)) {
+      visitor.groupComplete(control as any, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
+    } else {
+      visitor.fieldComplete(control as any, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
     }
   }
   visitor.itemComplete(control, config as any, parentBundle?.control ?? null, rootBundle.control, registry);
 }
 
 function bundleConfig2<
-  TControl extends ItemControl<THints, TExtras>,
+  TControl,
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints,
