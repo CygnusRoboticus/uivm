@@ -33,9 +33,32 @@ viewModel.state$.subscribe(console.log);
 Sample config usage, this produces a view model identical to the above. [Sandbox](https://codesandbox.io/s/jolly-bogdan-y1kvz?file=/src/index.ts)
 
 ```ts
-import { ItemControl, FieldConfig, GroupConfig, FieldTypeMap, bundleConfig } from "uivm";
+import {
+  ArrayControl,
+  ControlVisitor,
+  createConfigBundler,
+  FieldConfig,
+  FieldControl,
+  GroupConfig,
+  GroupControl,
+  ItemControl,
+} from ".";
 
-const config = {
+interface CustomGroupConfig extends GroupConfig<CustomConfigs, typeof registry>, FieldConfig<typeof registry> {
+  type: "group";
+}
+
+interface TextConfig extends FieldConfig<typeof registry> {
+  type: "text";
+}
+
+interface CheckboxConfig extends FieldConfig<typeof registry> {
+  type: "checkbox";
+}
+
+type CustomConfigs = CustomGroupConfig | TextConfig | CheckboxConfig;
+
+const config: CustomConfigs = {
   type: "group",
   name: "group",
   fields: [
@@ -49,7 +72,9 @@ const config = {
         {
           type: "text",
           name: "password",
-          hints: { private: [{ name: "static", params: { value: true } }] },
+          hints: {
+            private: [{ name: "static", params: { value: true } }],
+          },
         },
         { type: "checkbox", name: "rememberMe" },
       ],
@@ -65,22 +90,18 @@ const registry = {
   },
 };
 
-interface CustomGroupConfig extends GroupConfig<CustomConfigs>, FieldConfig<typeof registry> {
-  type: "group";
-}
+const visitor = new ControlVisitor<CustomConfigs, typeof registry, any, any>();
+const bundler = createConfigBundler<
+  CustomConfigs,
+  typeof registry,
+  ItemControl<any, any>,
+  FieldControl<any, any, any>,
+  GroupControl<any, any, any, any>,
+  ArrayControl<any, any, any, any>
+>(registry, visitor);
 
-interface TextConfig extends FieldConfig<typeof registry> {
-  type: "text";
-}
-
-interface CheckboxConfig extends FieldConfig<typeof registry> {
-  type: "checkbox";
-}
-
-type CustomConfigs = CustomGroupConfig | TextConfig | CheckboxConfig;
-type CustomConfigsTypes = FieldTypeMap<CustomConfigs, { type: "text" }, never, { type: "checkbox" }, never, never>;
-
-const bundle = bundleConfig<CustomConfigs, typeof registry>(config, registry, {
+const bundle = bundler<GroupControl<any, any, any, any>>(config);
+bundle.control.reset({
   firstName: "John",
   lastName: "Wick",
   group: {

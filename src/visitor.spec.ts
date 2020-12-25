@@ -1,16 +1,26 @@
+import { of } from "rxjs";
 import { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 import { FuzzyExecutableRegistry } from "./executable";
 import { ControlVisitor, createConfigBundler } from "./visitor";
 
 describe("#bundleConfig", () => {
-  const registry = {} as FuzzyExecutableRegistry;
+  const registry = {
+    hints: {
+      static(config: any, control: ItemControl, { value }: { value: boolean }) {
+        return (c: ItemControl) => of(value);
+      },
+    },
+  } as FuzzyExecutableRegistry;
 
   test("item config", () => {
     const config = {
       type: "group",
       name: "group",
       fields: [{ type: "message" }],
-    } as const;
+      hints: {
+        skirts: [{ name: "static", params: { value: true } }],
+      },
+    };
     const bundler = createConfigBundler<
       typeof config,
       typeof registry,

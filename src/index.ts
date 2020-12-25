@@ -50,5 +50,5 @@ export {
   notNullish,
   toObservable,
 } from "./utils";
-export { Bundle, ControlVisitor as DefaultVisitor, Visitor } from "./visitor";
+export { Bundle, ControlVisitor, createConfigBundler, Visitor } from "./visitor";
 export { getRegistryMethod, getRegistryMethods, getRegistryValue, getRegistryValues } from "./visitor.utils";
