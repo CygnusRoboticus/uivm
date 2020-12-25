@@ -15,10 +15,10 @@ export interface ItemConfig<
   TExtras = AbstractExtras
 > extends BaseItemConfig {
   hints?: {
-    [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>[];
+    [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, ItemControl<THints, TExtras>>[];
   };
-  extras?: ExtraDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>;
-  messagers?: readonly ValidatorDefinition<TRegistry, any, ItemControl<THints, TExtras>, THints, TExtras>[];
+  extras?: ExtraDefinition<TRegistry, any, ItemControl<THints, TExtras>>;
+  messagers?: readonly ValidatorDefinition<TRegistry, any, ItemControl<THints, TExtras>>[];
 }
 
 export interface FieldConfig<
@@ -27,9 +27,9 @@ export interface FieldConfig<
   TExtras = AbstractExtras
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
-  disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
-  triggers?: readonly TriggerDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
-  validators?: readonly ValidatorDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>, THints, TExtras>[];
+  disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
+  triggers?: readonly TriggerDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
+  validators?: readonly ValidatorDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
 }
 
 export type GroupConfig<
@@ -37,7 +37,7 @@ export type GroupConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras
-> = ItemConfig<TRegistry, THints, TExtras> & BaseGroupConfig<TConfig>;
+> = BaseGroupConfig<TConfig> & ItemConfig<TRegistry, THints, TExtras>;
 
 export type ArrayConfig<
   TConfig extends ItemConfig<TRegistry, THints, TExtras>,

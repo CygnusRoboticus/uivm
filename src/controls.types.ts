@@ -25,13 +25,13 @@ export type AbstractHints = Record<string, boolean | undefined>;
 export type AbstractExtras = Record<string, unknown | undefined>;
 
 export type Observableish<TValue> = TValue | Promise<TValue> | Observable<TValue>;
-export type Executor<TControl extends BaseControl, TValue> = (control: TControl) => Observableish<TValue>;
+export type Executor<TControl, TValue> = (control: TControl) => Observableish<TValue>;
 
-export type Validator<TControl extends BaseControl> = Executor<TControl, Messages | null>;
-export type Trigger<TControl extends BaseControl> = Executor<TControl, void>;
-export type Hinter<TControl extends BaseControl, THints = AbstractHints> = Executor<TControl, [keyof THints, boolean]>;
-export type Disabler<TControl extends BaseControl> = Executor<TControl, boolean>;
-export type Extraer<TControl extends BaseControl, TExtras = AbstractExtras> = Executor<TControl, Partial<TExtras>>;
+export type Validator<TControl> = Executor<TControl, Messages | null>;
+export type Trigger<TControl> = Executor<TControl, void>;
+export type Hinter<TControl, THints = AbstractHints> = Executor<TControl, [keyof THints, boolean]>;
+export type Disabler<TControl> = Executor<TControl, boolean>;
+export type Extraer<TControl, TExtras = AbstractExtras> = Executor<TControl, Partial<TExtras>>;
 
 export interface ItemControlOptions<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> {
   hints?: Hinter<ItemControl<THints, TExtras>, THints>[];

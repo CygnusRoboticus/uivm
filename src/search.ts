@@ -1,21 +1,12 @@
 import { readonlyArray as RAR } from "fp-ts";
 import { combineLatest, Observable, of } from "rxjs";
 import { bufferTime, debounceTime, filter, groupBy, map, mergeAll, switchMap } from "rxjs/operators";
-import { ItemControl } from "./controls";
-import { AbstractExtras, AbstractHints } from "./controls.types";
 import { SearchResolver } from "./search.types";
 import { toObservable } from "./utils";
 
-export function mergeSearchResolvers<
-  TControl extends ItemControl<THints, TExtras>,
-  TOption,
-  TValue,
-  TParams extends object,
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
->(
-  searchResolvers: SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
-): SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras> {
+export function mergeSearchResolvers<TControl, TOption, TValue, TParams extends object>(
+  searchResolvers: SearchResolver<TControl, TOption, TValue, TParams>[],
+): SearchResolver<TControl, TOption, TValue, TParams> {
   return {
     search: (s, c, p) =>
       searchResolvers.length
@@ -34,16 +25,14 @@ export function mergeSearchResolvers<
  * `key` property.
  */
 export function createSearchObservable<
-  TControl extends ItemControl<THints, TExtras>,
+  TControl,
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { search: string; control: TControl; params: TParams; key: string },
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TInput extends { search: string; control: TControl; params: TParams; key: string }
 >(
   search$: Observable<TInput>,
-  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
+  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
   delay = 500,
 ) {
   return search$.pipe(
@@ -69,16 +58,14 @@ export function createSearchObservable<
  * `key` property.
  */
 export function createResolveObservable<
-  TControl extends ItemControl<THints, TExtras>,
+  TControl,
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { values: TValue[]; control: TControl; params: TParams; key: string },
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TInput extends { values: TValue[]; control: TControl; params: TParams; key: string }
 >(
   resolve$: Observable<TInput>,
-  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams, THints, TExtras>[],
+  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
   delay = 500,
 ) {
   return resolve$.pipe(

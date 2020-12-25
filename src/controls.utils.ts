@@ -73,12 +73,7 @@ export function traverseParents(control: BaseControl) {
   return control;
 }
 
-export function extractSources<
-  TControl extends ItemControl<THints, TExtras>,
-  THints extends AbstractHints,
-  TExtras,
-  TValue
->(control: TControl, executors: Executor<TControl, TValue>[]) {
+export function extractSources<TControl, TValue>(control: TControl, executors: Executor<TControl, TValue>[]) {
   const obs = executors.map(v => toObservable(v(control)));
   return obs.length ? combineLatest(obs) : of([]);
 }

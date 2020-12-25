@@ -11,10 +11,10 @@ describe("controls", () => {
     new GroupControl({
       field1: new FieldControl("pants"),
       field2: new FieldControl("skirts"),
-      // @ts-ignore
-      group1: new GroupControl({
-        field3: new FieldControl("shorts"),
-      }),
+      group1: (() =>
+        new GroupControl({
+          field3: new FieldControl("shorts"),
+        }))(),
       array1: new ArrayControl(
         (v: { groupField1: string | null } | null) =>
           new GroupControl({
@@ -40,7 +40,6 @@ describe("controls", () => {
     const {
       field1: _,
       field2: __,
-      // @ts-ignore
       group1: { field3: ___ },
       array1: [{ groupField1: ____ }],
     } = form.value;

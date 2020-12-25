@@ -1,16 +1,30 @@
 import { of } from "rxjs";
-import { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { GroupControl, ItemControl } from "./controls";
 import { FuzzyExecutableRegistry } from "./executable";
 import { ControlVisitor, createConfigBundler } from "./visitor";
+
+type TestConfigs =
+  | {
+      type: "group";
+      name?: string;
+      fields: readonly TestConfigs[];
+    }
+  | { type: "text"; name: string }
+  | { type: "checkbox"; name: string }
+  | { type: "select"; name: string }
+  | { type: "message" };
 
 describe("#bundleConfig", () => {
   const registry = {
     hints: {
-      static(config: any, control: ItemControl, { value }: { value: boolean }) {
+      static(config: TestConfigs, control: ItemControl, { value }: { value: boolean }) {
         return (c: ItemControl) => of(value);
       },
     },
   } as FuzzyExecutableRegistry;
+
+  const visitor = new ControlVisitor<TestConfigs, typeof registry>();
+  const bundler = createConfigBundler<TestConfigs, typeof registry, typeof visitor>(registry, visitor);
 
   test("item config", () => {
     const config = {
@@ -20,16 +34,8 @@ describe("#bundleConfig", () => {
       hints: {
         skirts: [{ name: "static", params: { value: true } }],
       },
-    };
-    const bundler = createConfigBundler<
-      typeof config,
-      typeof registry,
-      ItemControl<any, any>,
-      FieldControl<any, any, any>,
-      GroupControl<any, any, any, any>,
-      ArrayControl<any, any, any, any>
-    >(registry, new ControlVisitor<typeof config, typeof registry, any, any>());
-    const bundle = bundler<GroupControl<any, any, any, any>>(config);
+    } as const;
+    const bundle = bundler<GroupControl<{}>>(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);
     expect(bundle.children[0].children.length).toEqual(0);
@@ -40,16 +46,12 @@ describe("#bundleConfig", () => {
       type: "group",
       name: "group",
       fields: [{ type: "text", name: "text" }],
-    };
-    const bundler = createConfigBundler<
-      typeof config,
-      typeof registry,
-      ItemControl<any, any>,
-      FieldControl<any, any, any>,
-      GroupControl<any, any, any, any>,
-      ArrayControl<any, any, any, any>
-    >(registry, new ControlVisitor<typeof config, typeof registry, any, any>());
-    const bundle = bundler<GroupControl<any, any, any, any>>(config);
+    } as const;
+    const bundle = bundler<
+      GroupControl<{
+        text: string | null;
+      }>
+    >(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(1);
     expect(bundle.children[0].children.length).toEqual(0);
@@ -61,16 +63,8 @@ describe("#bundleConfig", () => {
       type: "group",
       name: "group",
       fields: [{ type: "text", name: "text" }, { type: "message" }],
-    };
-    const bundler = createConfigBundler<
-      typeof config,
-      typeof registry,
-      ItemControl<any, any>,
-      FieldControl<any, any, any>,
-      GroupControl<any, any, any, any>,
-      ArrayControl<any, any, any, any>
-    >(registry, new ControlVisitor<typeof config, typeof registry, any, any>());
-    const bundle = bundler<GroupControl<any, any, any, any>>(config);
+    } as const;
+    const bundle = bundler<GroupControl<{ text: string | null }>>(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
     expect(bundle.control.value).toEqual({ text: null });
@@ -81,16 +75,12 @@ describe("#bundleConfig", () => {
       type: "group",
       name: "group",
       fields: [{ type: "text", name: "text" }, { type: "message" }],
-    };
-    const bundler = createConfigBundler<
-      typeof config,
-      typeof registry,
-      ItemControl<any, any>,
-      FieldControl<any, any, any>,
-      GroupControl<any, any, any, any>,
-      ArrayControl<any, any, any, any>
-    >(registry, new ControlVisitor<typeof config, typeof registry, any, any>());
-    const bundle = bundler<GroupControl<any, any, any, any>>(config);
+    } as const;
+    const bundle = bundler<
+      GroupControl<{
+        text: string | null;
+      }>
+    >(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(2);
     expect(bundle.control.value).toEqual({ text: null });
@@ -112,16 +102,16 @@ describe("#bundleConfig", () => {
           ],
         },
       ],
-    };
-    const bundler = createConfigBundler<
-      typeof config,
-      typeof registry,
-      ItemControl<any, any>,
-      FieldControl<any, any, any>,
-      GroupControl<any, any, any, any>,
-      ArrayControl<any, any, any, any>
-    >(registry, new ControlVisitor<typeof config, typeof registry, any, any>());
-    const bundle = bundler<GroupControl<any, any, any, any>>(config);
+    } as const;
+    const bundle = bundler<
+      GroupControl<{
+        text: string;
+        checkbox: boolean;
+        group: {
+          select: string;
+        };
+      }>
+    >(config);
     expect(bundle).toBeTruthy();
     expect(bundle.children.length).toEqual(3);
     expect(bundle.children[2].children.length).toEqual(3);

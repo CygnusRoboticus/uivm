@@ -1,11 +1,14 @@
 import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
-import { AbstractExtras, AbstractHints } from "../src/controls.types";
-import { bundleConfig } from "../src/visitor";
+import { GroupControl } from "../src/controls";
+import { ControlVisitor, createConfigBundler } from "../src/visitor";
 import { Fields as BasicFields } from "./react.basic";
 import { CustomConfigs } from "./react.configs";
 import { Fields as SemanticFields } from "./react.semantic";
 import { registry } from "./registry";
+
+const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
+const bundler = createConfigBundler<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
 
 function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactory<any, any> }) {
   const config = {
@@ -63,29 +66,18 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
     ],
   } as const;
 
-  const [bundle] = useState(() =>
-    bundleConfig<
-      CustomConfigs,
-      typeof registry,
-      AbstractHints,
-      AbstractExtras,
-      {
-        firstName: string;
-        lastName: string;
-        movie: string;
-        autofill: string;
-        checkbox: boolean;
-        select: number;
-      }
-    >(config, registry, {
+  const [bundle] = useState(() => {
+    const b = bundler<GroupControl<{}>>(config);
+    b.control.reset({
       firstName: "John",
       lastName: "Wick",
       movie: "Parabellum",
       autofill: "",
       checkbox: false,
       select: 2,
-    }),
-  );
+    });
+    return b;
+  });
   const [state, setState] = useState(() => bundle.control.state);
   useEffect(() => {
     bundle.control.state$.subscribe(setState);

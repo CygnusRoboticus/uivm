@@ -31,14 +31,7 @@ export interface OptionMulti<T = unknown, U = unknown> {
 
 export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;
 
-export interface SearchResolver<
-  TControl extends ItemControl<THints, TExtras>,
-  TOption,
-  TValue,
-  TParams extends object = any,
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
-> {
+export interface SearchResolver<TControl, TOption, TValue, TParams extends object = any> {
   search(search: string, control: TControl, params: TParams): Observableish<readonly TOption[]>;
   resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;
 }

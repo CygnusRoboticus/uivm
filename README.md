@@ -18,31 +18,24 @@ import { FieldControl, GroupControl } from "uivm";
 const viewModel = new GroupControl({
   firstName: new FieldControl("John"),
   lastName: new FieldControl("Wick"),
-  group: new GroupControl({
-    username: new FieldControl(null),
-    password: new FieldControl(null, {
-      hints: [() => tuple("private", true)],
-    }),
-    rememberMe: new FieldControl(false),
-  }),
+  group: (() =>
+    new GroupControl({
+      username: new FieldControl("keanu@keanu.com"),
+      password: new FieldControl(null, {
+        hints: [() => tuple("private", true)],
+      }),
+      rememberMe: new FieldControl(false),
+    }))(),
 });
 
+console.log(viewModel.value.group.username); // keanu@keanu.com
 viewModel.state$.subscribe(console.log);
 ```
 
 Sample config usage, this produces a view model identical to the above. [Sandbox](https://codesandbox.io/s/jolly-bogdan-y1kvz?file=/src/index.ts)
 
 ```ts
-import {
-  ArrayControl,
-  ControlVisitor,
-  createConfigBundler,
-  FieldConfig,
-  FieldControl,
-  GroupConfig,
-  GroupControl,
-  ItemControl,
-} from ".";
+import { ControlVisitor, createConfigBundler, FieldConfig, GroupConfig, GroupControl, ItemControl } from "uivm";
 
 interface CustomGroupConfig extends GroupConfig<CustomConfigs, typeof registry>, FieldConfig<typeof registry> {
   type: "group";
@@ -90,22 +83,25 @@ const registry = {
   },
 };
 
-const visitor = new ControlVisitor<CustomConfigs, typeof registry, any, any>();
-const bundler = createConfigBundler<
-  CustomConfigs,
-  typeof registry,
-  ItemControl<any, any>,
-  FieldControl<any, any, any>,
-  GroupControl<any, any, any, any>,
-  ArrayControl<any, any, any, any>
->(registry, visitor);
+const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
+const bundler = createConfigBundler<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
 
-const bundle = bundler<GroupControl<any, any, any, any>>(config);
+const bundle = bundler<
+  GroupControl<{
+    firstName: string;
+    lastName: string;
+    group: {
+      username: string;
+      password: string | null;
+      rememberMe: boolean;
+    };
+  }>
+>(config);
 bundle.control.reset({
   firstName: "John",
   lastName: "Wick",
   group: {
-    username: null,
+    username: "keanu@keanu.com",
     password: null,
     rememberMe: false,
   },

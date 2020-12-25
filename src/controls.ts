@@ -116,9 +116,7 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     this.hintsSub?.unsubscribe();
     this.hintsSub = this._initialized$
       .pipe(
-        switchMap(() =>
-          extractSources<ItemControl<THints, TExtras>, THints, TExtras, [keyof THints, boolean]>(this, this.hinters),
-        ),
+        switchMap(() => extractSources<ItemControl<THints, TExtras>, [keyof THints, boolean]>(this, this.hinters)),
         map(flgs =>
           flgs.reduce((acc, [k, v]) => {
             acc[k] = (!!acc[k] || v) as THints[typeof k];
@@ -140,9 +138,7 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     this.messagesSub?.unsubscribe();
     this.messagesSub = this._initialized$
       .pipe(
-        switchMap(() =>
-          extractSources<ItemControl<THints, TExtras>, THints, TExtras, Messages | null>(this, this.messagers),
-        ),
+        switchMap(() => extractSources<ItemControl<THints, TExtras>, Messages | null>(this, this.messagers)),
         map(AR.filter(notNullish)),
         map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
         distinctUntilChanged(),
@@ -445,12 +441,7 @@ export class FieldControl<
     this.validatorSub = combineLatest([this._enabled$, this._initialized$])
       .pipe(
         tap(() => this._pending$.next(true)),
-        switchMap(() =>
-          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, Messages | null>(
-            this,
-            this.validators,
-          ),
-        ),
+        switchMap(() => extractSources<FieldControl<TValue, THints, TExtras>, Messages | null>(this, this.validators)),
         map(msgs => msgs.filter(Boolean)),
         map(msgs => (msgs.length ? msgs.reduce((acc, m) => ({ ...acc, ...m }), {}) : null)),
         finalize(() => this._pending$.next(false)),
@@ -470,9 +461,7 @@ export class FieldControl<
     this.triggerSub?.unsubscribe();
     this.triggerSub = this._initialized$
       .pipe(
-        switchMap(() =>
-          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, void>(this, this.triggers),
-        ),
+        switchMap(() => extractSources<FieldControl<TValue, THints, TExtras>, void>(this, this.triggers)),
         first(),
       )
       .subscribe();
@@ -482,9 +471,7 @@ export class FieldControl<
     this.disablerSub?.unsubscribe();
     this.disablerSub = this._initialized$
       .pipe(
-        switchMap(() =>
-          extractSources<FieldControl<TValue, THints, TExtras>, THints, TExtras, boolean>(this, this.disablers),
-        ),
+        switchMap(() => extractSources<FieldControl<TValue, THints, TExtras>, boolean>(this, this.disablers)),
         map(disableds => disableds.some(Boolean)),
       )
       .subscribe(disabled => {
@@ -561,9 +548,9 @@ export class FieldControl<
 
 export class GroupControl<
   TValue extends KeyControlsValue<TControls>,
-  TControls extends KeyValueControls<TValue, THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
 > extends FieldControl<TValue, THints, TExtras> {
   constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
     super(reduceControls<TValue, THints, TExtras>(controls), opts);
@@ -638,9 +625,9 @@ export class GroupControl<
 
 export class ArrayControl<
   TValue extends KeyControlsValue<TControls>,
-  TControls extends KeyValueControls<TValue, THints, TExtras>,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
 > extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 
@@ -649,7 +636,7 @@ export class ArrayControl<
   }
 
   constructor(
-    protected _itemFactory: (value: TValue | null) => GroupControl<TValue, TControls, THints, TExtras>,
+    protected _itemFactory: (value: TValue | null) => GroupControl<TValue, THints, TExtras, TControls>,
     value: TValue[] = [],
     opts: FieldControlOptions<TValue[], THints, TExtras> = {},
   ) {

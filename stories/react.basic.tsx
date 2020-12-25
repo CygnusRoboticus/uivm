@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { of } from "rxjs";
 import { FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Messages, Trigger } from "../src/controls.types";
+import { createSearchObservable } from "../src/search";
 import { OptionSingle, SearchResolver } from "../src/search.types";
-import { ConfigBundle } from "../src/visitor";
+import { Bundle } from "../src/visitor";
+import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
   ButtonConfig,
   CheckboxConfig,
@@ -15,9 +18,6 @@ import {
   TextConfig,
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
-import { createSearchObservable } from "../src/search";
-import { of } from "rxjs";
-import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 
 export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
   ["form", Form],
@@ -32,7 +32,7 @@ export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentF
 export function Fields({
   children,
 }: {
-  children: ConfigBundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>[];
+  children: Bundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>[];
 }) {
   return (
     <>
@@ -57,7 +57,7 @@ export function Form({
   control,
   config,
   children,
-}: ConfigBundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
   return (
     <form>
       <Fields children={children}></Fields>
@@ -66,10 +66,15 @@ export function Form({
 }
 
 export function Text({
-  id,
   config,
   control,
-}: ConfigBundle<TextConfig, FieldControl<string | null, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<
+  TextConfig,
+  FieldControl<string | null, CustomHints>,
+  CustomConfigs,
+  ItemControl<CustomHints>,
+  CustomRegistry
+>) {
   const [{ value, errors, disabled }, setState] = useState(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -77,7 +82,7 @@ export function Text({
 
   return (
     <div>
-      {config.label ? <label htmlFor={id}>{config.label}</label> : null}
+      {config.label ? <label>{config.label}</label> : null}
       <br />
       <input
         name={config.name}
@@ -93,10 +98,15 @@ export function Text({
 }
 
 export function Checkbox({
-  id,
   config,
   control,
-}: ConfigBundle<CheckboxConfig, FieldControl<boolean, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<
+  CheckboxConfig,
+  FieldControl<boolean, CustomHints>,
+  CustomConfigs,
+  ItemControl<CustomHints>,
+  CustomRegistry
+>) {
   const [value, setValue] = useState<boolean>(false);
   const [disabled, setDisabled] = useState(false);
   const [errors, setErrors] = useState<Messages | null>(null);
@@ -116,39 +126,44 @@ export function Checkbox({
         onChange={e => control.setValue(e.currentTarget.checked)}
         disabled={disabled}
       />
-      <label htmlFor={id}>{config.label}</label>
+      <label>{config.label}</label>
       {errors ? JSON.stringify(errors) : null}
     </div>
   );
 }
 
 export function Select({
-  id,
   config,
   control,
   registry,
-}: ConfigBundle<SelectConfig<unknown>, FieldControl<string, CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<
+  SelectConfig<unknown>,
+  FieldControl<string, CustomHints>,
+  CustomConfigs,
+  ItemControl<CustomHints>,
+  CustomRegistry
+>) {
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
-  const [options, setOptions] = useState<OptionSingle<string>[]>([]);
+  const [options, setOptions] = useState<readonly OptionSingle<string>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
       typeof registry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, unknown, object, CustomHints>,
-      CustomHints
+      SearchResolver<typeof control, OptionSingle<string>, string>
     >(registry, "search", config, control, config.options);
-    createSearchObservable(searchers, of({ key: "", search: "", params: {}, control })).subscribe(setOptions);
+    createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers).subscribe(o =>
+      setOptions(o.result),
+    );
   }, []);
 
   return hints.hidden ? null : (
     <div>
-      {config.label ? <label htmlFor={id}>{config.label}</label> : null}
+      {config.label ? <label>{config.label}</label> : null}
       <br />
       <select
         name={config.name}
-        id={id}
         value={value ?? ""}
         onChange={e => control.setValue(e.currentTarget.value)}
         disabled={disabled}
@@ -167,7 +182,7 @@ export function Select({
 export function Message({
   config,
   control,
-}: ConfigBundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry>) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);
@@ -191,7 +206,7 @@ export function FormGroup({
   config,
   control,
   children,
-}: ConfigBundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
   return (
     <>
       <Fields children={children}></Fields>
@@ -203,14 +218,14 @@ export function Button({
   config,
   control,
   registry,
-}: ConfigBundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry, CustomHints>) {
+}: Bundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
   }, []);
 
   const [trigger] = useState(() =>
-    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>, CustomHints>(
+    getRegistryValue<typeof registry, typeof config, typeof control, Trigger<typeof control>>(
       registry,
       "triggers",
       config,
