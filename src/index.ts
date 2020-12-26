@@ -48,6 +48,7 @@ export {
   OptionSingle,
   SearchResolver,
 } from "./search";
+export { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormValue } from "./typing";
 export {
   isArrayConfig,
   isFieldConfig,

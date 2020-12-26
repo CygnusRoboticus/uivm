@@ -2,9 +2,10 @@ import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
 import { ComponentBuilder } from "../src/component";
 import { GroupControl } from "../src/controls";
+import { FormValue } from "../src/typing";
 import { ControlVisitor, createConfigBuilder } from "../src/visitor";
 import { BasicBuilder } from "./react.basic";
-import { CustomConfigs } from "./react.configs";
+import { CustomConfigs, CustomConfigsTypes } from "./react.configs";
 import { SemanticBuilder } from "./react.semantic";
 import { registry } from "./registry";
 
@@ -12,7 +13,7 @@ const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
 const controlBuilder = createConfigBuilder<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
 
 function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any, any> }) {
-  const config: CustomConfigs = {
+  const config = {
     type: "form",
     name: "form",
     fields: [
@@ -65,10 +66,12 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
       { label: "Checkbox", type: "checkbox", name: "checkbox" },
       { type: "button", label: "Click", trigger: { name: "alert", params: { message: "I'm an alert alright" } } },
     ],
-  };
+  } as const;
 
   const [bundle] = useState(() => {
-    const b = controlBuilder<GroupControl<{}>>(config);
+    const b = controlBuilder<GroupControl<FormValue<typeof config["fields"], CustomConfigs, CustomConfigsTypes>>>(
+      config,
+    );
     b.control.reset({
       firstName: "John",
       lastName: "Wick",
