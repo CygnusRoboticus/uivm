@@ -1,8 +1,8 @@
 import { combineLatest, of } from "rxjs";
 import { filter, map, switchMap, tap } from "rxjs/operators";
 import { FieldControl, ItemControl } from "../src/controls";
-import { Option } from "../src/search.types";
 import { BaseItemConfig } from "../src/primitives";
+import { Option } from "../src/search";
 import { isGroupControl } from "../src/utils";
 
 export const registry = {

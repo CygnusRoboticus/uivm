@@ -1,6 +1,6 @@
 import { AbstractExtras, Executor, Messages, Trigger, Validator } from "./controls.types";
 import { BaseItemConfig } from "./primitives";
-import { SearchResolver } from "./search.types";
+import { SearchResolver } from "./search";
 import { Spread, WithOptional } from "./typing.utils";
 
 // Executable definitions, these are the objects placed on configs

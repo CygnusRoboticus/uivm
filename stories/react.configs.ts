@@ -1,8 +1,7 @@
 import { FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
 import { FieldControl, ItemControl } from "../src/controls";
 import { SearchDefinition, TriggerDefinition } from "../src/executable";
-import { FieldTypeMap } from "../src/typing";
-import { Option } from "../src/search.types";
+import { Option } from "../src/search";
 import { CustomRegistry } from "./registry";
 
 export interface FormConfig extends GroupConfig<CustomConfigs, CustomRegistry>, FieldConfig<CustomRegistry> {
@@ -30,8 +29,7 @@ export interface SelectConfig<T> extends FieldConfig<CustomRegistry> {
     T,
     object,
     CustomConfigs,
-    FieldControl<unknown, CustomHints>,
-    CustomHints
+    FieldControl<unknown, CustomHints>
   >[];
 }
 
@@ -43,7 +41,7 @@ export interface ButtonConfig extends ItemConfig<CustomRegistry> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints>, CustomHints>;
+  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints>>;
 }
 
 export interface MessageConfig extends ItemConfig<CustomRegistry> {
@@ -64,12 +62,3 @@ export type CustomConfigs =
 export type CustomHints = {
   hidden: boolean;
 } & Record<string, boolean>;
-
-export type CustomConfigsTypes = FieldTypeMap<
-  CustomConfigs,
-  { type: "text" },
-  never,
-  { type: "checkbox" },
-  never,
-  never
->;

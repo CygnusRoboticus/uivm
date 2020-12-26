@@ -1,7 +1,7 @@
 import { of } from "rxjs";
 import { GroupControl, ItemControl } from "./controls";
 import { FuzzyExecutableRegistry } from "./executable";
-import { ControlVisitor, createConfigBundler } from "./visitor";
+import { ControlVisitor, createConfigBuilder } from "./visitor";
 
 type TestConfigs =
   | {
@@ -24,7 +24,7 @@ describe("#bundleConfig", () => {
   } as FuzzyExecutableRegistry;
 
   const visitor = new ControlVisitor<TestConfigs, typeof registry>();
-  const bundler = createConfigBundler<TestConfigs, typeof registry, typeof visitor>(registry, visitor);
+  const bundler = createConfigBuilder<TestConfigs, typeof registry, typeof visitor>(registry, visitor);
 
   test("item config", () => {
     const config = {

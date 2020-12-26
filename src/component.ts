@@ -1,23 +1,95 @@
-import { ComponentBuilder, ComponentRegistry } from "./component.types";
 import { AbstractExtras } from "./controls.types";
+import { FuzzyExecutableRegistry } from "./executable";
 import { BaseItemConfig } from "./primitives";
+import { Bundle } from "./visitor";
+
+export type ComponentBuilder<
+  TConfig extends TConfigs,
+  TControl extends TControls,
+  TComponent extends TComponents,
+  TConfigs extends BaseItemConfig,
+  TControls,
+  TComponents,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
+  TExtras = AbstractExtras
+> = (bundle: Bundle<TConfig, TControl, TConfigs, TControls, TRegistry>, extras?: TExtras) => TComponent;
+
+export type ComponentRegistry<
+  TConfigs extends BaseItemConfig,
+  TControls,
+  TComponents,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
+  TExtras = AbstractExtras
+> = {
+  [type in TConfigs["type"]]: ComponentBuilder<
+    TConfigs extends { type: type } ? TConfigs : never,
+    TControls,
+    TComponents,
+    TConfigs,
+    TControls,
+    TComponents,
+    TRegistry,
+    TExtras
+  >;
+};
 
 export function createComponentBuilder<
-  TConfig extends BaseItemConfig,
-  TRegistry extends ComponentRegistry<TConfig, TExtras>,
-  TExtras = AbstractExtras
->(registry: TRegistry) {
-  return <TControl>(config: TConfig, extras: TExtras) => {
-    const method = getComponentRegistryMethod<TConfig, TControl, TRegistry, TExtras>(config, registry);
-    return method?.(config, registry, extras) ?? null;
+  TConfigs extends BaseItemConfig,
+  TControls,
+  TComponents,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
+  TExtras = AbstractExtras,
+  TComponentRegistry extends ComponentRegistry<
+    TConfigs,
+    TControls,
+    TComponents,
+    TRegistry,
+    TExtras
+  > = ComponentRegistry<TConfigs, TControls, TComponents, TRegistry, TExtras>
+>(
+  registry: TComponentRegistry,
+): ComponentBuilder<TConfigs, TControls, TComponents, TConfigs, TControls, TComponents, TRegistry, TExtras> {
+  return <TConfig extends TConfigs, TControl extends TControls, TComponent extends TComponents>(
+    bundle: Bundle<TConfig, TControl, TConfigs, TControls, TRegistry>,
+    extras?: TExtras,
+  ): TComponent => {
+    const method = getComponentRegistryMethod<
+      TConfig,
+      TControl,
+      TComponent,
+      TConfigs,
+      TControls,
+      TComponents,
+      TRegistry,
+      TExtras,
+      TComponentRegistry
+    >(bundle.config, registry);
+    if (!method) {
+      throw new Error(`No registry method for ${bundle.config.type}`);
+    }
+    return method(bundle, extras);
   };
 }
 
 function getComponentRegistryMethod<
-  TConfig extends BaseItemConfig,
-  TControl,
-  TRegistry extends ComponentRegistry<TConfig, TExtras>,
-  TExtras = AbstractExtras
->(config: TConfig, registry: TRegistry): ComponentBuilder<TConfig, TConfig, TControl, TRegistry, TExtras> | null {
+  TConfig extends TConfigs,
+  TControl extends TControls,
+  TComponent extends TComponents,
+  TConfigs extends BaseItemConfig,
+  TControls,
+  TComponents,
+  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
+  TExtras = AbstractExtras,
+  TComponentRegistry extends ComponentRegistry<
+    TConfigs,
+    TControls,
+    TComponents,
+    TRegistry,
+    TExtras
+  > = ComponentRegistry<TConfigs, TControls, TComponents, TRegistry, TExtras>
+>(
+  config: TConfigs,
+  registry: TComponentRegistry,
+): ComponentBuilder<TConfig, TControl, TComponent, TConfigs, TControls, TComponents, TRegistry, TExtras> | null {
   return (registry as any)[config.type]?.bind(registry) ?? null;
 }

@@ -1,3 +1,4 @@
+export { ComponentBuilder, ComponentRegistry, createComponentBuilder } from "./component";
 export { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
 export { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 export {
@@ -38,8 +39,15 @@ export {
   ValidatorDefinition,
 } from "./executable";
 export { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
-export { createResolveObservable, createSearchObservable, mergeSearchResolvers } from "./search";
-export { Option, OptionMulti, OptionSingle, SearchResolver } from "./search.types";
+export {
+  createResolveObservable,
+  createSearchObservable,
+  mergeSearchResolvers,
+  Option,
+  OptionMulti,
+  OptionSingle,
+  SearchResolver,
+} from "./search";
 export {
   isArrayConfig,
   isFieldConfig,
@@ -50,5 +58,5 @@ export {
   notNullish,
   toObservable,
 } from "./utils";
-export { Bundle, ControlVisitor, createConfigBundler, Visitor } from "./visitor";
+export { Bundle, ControlVisitor, createConfigBuilder, Visitor, VisitorControls } from "./visitor";
 export { getRegistryMethod, getRegistryMethods, getRegistryValue, getRegistryValues } from "./visitor.utils";

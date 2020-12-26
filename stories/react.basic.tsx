@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { of } from "rxjs";
+import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Messages, Trigger } from "../src/controls.types";
-import { createSearchObservable } from "../src/search";
-import { OptionSingle, SearchResolver } from "../src/search.types";
+import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
 import { Bundle } from "../src/visitor";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
@@ -19,15 +19,17 @@ import {
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
 
-export const BasicComponentMap = new Map<CustomConfigs["type"], React.ComponentFactory<any, any>>([
-  ["form", Form],
-  ["text", Text],
-  ["message", Message],
-  ["button", Button],
-  ["checkbox", Checkbox],
-  ["select", Select],
-  ["formGroup", FormGroup],
-]);
+export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, CustomRegistry> = {
+  form: b => Form(b),
+  text: b => Text(b),
+  message: b => Message(b),
+  button: b => Button(b),
+  checkbox: b => Checkbox(b),
+  select: b => Select(b),
+  formGroup: b => FormGroup(b),
+};
+
+export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, CustomRegistry>(BasicComponentMap);
 
 export function Fields({
   children,
@@ -36,19 +38,12 @@ export function Fields({
 }) {
   return (
     <>
-      {children.map((c, i) => {
-        const Component = BasicComponentMap.get(c.config.type);
-        if (!Component) {
-          throw new Error(`Type "${c.config.type}" not found in component map.`);
-        }
-
-        return (
-          <div key={i}>
-            <Component {...c}></Component>
-            <br />
-          </div>
-        );
-      })}
+      {children.map((c, i) => (
+        <div key={i}>
+          {BasicBuilder(c)}
+          <br />
+        </div>
+      ))}
     </>
   );
 }
@@ -182,7 +177,7 @@ export function Select({
 export function Message({
   config,
   control,
-}: Bundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, CustomRegistry>) {
+}: Bundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);

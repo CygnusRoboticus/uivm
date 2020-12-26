@@ -1,17 +1,18 @@
 import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
+import { ComponentBuilder } from "../src/component";
 import { GroupControl } from "../src/controls";
-import { ControlVisitor, createConfigBundler } from "../src/visitor";
-import { Fields as BasicFields } from "./react.basic";
+import { ControlVisitor, createConfigBuilder } from "../src/visitor";
+import { BasicBuilder } from "./react.basic";
 import { CustomConfigs } from "./react.configs";
-import { Fields as SemanticFields } from "./react.semantic";
+import { SemanticBuilder } from "./react.semantic";
 import { registry } from "./registry";
 
 const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
-const bundler = createConfigBundler<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
+const controlBuilder = createConfigBuilder<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
 
-function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactory<any, any> }) {
-  const config = {
+function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any, any> }) {
+  const config: CustomConfigs = {
     type: "form",
     name: "form",
     fields: [
@@ -64,10 +65,10 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
       { label: "Checkbox", type: "checkbox", name: "checkbox" },
       { type: "button", label: "Click", trigger: { name: "alert", params: { message: "I'm an alert alright" } } },
     ],
-  } as const;
+  };
 
   const [bundle] = useState(() => {
-    const b = bundler<GroupControl<{}>>(config);
+    const b = controlBuilder<GroupControl<{}>>(config);
     b.control.reset({
       firstName: "John",
       lastName: "Wick",
@@ -86,7 +87,7 @@ function ReactForm({ FieldsComponent }: { FieldsComponent: React.ComponentFactor
 
   return (
     <>
-      <FieldsComponent children={[bundle]}></FieldsComponent>
+      {builder(bundle)}
 
       <pre>{JSON.stringify(state, null, 2)}</pre>
     </>
@@ -100,6 +101,6 @@ export default {
 
 const Template: Story<Parameters<typeof ReactForm>[0]> = args => <ReactForm {...args} />;
 export const BasicUsage = Template.bind({});
-BasicUsage.args = { FieldsComponent: BasicFields };
+BasicUsage.args = { builder: BasicBuilder };
 export const SemanticUsage = Template.bind({});
-SemanticUsage.args = { FieldsComponent: SemanticFields };
+SemanticUsage.args = { builder: SemanticBuilder };

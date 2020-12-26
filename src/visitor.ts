@@ -11,6 +11,10 @@ import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } fro
 import { isArrayConfig, isFieldConfig, isGroupConfig, toObservable } from "./utils";
 import { getRegistryValue, getRegistryValues } from "./visitor.utils";
 
+export type VisitorControls<TVisitor extends Visitor<any, any, any, any, any, any>> = ReturnType<
+  TVisitor["itemInit"] | TVisitor["fieldInit"] | TVisitor["groupInit"] | TVisitor["arrayInit"]
+>;
+
 export interface Visitor<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
@@ -265,19 +269,19 @@ export class ControlVisitor<
 }
 
 export interface Bundle<
-  TConfig extends TAllConfigs,
+  TConfig extends TConfigs,
   TControl,
-  TAllConfigs extends BaseItemConfig,
-  TAllControls,
-  TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry
+  TConfigs extends BaseItemConfig,
+  TControls,
+  TRegistry extends FuzzyExecutableRegistry
 > {
   config: TConfig;
   control: TControl;
   registry: TRegistry;
-  children: Bundle<TAllConfigs, TAllControls, TAllConfigs, TAllControls, TRegistry>[];
+  children: Bundle<TConfigs, TControls, TConfigs, TControls, TRegistry>[];
 }
 
-export function createConfigBundler<
+export function createConfigBuilder<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   TVisitor extends Visitor<TConfig, TRegistry, TItemControl, TFieldControl, TGroupControl, TArrayControl>,
@@ -286,14 +290,7 @@ export function createConfigBundler<
   TGroupControl = any,
   TArrayControl = any
 >(registry: TRegistry, visitor: TVisitor) {
-  return <
-    TRootControl extends ReturnType<
-      TVisitor["itemInit"] | TVisitor["fieldInit"] | TVisitor["groupInit"] | TVisitor["arrayInit"]
-    >
-  >(
-    config: TConfig,
-    overrideRegistry?: TRegistry,
-  ) => {
+  return <TRootControl extends VisitorControls<TVisitor>>(config: TConfig, overrideRegistry?: TRegistry) => {
     const bundle = bundleConfig2<
       TConfig,
       TRegistry,
@@ -304,13 +301,7 @@ export function createConfigBundler<
       any
     >(config, overrideRegistry ?? registry, visitor);
     completeConfig2(bundle, [], overrideRegistry ?? registry, visitor as any);
-    return bundle as Bundle<
-      TConfig,
-      TRootControl,
-      TConfig,
-      ReturnType<TVisitor["itemInit"] | TVisitor["fieldInit"] | TVisitor["groupInit"] | TVisitor["arrayInit"]>,
-      TRegistry
-    >;
+    return bundle as Bundle<TConfig, TRootControl, TConfig, VisitorControls<TVisitor>, TRegistry>;
   };
 }
 
