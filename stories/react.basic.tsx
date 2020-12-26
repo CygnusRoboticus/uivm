@@ -19,33 +19,32 @@ import {
 } from "./react.configs";
 import { CustomRegistry } from "./registry";
 
-export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, CustomRegistry> = {
-  form: b => Form(b),
-  text: b => Text(b),
-  message: b => Message(b),
-  button: b => Button(b),
-  checkbox: b => Checkbox(b),
-  select: b => Select(b),
-  formGroup: b => FormGroup(b),
+export const BasicComponentMap: ComponentRegistry<
+  CustomConfigs,
+  any,
+  JSX.Element,
+  CustomRegistry,
+  { index: number }
+> = {
+  form: (b, { index: i } = { index: 0 }) => <Form key={i} {...b} />,
+  text: (b, { index: i } = { index: 0 }) => <Text key={i} {...b} />,
+  message: (b, { index: i } = { index: 0 }) => <Message key={i} {...b} />,
+  button: (b, { index: i } = { index: 0 }) => <Button key={i} {...b} />,
+  checkbox: (b, { index: i } = { index: 0 }) => <Checkbox key={i} {...b} />,
+  select: (b, { index: i } = { index: 0 }) => <Select key={i} {...b} />,
+  formGroup: (b, { index: i } = { index: 0 }) => <FormGroup key={i} {...b} />,
 };
 
-export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, CustomRegistry>(BasicComponentMap);
+export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, CustomRegistry, { index: number }>(
+  BasicComponentMap,
+);
 
 export function Fields({
   children,
 }: {
   children: Bundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>[];
 }) {
-  return (
-    <>
-      {children.map((c, i) => (
-        <div key={i}>
-          {BasicBuilder(c)}
-          <br />
-        </div>
-      ))}
-    </>
-  );
+  return <>{children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
 }
 
 export function Form({
