@@ -1,4 +1,5 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
+import { pipe } from "fp-ts/lib/function";
 import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import {
@@ -18,23 +19,39 @@ import {
   Validator,
 } from "./controls.types";
 import { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
-import { notNullish, toObservable } from "./utils";
+import { DeepPartial } from "./typing.utils";
+import { notNullish } from "./utils";
 
 export abstract class BaseControl {
   protected _parent$ = new BehaviorSubject<BaseControl | null>(null);
-  protected _root$ = this._parent$.pipe(map(() => traverseParents(this)));
+  protected _children$ = new BehaviorSubject<BaseControl[]>([]);
+  protected _root$ = this._parent$.pipe(map(() => this.root));
+  protected _parents$ = this._parent$.pipe(map(() => this.parents));
 
   get parent$() {
     return this._parent$.asObservable();
   }
+  get parents$() {
+    return this._parent$;
+  }
   get root$() {
     return this._root$;
   }
+  get children$() {
+    return this._children$.asObservable();
+  }
+
   get parent() {
-    return this._parent$.getValue();
+    return this._parent$.value;
+  }
+  get parents() {
+    return traverseParents(this);
   }
   get root() {
-    return traverseParents(this);
+    return pipe(traverseParents(this), a => a[a.length - 1] ?? this);
+  }
+  get children() {
+    return this._children$.value;
   }
 
   constructor(parent?: BaseControl) {
@@ -42,11 +59,33 @@ export abstract class BaseControl {
   }
 
   setParent(parent: BaseControl | null) {
+    if (parent === this) {
+      return;
+    }
+
     this._parent$.next(parent);
+    const curr = parent?.children ?? [];
+    if (!curr.includes(this)) {
+      parent?._children$.next([...curr, this]);
+    }
+  }
+
+  addChild(child: BaseControl) {
+    child.setParent(this);
+  }
+
+  removeChild(child: BaseControl) {
+    child?.setParent(null);
   }
 
   abstract update(): void;
-  abstract dispose(): void;
+
+  dispose() {
+    this._parent$.complete();
+    this._children$.complete();
+
+    this.children.forEach(c => c.dispose());
+  }
 
   toJSON() {
     return {
@@ -63,20 +102,20 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
 
   protected hinters: Hinter<ItemControl<THints, TExtras>, THints>[] = [];
   protected messagers: Validator<ItemControl<THints, TExtras>>[] = [];
-  protected extraers: Extraer<ItemControl<THints, TExtras>, TExtras> | null = null;
+  protected extraers: Extraer<ItemControl<THints, TExtras>, TExtras>[] = [];
 
   protected hintsSub?: Subscription;
   protected messagesSub?: Subscription;
   protected extrasSub?: Subscription;
 
   get hints() {
-    return this._hints$.getValue();
+    return this._hints$.value;
   }
   get extras() {
-    return this._extras$.getValue();
+    return this._extras$.value;
   }
   get messages() {
-    return this._messages$.getValue();
+    return this._messages$.value;
   }
   get state(): ItemControlState<THints, TExtras> {
     return {
@@ -109,7 +148,7 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
   protected _initializer$ = new BehaviorSubject(false);
   protected _initialized$ = this._initializer$.pipe(filter(Boolean));
   protected get initialized() {
-    return this._initializer$.getValue();
+    return this._initializer$.value;
   }
 
   updateHints() {
@@ -130,7 +169,10 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
   updateExtras() {
     this.extrasSub?.unsubscribe();
     this.extrasSub = this._initialized$
-      .pipe(switchMap(() => (this.extraers ? toObservable(this.extraers(this)) : of({}))))
+      .pipe(
+        switchMap(() => extractSources<ItemControl<THints, TExtras>, Partial<TExtras>>(this, this.extraers)),
+        map(flgs => flgs.reduce((acc, extras) => Object.assign(acc, extras), {} as TExtras)),
+      )
       .subscribe(extras => this._extras$.next(extras));
   }
 
@@ -174,14 +216,36 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     this.updateHints();
   }
 
-  setExtraers(extraers: Extraer<ItemControl<THints, TExtras>, TExtras> | null) {
+  addHinters(...hinters: Hinter<ItemControl<THints, TExtras>, THints>[]) {
+    if (hinters.length) {
+      this.setHinters([...this.hinters, ...hinters]);
+    }
+  }
+
+  setExtraers(extraers: Extraer<ItemControl<THints, TExtras>, TExtras>[]) {
     this.extraers = extraers;
     this.updateExtras();
+  }
+
+  addExtraers(...extraers: Extraer<ItemControl<THints, TExtras>, TExtras>[]) {
+    if (extraers.length) {
+      this.setExtraers([...this.extraers, ...extraers]);
+    }
   }
 
   setMessagers(messagers: Validator<ItemControl<THints, TExtras>>[]) {
     this.messagers = messagers;
     this.updateMessages();
+  }
+
+  addMessagers(...messagers: Validator<ItemControl<THints, TExtras>>[]) {
+    if (messagers.length) {
+      this.setMessagers([...this.messagers, ...messagers]);
+    }
+  }
+
+  clone() {
+    return new ItemControl({ hints: this.hinters, extras: this.extraers ?? undefined, messages: this.messagers });
   }
 
   dispose() {
@@ -193,6 +257,8 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     this._extras$.complete();
     this._messages$.complete();
     this._initializer$.complete();
+
+    super.dispose();
   }
 
   protected itemReady() {
@@ -223,10 +289,6 @@ export class FieldControl<
   protected _touched$ = new BehaviorSubject(false);
   protected _errors$ = new BehaviorSubject<Messages | null>(null);
 
-  protected _validChildren$ = new BehaviorSubject(true);
-  protected _childrenDirty$ = new BehaviorSubject(false);
-  protected _childrenPending$ = new BehaviorSubject(false);
-  protected _childrenTouched$ = new BehaviorSubject(false);
   protected _parentDisabled$ = new BehaviorSubject(false);
 
   protected triggers: Trigger<FieldControl<TValue, THints, TExtras>>[] = [];
@@ -238,28 +300,25 @@ export class FieldControl<
   protected validatorSub?: Subscription;
 
   get value() {
-    return this._value$.getValue();
+    return this._value$.value;
   }
   get disabled() {
-    return this._disabled$.getValue() || this._parentDisabled$.getValue();
+    return this._disabled$.value || this._parentDisabled$.value;
   }
   get valid() {
-    return !this._errors$.getValue() && this._validChildren$.getValue();
-  }
-  get validChildren() {
-    return this._validChildren$.getValue();
+    return !this._errors$.value;
   }
   get pending() {
-    return this._pending$.getValue() || this._childrenPending$.getValue();
+    return this._pending$.value;
   }
   get dirty() {
-    return this._dirty$.getValue() || this._childrenDirty$.getValue();
+    return this._dirty$.value;
   }
   get touched() {
-    return this._touched$.getValue() || this._childrenTouched$.getValue();
+    return this._touched$.value;
   }
   get errors() {
-    return this._errors$.getValue();
+    return this._errors$.value;
   }
   get state(): FieldControlState<TValue, THints, TExtras> {
     return {
@@ -308,26 +367,17 @@ export class FieldControl<
     map(([d, pd]) => d || pd),
     distinctUntilChanged(),
   );
-  protected __valid$ = combineLatest([this._errors$, this._validChildren$]).pipe(
-    map(([e, cv]) => !e && cv),
+  protected __valid$ = this._errors$.pipe(
+    map(e => !e),
     distinctUntilChanged(),
   );
-  protected __pending$ = combineLatest([this._pending$, this._childrenPending$]).pipe(
-    map(([p, cp]) => p || cp),
-    distinctUntilChanged(),
-  );
-  protected __dirty$ = combineLatest([this._dirty$, this._childrenDirty$]).pipe(
-    map(([d, cd]) => d || cd),
-    distinctUntilChanged(),
-  );
-  protected __touched$ = combineLatest([this._touched$, this._childrenTouched$]).pipe(
-    map(([t, ct]) => t || ct),
-    distinctUntilChanged(),
-  );
+  protected __pending$ = this._pending$.pipe(distinctUntilChanged());
+  protected __dirty$ = this._dirty$.pipe(distinctUntilChanged());
+  protected __touched$ = this._touched$.pipe(distinctUntilChanged());
   protected __errors$ = this._errors$.pipe(distinctUntilChanged());
   protected _enabled$ = this.__disabled$.pipe(
     map(v => !v),
-    filter(Boolean),
+    distinctUntilChanged(),
   );
   protected _state$: Observable<FieldControlState<TValue, THints, TExtras>>;
 
@@ -400,14 +450,32 @@ export class FieldControl<
     this.trigger();
   }
 
+  addTriggers(...triggers: Trigger<FieldControl<TValue, THints, TExtras>>[]) {
+    if (triggers.length) {
+      this.setTriggers([...this.triggers, ...triggers]);
+    }
+  }
+
   setDisablers(disablers: Disabler<FieldControl<TValue, THints, TExtras>>[]) {
     this.disablers = disablers;
     this.updateDisablers();
   }
 
+  addDisablers(...disablers: Disabler<FieldControl<TValue, THints, TExtras>>[]) {
+    if (disablers.length) {
+      this.setDisablers([...this.disablers, ...disablers]);
+    }
+  }
+
   setValidators(validators: Validator<FieldControl<TValue, THints, TExtras>>[]) {
     this.validators = validators;
     this.validate();
+  }
+
+  addValidators(...validators: Validator<FieldControl<TValue, THints, TExtras>>[]) {
+    if (validators.length) {
+      this.setValidators([...this.validators, ...validators]);
+    }
   }
 
   setValue = (value: TValue) => {
@@ -491,25 +559,8 @@ export class FieldControl<
       return;
     }
 
-    const status = this.children.reduce(
-      (acc, c) => ({
-        dirty: acc.dirty || c.dirty,
-        pending: acc.pending || c.pending,
-        touched: acc.touched || c.touched,
-        valid: acc.valid && c.valid,
-      }),
-      { dirty: false, pending: false, touched: false, valid: true },
-    );
-    this._childrenDirty$.next(status.dirty);
-    this._childrenPending$.next(status.pending);
-    this._childrenTouched$.next(status.touched);
-    this._validChildren$.next(status.valid);
     this._parentDisabled$.next(this._parent?.disabled ?? false);
     super.update();
-  }
-
-  get children() {
-    return <FieldControl<unknown, THints, TExtras>[]>[];
   }
 
   dispose() {
@@ -523,14 +574,9 @@ export class FieldControl<
     this._dirty$.complete();
     this._touched$.complete();
     this._errors$.complete();
-    this._childrenDirty$.complete();
-    this._childrenPending$.complete();
-    this._childrenTouched$.complete();
-    this._validChildren$.complete();
     this._parentDisabled$.complete();
 
     super.dispose();
-    this.children.forEach(c => c.dispose());
   }
 
   protected itemReady() {}
@@ -552,16 +598,66 @@ export class GroupControl<
   TExtras = AbstractExtras,
   TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
 > extends FieldControl<TValue, THints, TExtras> {
+  protected _validChildren$ = new BehaviorSubject(true);
+  protected _childrenDirty$ = new BehaviorSubject(false);
+  protected _childrenPending$ = new BehaviorSubject(false);
+  protected _childrenTouched$ = new BehaviorSubject(false);
+
+  get valid() {
+    return !this._errors$.value && this._validChildren$.value;
+  }
+  get pending() {
+    return this._pending$.value || this._childrenPending$.value;
+  }
+  get dirty() {
+    return this._dirty$.value || this._childrenDirty$.value;
+  }
+  get touched() {
+    return this._touched$.value || this._childrenTouched$.value;
+  }
+
+  protected get controlList() {
+    return Object.values(this.controls) as TControls[keyof TControls][];
+  }
+
+  // Piped behavior subjects
+  protected __valid$ = combineLatest([this._errors$, this._validChildren$]).pipe(
+    map(([e, cv]) => !e && cv),
+    distinctUntilChanged(),
+  );
+  protected __pending$ = combineLatest([this._pending$, this._childrenPending$]).pipe(
+    map(([p, cp]) => p || cp),
+    distinctUntilChanged(),
+  );
+  protected __dirty$ = combineLatest([this._dirty$, this._childrenDirty$]).pipe(
+    map(([d, cd]) => d || cd),
+    distinctUntilChanged(),
+  );
+  protected __touched$ = combineLatest([this._touched$, this._childrenTouched$]).pipe(
+    map(([t, ct]) => t || ct),
+    distinctUntilChanged(),
+  );
+
   constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
     super(reduceControls<TValue, THints, TExtras>(controls), opts);
     this.controls = controls;
-    this.children.forEach(control => this.registerControl(control as TControls[keyof TControls]));
+    this.controlList.forEach(c => this.registerControl(c));
 
     this.groupReady();
   }
 
-  get children() {
-    return Object.values(this.controls) as FieldControl<unknown, THints, TExtras>[];
+  /**
+   * Add control to controls listing, replacing any existing controls. Use with
+   * caution, as the types will no longer reflect the value/controls of this group.
+   * `isChild` determines if the control should be added as a child in as well, for cases
+   * where the control is a logical value rather than a structural value.
+   */
+  addControl(name: string, control: FieldControl<any, THints, TExtras>, isChild = true) {
+    (this.controls as any)[name] = control;
+    if (isChild) {
+      this.registerControl(control);
+    }
+    this.update();
   }
 
   setValue = (value: TValue) => {
@@ -573,7 +669,7 @@ export class GroupControl<
     });
   };
 
-  patchValue = (value: Partial<TValue>) => {
+  patchValue = (value: DeepPartial<TValue>) => {
     Object.keys(value).forEach(name => {
       const control = this.get(name);
       if (control) {
@@ -603,7 +699,32 @@ export class GroupControl<
 
     const value = reduceControls<TValue, THints, TExtras>(this.controls);
     this._value$.next(value);
+
+    const status = this.controlList.reduce(
+      (acc, c) => ({
+        dirty: acc.dirty || c.dirty,
+        pending: acc.pending || c.pending,
+        touched: acc.touched || c.touched,
+        valid: acc.valid && c.valid,
+      }),
+      { dirty: false, pending: false, touched: false, valid: true },
+    );
+    this._childrenDirty$.next(status.dirty);
+    this._childrenPending$.next(status.pending);
+    this._childrenTouched$.next(status.touched);
+    this._validChildren$.next(status.valid);
+
     super.update();
+  }
+
+  dispose() {
+    this._childrenDirty$.complete();
+    this._childrenPending$.complete();
+    this._childrenTouched$.complete();
+    this._validChildren$.complete();
+    this.controlList.forEach(c => c.dispose());
+
+    super.dispose();
   }
 
   protected registerControl(control: ItemControl<THints, TExtras>) {
@@ -631,18 +752,21 @@ export class ArrayControl<
 > extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 
+  protected _itemFactory: (value: TValue | null) => GroupControl<TValue, THints, TExtras, TControls>;
   get itemFactory() {
     return this._itemFactory;
   }
 
   constructor(
-    protected _itemFactory: (value: TValue | null) => GroupControl<TValue, THints, TExtras, TControls>,
+    itemFactory: (value: TValue | null) => GroupControl<TValue, THints, TExtras, TControls>,
     value: TValue[] = [],
     opts: FieldControlOptions<TValue[], THints, TExtras> = {},
   ) {
     super(value, opts);
+    this._itemFactory = itemFactory;
     this.controls = value.map(v => this.itemFactory(v) as ReturnType<this["itemFactory"]>);
-    this.children.forEach(control => this.registerControl(control));
+    this.controls.forEach(control => this.registerControl(control));
+
     this.arrayReady();
   }
 
@@ -692,13 +816,16 @@ export class ArrayControl<
     });
   };
 
-  patchValue = (value: Partial<TValue>[]) => {
+  patchValue = (value: DeepPartial<TValue>[]) => {
     this.resize(value.length);
-
     value.forEach((v, index) => {
       const control = this.at(index);
       control?.patchValue(v);
     });
+  };
+
+  patchEachValue = (value: DeepPartial<TValue>) => {
+    this.controls.forEach(control => control.patchValue(value));
   };
 
   reset = (value?: TValue[]) => {

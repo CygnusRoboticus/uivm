@@ -47,3 +47,7 @@ type DF6<T> = T extends any ? DFBase<T, DF7<EmptyObjectValues<T>>> : never;
 type DF7<T> = T extends any ? DFBase<T, DF8<EmptyObjectValues<T>>> : never;
 type DF8<T> = T extends any ? DFBase<T, DF9<EmptyObjectValues<T>>> : never;
 type DF9<T> = T extends any ? DFBase<T, EmptyObjectValues<T>> : never;
+
+export type DeepPartial<T> = {
+  [P in keyof T]?: DeepPartial<T[P]>;
+};

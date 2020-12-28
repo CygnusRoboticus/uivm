@@ -2,17 +2,17 @@ import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
 import { ComponentBuilder } from "../src/component";
 import { GroupControl } from "../src/controls";
+import { BasicRegistry } from "../src/executable";
 import { FormValue } from "../src/typing";
-import { ControlVisitor, createConfigBuilder } from "../src/visitor";
+import { BasicVisitor, createConfigBuilder } from "../src/visitor";
 import { BasicBuilder } from "./react.basic";
 import { CustomConfigs, CustomConfigsTypes } from "./react.configs";
 import { SemanticBuilder } from "./react.semantic";
-import { registry } from "./registry";
 
-const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
-const controlBuilder = createConfigBuilder<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
+const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry>();
+const controlBuilder = createConfigBuilder<CustomConfigs, typeof BasicRegistry, typeof visitor>(BasicRegistry, visitor);
 
-function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any, any> }) {
+function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any> }) {
   const config = {
     type: "form",
     name: "form",
@@ -38,11 +38,17 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
         ],
       },
       {
-        label: "Movie",
-        type: "text",
-        name: "movie",
+        type: "repeater",
+        name: "films",
+        array: true,
         hints: {
           hidden: [{ name: "field", params: { field: "lastName", value: "Wick" } }],
+        },
+        fields: {
+          type: "formGroup",
+          fields: [
+            { label: "Film", type: "text", name: "film", disablers: [{ name: "static", params: { value: true } }] },
+          ],
         },
       },
       { label: "Autofill", type: "text", name: "autofill", disablers: [{ name: "static", params: { value: true } }] },
@@ -68,29 +74,29 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
     ],
   } as const;
 
-  const [bundle] = useState(() => {
-    const b = controlBuilder<GroupControl<FormValue<typeof config["fields"], CustomConfigs, CustomConfigsTypes>>>(
+  const [control] = useState(() => {
+    const c = controlBuilder<GroupControl<FormValue<typeof config["fields"], CustomConfigs, CustomConfigsTypes>>>(
       config,
     );
-    b.control.reset({
+    c.reset({
       firstName: "John",
       lastName: "Wick",
-      movie: "Parabellum",
+      films: [{ film: "John Wick" }, { film: "Takes Manhatten" }, { film: "Parabellum" }],
       autofill: "",
       checkbox: false,
       select: 2,
     });
-    return b;
+    return c;
   });
-  const [state, setState] = useState(() => bundle.control.state);
+  const [state, setState] = useState(() => control.state);
   useEffect(() => {
-    bundle.control.state$.subscribe(setState);
-    return () => bundle.control.dispose();
+    control.state$.subscribe(setState);
+    return () => control.dispose();
   }, []);
 
   return (
     <>
-      {builder(bundle)}
+      {builder(control)}
 
       <pre>{JSON.stringify(state, null, 2)}</pre>
     </>

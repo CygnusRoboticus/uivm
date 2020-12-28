@@ -35,7 +35,7 @@ viewModel.state$.subscribe(console.log);
 Sample config usage, this produces a view model identical to the above. [Sandbox](https://codesandbox.io/s/jolly-bogdan-y1kvz?file=/src/index.ts)
 
 ```ts
-import { ControlVisitor, createConfigBuilder, FieldConfig, GroupConfig, GroupControl, ItemControl } from "uivm";
+import { BasicVisitor, createConfigBuilder, FieldConfig, GroupConfig, GroupControl, ItemControl } from "uivm";
 
 interface CustomGroupConfig extends GroupConfig<CustomConfigs, typeof registry>, FieldConfig<typeof registry> {
   type: "group";
@@ -83,10 +83,10 @@ const registry = {
   },
 };
 
-const visitor = new ControlVisitor<CustomConfigs, typeof registry>();
+const visitor = new BasicVisitor<CustomConfigs, typeof registry>();
 const bundler = createConfigBuilder<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
 
-const bundle = bundler<
+const control = bundler<
   GroupControl<{
     firstName: string;
     lastName: string;
@@ -97,7 +97,7 @@ const bundle = bundler<
     };
   }>
 >(config);
-bundle.control.reset({
+control.reset({
   firstName: "John",
   lastName: "Wick",
   group: {
@@ -107,7 +107,7 @@ bundle.control.reset({
   },
 });
 
-bundle.control.state$.subscribe(console.log);
+control.state$.subscribe(console.log);
 ```
 
 ## Demo

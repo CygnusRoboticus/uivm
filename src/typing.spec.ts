@@ -79,6 +79,7 @@ describe("typings", () => {
       { type: "number" | "date" },
       { type: "checkbox" },
       never,
+      { type: "text" },
       { type: "text" }
     >;
 

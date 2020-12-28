@@ -6,76 +6,41 @@ import { Button as SemanticButton, Form as SemanticForm, Input, Message as Seman
 import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Trigger } from "../src/controls.types";
+import { BasicRegistry } from "../src/executable";
 import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
-import { Bundle } from "../src/visitor";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
-import {
-  ButtonConfig,
-  CheckboxConfig,
-  CustomConfigs,
-  CustomHints,
-  FormConfig,
-  FormGroupConfig,
-  MessageConfig,
-  SelectConfig,
-  TextConfig,
-} from "./react.configs";
-import { CustomRegistry, registry } from "./registry";
+import { CustomConfigs, CustomHints } from "./react.configs";
 
-export const SemanticComponentMap: ComponentRegistry<
-  CustomConfigs,
-  any,
-  JSX.Element,
-  CustomRegistry,
-  { index: number }
-> = {
-  form: (b, { index: i } = { index: 0 }) => <Form key={i} {...b} />,
-  text: (b, { index: i } = { index: 0 }) => <Text key={i} {...b} />,
-  message: (b, { index: i } = { index: 0 }) => <Message key={i} {...b} />,
-  button: (b, { index: i } = { index: 0 }) => <Button key={i} {...b} />,
-  checkbox: (b, { index: i } = { index: 0 }) => <Checkbox key={i} {...b} />,
-  select: (b, { index: i } = { index: 0 }) => <Select key={i} {...b} />,
-  formGroup: (b, { index: i } = { index: 0 }) => <FormGroup key={i} {...b} />,
+export const SemanticComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, { index: number }> = {
+  form: (control, { index: i } = { index: 0 }) => <Form key={i} control={control} />,
+  text: (control, { index: i } = { index: 0 }) => <Text key={i} control={control} />,
+  message: (control, { index: i } = { index: 0 }) => <Message key={i} control={control} />,
+  button: (control, { index: i } = { index: 0 }) => <Button key={i} control={control} />,
+  checkbox: (control, { index: i } = { index: 0 }) => <Checkbox key={i} control={control} />,
+  select: (control, { index: i } = { index: 0 }) => <Select key={i} control={control} />,
+  formGroup: (control, { index: i } = { index: 0 }) => <FormGroup key={i} control={control} />,
+  repeater: (control, { index: i } = { index: 0 }) => <Fields key={i} control={control} />,
 };
 
-export const SemanticBuilder = createComponentBuilder<
-  CustomConfigs,
-  any,
-  JSX.Element,
-  CustomRegistry,
-  { index: number }
->(SemanticComponentMap);
+export const SemanticBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
+  SemanticComponentMap,
+  c => c.extras.config.type,
+);
 
-export function Fields({
-  children,
-}: {
-  children: Bundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>[];
-}) {
-  return <>{children.map((c, i) => SemanticBuilder(c, { index: i }))}</>;
+export function Fields({ control }: { control: ItemControl<CustomHints> }) {
+  return <>{control.children.map((c, i) => SemanticBuilder(c, { index: i }))}</>;
 }
 
-export function Form({
-  control,
-  config,
-  children,
-}: Bundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
+export function Form({ control }: { control: GroupControl<{}, {}, CustomHints> }) {
   return (
     <SemanticForm>
-      <Fields children={children}></Fields>
+      <Fields control={control}></Fields>
     </SemanticForm>
   );
 }
 
-export function Text({
-  config,
-  control,
-}: Bundle<
-  TextConfig,
-  FieldControl<string | null, CustomHints>,
-  CustomConfigs,
-  ItemControl<CustomHints>,
-  CustomRegistry
->) {
+export function Text({ control }: { control: FieldControl<string, any, any> }) {
+  const config = control.extras.config;
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -102,16 +67,8 @@ export function Text({
   );
 }
 
-export function Checkbox({
-  config,
-  control,
-}: Bundle<
-  CheckboxConfig,
-  FieldControl<boolean, CustomHints>,
-  CustomConfigs,
-  ItemControl<CustomHints>,
-  CustomRegistry
->) {
+export function Checkbox({ control }: { control: FieldControl<boolean, any, any> }) {
+  const config = control.extras.config;
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -135,20 +92,18 @@ export function Checkbox({
   );
 }
 
-export function Select({
-  config,
-  control,
-}: Bundle<SelectConfig<unknown>, FieldControl<unknown[], CustomHints>, CustomConfigs, any, CustomRegistry>) {
+export function Select({ control }: { control: FieldControl<string | string[], any, any> }) {
+  const config = control.extras.config;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
   const [options, setOptions] = useState<readonly OptionSingle<unknown>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
-      typeof registry,
+      typeof BasicRegistry,
       typeof config,
       typeof control,
       SearchResolver<typeof control, OptionSingle<unknown>, unknown>
-    >(registry, "search", config, control, config.options);
+    >(BasicRegistry, "search", config, control, config.options);
     createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers)
       .pipe(map(o => o.result))
       .subscribe(setOptions);
@@ -179,10 +134,8 @@ export function Select({
   );
 }
 
-export function Message({
-  config,
-  control,
-}: Bundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, any, CustomRegistry>) {
+export function Message({ control }: { control: ItemControl<any, any> }) {
+  const config = control.extras.config;
   const [{ hints, messages, extras }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -204,23 +157,16 @@ export function Message({
   );
 }
 
-export function FormGroup({
-  config,
-  control,
-  children,
-}: Bundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, any, CustomRegistry>) {
+export function FormGroup({ control }: { control: ItemControl<CustomHints> }) {
   return (
     <SemanticForm.Group>
-      <Fields children={children}></Fields>
+      <Fields control={control}></Fields>
     </SemanticForm.Group>
   );
 }
 
-export function Button({
-  config,
-  control,
-  registry,
-}: Bundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, any, CustomRegistry>) {
+export function Button({ control }: { control: ItemControl<CustomHints> }) {
+  const { config, registry } = control.extras as any;
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);

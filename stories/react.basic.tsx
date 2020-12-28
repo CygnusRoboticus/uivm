@@ -4,71 +4,39 @@ import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Messages, Trigger } from "../src/controls.types";
 import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
-import { Bundle } from "../src/visitor";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
-import {
-  ButtonConfig,
-  CheckboxConfig,
-  CustomConfigs,
-  CustomHints,
-  FormConfig,
-  FormGroupConfig,
-  MessageConfig,
-  SelectConfig,
-  TextConfig,
-} from "./react.configs";
-import { CustomRegistry } from "./registry";
+import { CustomConfigs } from "./react.configs";
 
-export const BasicComponentMap: ComponentRegistry<
-  CustomConfigs,
-  any,
-  JSX.Element,
-  CustomRegistry,
-  { index: number }
-> = {
-  form: (b, { index: i } = { index: 0 }) => <Form key={i} {...b} />,
-  text: (b, { index: i } = { index: 0 }) => <Text key={i} {...b} />,
-  message: (b, { index: i } = { index: 0 }) => <Message key={i} {...b} />,
-  button: (b, { index: i } = { index: 0 }) => <Button key={i} {...b} />,
-  checkbox: (b, { index: i } = { index: 0 }) => <Checkbox key={i} {...b} />,
-  select: (b, { index: i } = { index: 0 }) => <Select key={i} {...b} />,
-  formGroup: (b, { index: i } = { index: 0 }) => <FormGroup key={i} {...b} />,
+export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, { index: number }> = {
+  form: (control, { index: i } = { index: 0 }) => <Form key={i} control={control} />,
+  text: (control, { index: i } = { index: 0 }) => <Text key={i} control={control} />,
+  message: (control, { index: i } = { index: 0 }) => <Message key={i} control={control} />,
+  button: (control, { index: i } = { index: 0 }) => <Button key={i} control={control} />,
+  checkbox: (control, { index: i } = { index: 0 }) => <Checkbox key={i} control={control} />,
+  select: (control, { index: i } = { index: 0 }) => <Select key={i} control={control} />,
+  formGroup: (control, { index: i } = { index: 0 }) => <FormGroup key={i} control={control} />,
+  repeater: (control, { index: i } = { index: 0 }) => <Fields key={i} control={control} />,
 };
 
-export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, CustomRegistry, { index: number }>(
+export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
   BasicComponentMap,
+  c => c.extras.config.type,
 );
 
-export function Fields({
-  children,
-}: {
-  children: Bundle<CustomConfigs, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>[];
-}) {
-  return <>{children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
+export function Fields({ control }: { control: ItemControl<any, any> }) {
+  return <>{control.children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
 }
 
-export function Form({
-  control,
-  config,
-  children,
-}: Bundle<FormConfig, GroupControl<{}, {}, CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
+export function Form({ control }: { control: ItemControl<any, any> }) {
   return (
     <form>
-      <Fields children={children}></Fields>
+      <Fields control={control}></Fields>
     </form>
   );
 }
 
-export function Text({
-  config,
-  control,
-}: Bundle<
-  TextConfig,
-  FieldControl<string | null, CustomHints>,
-  CustomConfigs,
-  ItemControl<CustomHints>,
-  CustomRegistry
->) {
+export function Text({ control }: { control: FieldControl<string, any, any> }) {
+  const config = control.extras.config;
   const [{ value, errors, disabled }, setState] = useState(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
@@ -91,16 +59,8 @@ export function Text({
   );
 }
 
-export function Checkbox({
-  config,
-  control,
-}: Bundle<
-  CheckboxConfig,
-  FieldControl<boolean, CustomHints>,
-  CustomConfigs,
-  ItemControl<CustomHints>,
-  CustomRegistry
->) {
+export function Checkbox({ control }: { control: FieldControl<boolean, any, any> }) {
+  const config = control.extras.config;
   const [value, setValue] = useState<boolean>(false);
   const [disabled, setDisabled] = useState(false);
   const [errors, setErrors] = useState<Messages | null>(null);
@@ -126,17 +86,8 @@ export function Checkbox({
   );
 }
 
-export function Select({
-  config,
-  control,
-  registry,
-}: Bundle<
-  SelectConfig<unknown>,
-  FieldControl<string, CustomHints>,
-  CustomConfigs,
-  ItemControl<CustomHints>,
-  CustomRegistry
->) {
+export function Select({ control }: { control: FieldControl<string, any, any> }) {
+  const { config, registry } = control.extras;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
   const [options, setOptions] = useState<readonly OptionSingle<string>[]>([]);
   useEffect(() => {
@@ -173,10 +124,7 @@ export function Select({
   );
 }
 
-export function Message({
-  config,
-  control,
-}: Bundle<MessageConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
+export function Message({ control }: { control: ItemControl<any, any> }) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);
@@ -196,23 +144,16 @@ export function Message({
   );
 }
 
-export function FormGroup({
-  config,
-  control,
-  children,
-}: Bundle<FormGroupConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
+export function FormGroup({ control }: { control: GroupControl<{}, any, any> }) {
   return (
     <>
-      <Fields children={children}></Fields>
+      <Fields control={control}></Fields>
     </>
   );
 }
 
-export function Button({
-  config,
-  control,
-  registry,
-}: Bundle<ButtonConfig, ItemControl<CustomHints>, CustomConfigs, ItemControl<CustomHints>, CustomRegistry>) {
+export function Button({ control }: { control: ItemControl<any, any> }) {
+  const { config, registry } = control.extras;
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);

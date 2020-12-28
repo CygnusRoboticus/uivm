@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { BaseControl, FieldControl, ItemControl } from "./controls";
+import { FieldControl, ItemControl } from "./controls";
 
 export interface Messages {
   [key: string]: {
@@ -35,7 +35,7 @@ export type Extraer<TControl, TExtras = AbstractExtras> = Executor<TControl, Par
 
 export interface ItemControlOptions<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> {
   hints?: Hinter<ItemControl<THints, TExtras>, THints>[];
-  extras?: Extraer<ItemControl<THints, TExtras>, TExtras>;
+  extras?: Extraer<ItemControl<THints, TExtras>, TExtras>[];
   messages?: Validator<ItemControl<THints, TExtras>>[];
 }
 

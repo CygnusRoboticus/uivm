@@ -23,6 +23,7 @@ export {
 } from "./controls.types";
 export { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
 export {
+  BasicRegistry,
   Executable,
   ExecutableDefinition,
   ExecutableDefinitionDefault,
@@ -59,5 +60,5 @@ export {
   notNullish,
   toObservable,
 } from "./utils";
-export { Bundle, ControlVisitor, createConfigBuilder, Visitor, VisitorControls } from "./visitor";
+export { BasicVisitor, createConfigBuilder, Visitor, VisitorControls } from "./visitor";
 export { getRegistryMethod, getRegistryMethods, getRegistryValue, getRegistryValues } from "./visitor.utils";

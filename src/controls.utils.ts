@@ -1,5 +1,5 @@
 import { combineLatest, of } from "rxjs";
-import { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } from "./controls";
+import { ArrayControl, BaseControl, FieldControl, GroupControl } from "./controls";
 import { AbstractExtras, AbstractHints, Executor, KeyValueControls, Obj } from "./controls.types";
 import { toObservable } from "./utils";
 
@@ -66,11 +66,13 @@ function forEachChild<TValue extends Obj, THints extends AbstractHints, TExtras>
   });
 }
 
-export function traverseParents(control: BaseControl) {
+export function traverseParents<TControl extends BaseControl>(control: TControl) {
+  const parents: BaseControl[] = [];
   while (control.parent) {
-    control = control.parent;
+    parents.push(control.parent);
+    control = control.parent as TControl;
   }
-  return control;
+  return parents;
 }
 
 export function extractSources<TControl, TValue>(control: TControl, executors: Executor<TControl, TValue>[]) {

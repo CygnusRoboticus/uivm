@@ -33,15 +33,15 @@ export interface FieldConfig<
 }
 
 export type GroupConfig<
-  TConfig extends ItemConfig<TRegistry, THints, TExtras>,
+  TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras
-> = BaseGroupConfig<TConfig> & ItemConfig<TRegistry, THints, TExtras>;
+> = BaseGroupConfig<TConfigs> & ItemConfig<TRegistry, THints, TExtras>;
 
 export type ArrayConfig<
-  TConfig extends ItemConfig<TRegistry, THints, TExtras>,
+  TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras
-> = FieldConfig<TRegistry, THints, TExtras> & BaseArrayConfig<TConfig>;
+> = FieldConfig<TRegistry, THints, TExtras> & BaseArrayConfig<TConfigs>;

@@ -1,31 +1,32 @@
-import { FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
+import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
 import { FieldControl, ItemControl } from "../src/controls";
-import { SearchDefinition, TriggerDefinition } from "../src/executable";
+import { BasicRegistry, SearchDefinition, TriggerDefinition } from "../src/executable";
 import { Option } from "../src/search";
 import { FieldTypeMap } from "../src/typing";
-import { CustomRegistry } from "./registry";
 
-export interface FormConfig extends GroupConfig<CustomConfigs, CustomRegistry>, FieldConfig<CustomRegistry> {
+export interface FormConfig
+  extends GroupConfig<CustomConfigs, typeof BasicRegistry>,
+    FieldConfig<typeof BasicRegistry> {
   type: "form";
 }
 
-export interface TextConfig extends FieldConfig<CustomRegistry> {
+export interface TextConfig extends FieldConfig<typeof BasicRegistry> {
   type: "text";
   label?: string;
   placeholder?: string;
 }
 
-export interface CheckboxConfig extends FieldConfig<CustomRegistry> {
+export interface CheckboxConfig extends FieldConfig<typeof BasicRegistry> {
   type: "checkbox";
   label: string;
 }
 
-export interface SelectConfig<T> extends FieldConfig<CustomRegistry> {
+export interface SelectConfig<T> extends FieldConfig<typeof BasicRegistry> {
   type: "select";
   label?: string;
   placeholder?: string;
   options: readonly SearchDefinition<
-    CustomRegistry,
+    typeof BasicRegistry,
     Option<T>,
     T,
     object,
@@ -34,18 +35,22 @@ export interface SelectConfig<T> extends FieldConfig<CustomRegistry> {
   >[];
 }
 
-export interface FormGroupConfig extends GroupConfig<CustomConfigs, CustomRegistry> {
+export interface FormGroupConfig extends GroupConfig<CustomConfigs, typeof BasicRegistry> {
   type: "formGroup";
 }
 
-export interface ButtonConfig extends ItemConfig<CustomRegistry> {
+export interface RepeaterConfig extends ArrayConfig<CustomConfigs, typeof BasicRegistry> {
+  type: "repeater";
+}
+
+export interface ButtonConfig extends ItemConfig<typeof BasicRegistry> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints>>;
+  trigger: TriggerDefinition<typeof BasicRegistry, CustomConfigs, ItemControl<CustomHints>>;
 }
 
-export interface MessageConfig extends ItemConfig<CustomRegistry> {
+export interface MessageConfig extends ItemConfig<typeof BasicRegistry> {
   type: "message";
   title?: string;
   chrome?: "info" | "warning" | "success" | "error";
@@ -57,6 +62,7 @@ export type CustomConfigs =
   | ButtonConfig
   | MessageConfig
   | FormGroupConfig
+  | RepeaterConfig
   | CheckboxConfig
   | SelectConfig<unknown>;
 
@@ -69,6 +75,7 @@ export type CustomConfigsTypes = FieldTypeMap<
   { type: "text" },
   never,
   { type: "checkbox" },
+  never,
   never,
   never
 >;

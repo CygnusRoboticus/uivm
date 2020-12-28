@@ -9,10 +9,11 @@ export interface BaseFieldConfig extends BaseItemConfig {
   dataType?: FieldDataTypeDefinition;
 }
 
-export interface BaseGroupConfig<TConfig extends BaseItemConfig> extends BaseItemConfig {
-  fields: readonly TConfig[];
+export interface BaseGroupConfig<TConfigs extends BaseItemConfig> extends BaseItemConfig {
+  fields: readonly TConfigs[];
 }
 
-export interface BaseArrayConfig<TConfig extends BaseItemConfig> extends BaseGroupConfig<TConfig>, BaseFieldConfig {
+export interface BaseArrayConfig<TConfigs extends BaseItemConfig> extends BaseFieldConfig {
   array: true;
+  fields: BaseGroupConfig<TConfigs> & TConfigs;
 }
