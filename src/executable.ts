@@ -158,10 +158,10 @@ export const BasicRegistry = {
               return dependent.value$.pipe(
                 map(v =>
                   Array.isArray(value)
-                    ? !!v == !!value.length
+                    ? !!v === !!value.length
                     : typeof value === "boolean"
-                    ? !!v == !!value
-                    : v == value,
+                    ? !!v === !!value
+                    : v === value,
                 ),
               );
             }

@@ -49,7 +49,7 @@ export abstract class Visitor<
   ) => void;
 }
 
-export function bundleChildren<
+export function buildChildren<
   TConfig extends BaseItemConfig,
   TRegistry extends FuzzyExecutableRegistry,
   TVisitor extends Visitor<
@@ -126,7 +126,7 @@ export class BasicVisitor<
     config: GroupConfig<TConfigs, TRegistry, THints, TExtras> & TConfigs,
     registry: TRegistry,
   ): ItemControl<THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>> {
-    const children = bundleChildren(config, registry, this);
+    const children = buildChildren(config, registry, this);
     const control = new ItemControl<THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>({
       extras: [() => ({ config, registry })],
     });
@@ -137,7 +137,7 @@ export class BasicVisitor<
     config: GroupConfig<TConfigs, TRegistry, THints, TExtras> & FieldConfig<TRegistry, THints, TExtras> & TConfigs,
     registry: TRegistry,
   ): GroupControl<any, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>> {
-    const children = bundleChildren(config, registry, this);
+    const children = buildChildren(config, registry, this);
     const control = new GroupControl<{}, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>(
       {},
       { extras: [() => ({ config, registry })] },
@@ -195,7 +195,11 @@ export class BasicVisitor<
   ) {
     type TBVExtras = BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>;
 
-    const config = control.extras.config!;
+    const config = control.extras.config;
+    if (!config) {
+      throw new Error(`Could not initialize control (${control}), \`extras.config\` is missing.`);
+    }
+
     const hints = Object.entries(config.hints ?? {}).reduce((acc, [key, value]) => {
       const sources = getRegistryValues<
         typeof registry,

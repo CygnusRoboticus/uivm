@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { of } from "rxjs";
 import { ComponentRegistry, createComponentBuilder } from "../src/component";
-import { FieldControl, GroupControl, ItemControl } from "../src/controls";
+import { ArrayControl, FieldControl, ItemControl } from "../src/controls";
 import { Messages, Trigger } from "../src/controls.types";
 import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
-import { CustomConfigs } from "./react.configs";
+import {
+  ButtonConfig,
+  CheckboxConfig,
+  CustomConfigs,
+  CustomExtras,
+  CustomHints,
+  FormConfig,
+  MessageConfig,
+  SelectConfig,
+  TextConfig,
+} from "./react.configs";
 
 export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, { index: number }> = {
   form: (control, { index: i } = { index: 0 }) => <Form key={i} control={control} />,
@@ -14,8 +24,8 @@ export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Elemen
   button: (control, { index: i } = { index: 0 }) => <Button key={i} control={control} />,
   checkbox: (control, { index: i } = { index: 0 }) => <Checkbox key={i} control={control} />,
   select: (control, { index: i } = { index: 0 }) => <Select key={i} control={control} />,
-  formGroup: (control, { index: i } = { index: 0 }) => <FormGroup key={i} control={control} />,
-  repeater: (control, { index: i } = { index: 0 }) => <Fields key={i} control={control} />,
+  container: (control, { index: i } = { index: 0 }) => <Fields key={i} control={control} />,
+  repeater: (control, { index: i } = { index: 0 }) => <Repeater key={i} control={control} />,
 };
 
 export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
@@ -23,11 +33,11 @@ export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Eleme
   c => c.extras.config.type,
 );
 
-export function Fields({ control }: { control: ItemControl<any, any> }) {
+export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras> }) {
   return <>{control.children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
 }
 
-export function Form({ control }: { control: ItemControl<any, any> }) {
+export function Form({ control }: { control: ItemControl<CustomHints, CustomExtras<FormConfig>> }) {
   return (
     <form>
       <Fields control={control}></Fields>
@@ -35,7 +45,7 @@ export function Form({ control }: { control: ItemControl<any, any> }) {
   );
 }
 
-export function Text({ control }: { control: FieldControl<string, any, any> }) {
+export function Text({ control }: { control: FieldControl<string, CustomHints, CustomExtras<TextConfig>> }) {
   const config = control.extras.config;
   const [{ value, errors, disabled }, setState] = useState(control.state);
   useEffect(() => {
@@ -59,7 +69,7 @@ export function Text({ control }: { control: FieldControl<string, any, any> }) {
   );
 }
 
-export function Checkbox({ control }: { control: FieldControl<boolean, any, any> }) {
+export function Checkbox({ control }: { control: FieldControl<boolean, CustomHints, CustomExtras<CheckboxConfig>> }) {
   const config = control.extras.config;
   const [value, setValue] = useState<boolean>(false);
   const [disabled, setDisabled] = useState(false);
@@ -86,7 +96,7 @@ export function Checkbox({ control }: { control: FieldControl<boolean, any, any>
   );
 }
 
-export function Select({ control }: { control: FieldControl<string, any, any> }) {
+export function Select({ control }: { control: FieldControl<string, CustomHints, CustomExtras<SelectConfig>> }) {
   const { config, registry } = control.extras;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
   const [options, setOptions] = useState<readonly OptionSingle<string>[]>([]);
@@ -124,7 +134,7 @@ export function Select({ control }: { control: FieldControl<string, any, any> })
   );
 }
 
-export function Message({ control }: { control: ItemControl<any, any> }) {
+export function Message({ control }: { control: ItemControl<CustomHints, CustomExtras<MessageConfig>> }) {
   const [messages, setMessage] = useState<Messages | null>();
   useEffect(() => {
     control.messages$.subscribe(setMessage);
@@ -144,15 +154,21 @@ export function Message({ control }: { control: ItemControl<any, any> }) {
   );
 }
 
-export function FormGroup({ control }: { control: GroupControl<{}, any, any> }) {
+export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<FormConfig>> }) {
+  const [{}, setState] = useState<typeof control["state"]>(control.state);
+  useEffect(() => {
+    control.state$.subscribe(setState);
+  }, []);
+
   return (
     <>
       <Fields control={control}></Fields>
+      <button onClick={() => control.add()}>Add</button>
     </>
   );
 }
 
-export function Button({ control }: { control: ItemControl<any, any> }) {
+export function Button({ control }: { control: ItemControl<CustomHints, CustomExtras<ButtonConfig>> }) {
   const { config, registry } = control.extras;
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {

@@ -4,12 +4,22 @@ import { map } from "rxjs/operators";
 import "semantic-ui-css/semantic.min.css";
 import { Button as SemanticButton, Form as SemanticForm, Input, Message as SemanticMessage } from "semantic-ui-react";
 import { ComponentRegistry, createComponentBuilder } from "../src/component";
-import { FieldControl, GroupControl, ItemControl } from "../src/controls";
+import { ArrayControl, FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Trigger } from "../src/controls.types";
 import { BasicRegistry } from "../src/executable";
 import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
-import { CustomConfigs, CustomHints } from "./react.configs";
+import {
+  ButtonConfig,
+  CheckboxConfig,
+  CustomConfigs,
+  CustomExtras,
+  CustomHints,
+  FormConfig,
+  MessageConfig,
+  SelectConfig,
+  TextConfig,
+} from "./react.configs";
 
 export const SemanticComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Element, { index: number }> = {
   form: (control, { index: i } = { index: 0 }) => <Form key={i} control={control} />,
@@ -18,8 +28,8 @@ export const SemanticComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Ele
   button: (control, { index: i } = { index: 0 }) => <Button key={i} control={control} />,
   checkbox: (control, { index: i } = { index: 0 }) => <Checkbox key={i} control={control} />,
   select: (control, { index: i } = { index: 0 }) => <Select key={i} control={control} />,
-  formGroup: (control, { index: i } = { index: 0 }) => <FormGroup key={i} control={control} />,
-  repeater: (control, { index: i } = { index: 0 }) => <Fields key={i} control={control} />,
+  container: (control, { index: i } = { index: 0 }) => <FormGroup key={i} control={control} />,
+  repeater: (control, { index: i } = { index: 0 }) => <Repeater key={i} control={control} />,
 };
 
 export const SemanticBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
@@ -27,11 +37,11 @@ export const SemanticBuilder = createComponentBuilder<CustomConfigs, any, JSX.El
   c => c.extras.config.type,
 );
 
-export function Fields({ control }: { control: ItemControl<CustomHints> }) {
+export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras> }) {
   return <>{control.children.map((c, i) => SemanticBuilder(c, { index: i }))}</>;
 }
 
-export function Form({ control }: { control: GroupControl<{}, {}, CustomHints> }) {
+export function Form({ control }: { control: GroupControl<{}, CustomHints, CustomExtras<FormConfig>> }) {
   return (
     <SemanticForm>
       <Fields control={control}></Fields>
@@ -39,7 +49,7 @@ export function Form({ control }: { control: GroupControl<{}, {}, CustomHints> }
   );
 }
 
-export function Text({ control }: { control: FieldControl<string, any, any> }) {
+export function Text({ control }: { control: FieldControl<string, CustomHints, CustomExtras<TextConfig>> }) {
   const config = control.extras.config;
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
@@ -67,7 +77,7 @@ export function Text({ control }: { control: FieldControl<string, any, any> }) {
   );
 }
 
-export function Checkbox({ control }: { control: FieldControl<boolean, any, any> }) {
+export function Checkbox({ control }: { control: FieldControl<boolean, CustomHints, CustomExtras<CheckboxConfig>> }) {
   const config = control.extras.config;
   const [{ hints, value, disabled, errors }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
@@ -92,7 +102,11 @@ export function Checkbox({ control }: { control: FieldControl<boolean, any, any>
   );
 }
 
-export function Select({ control }: { control: FieldControl<string | string[], any, any> }) {
+export function Select({
+  control,
+}: {
+  control: FieldControl<string | string[], CustomHints, CustomExtras<SelectConfig>>;
+}) {
   const config = control.extras.config;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
   const [options, setOptions] = useState<readonly OptionSingle<unknown>[]>([]);
@@ -113,8 +127,8 @@ export function Select({ control }: { control: FieldControl<string | string[], a
     <SemanticForm.Select
       required={config.validators?.some(v => v.name === "required")}
       label={config.label}
-      value={value as string[]}
-      onChange={(_, e) => control.setValue(e.value as any)}
+      value={value as string | string[]}
+      onChange={(_, e) => control.setValue(e.value as string | string[])}
       disabled={disabled}
       options={options.map(o => ({
         description: o.sublabel,
@@ -134,7 +148,7 @@ export function Select({ control }: { control: FieldControl<string | string[], a
   );
 }
 
-export function Message({ control }: { control: ItemControl<any, any> }) {
+export function Message({ control }: { control: ItemControl<CustomHints, CustomExtras<MessageConfig>> }) {
   const config = control.extras.config;
   const [{ hints, messages, extras }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
@@ -157,7 +171,7 @@ export function Message({ control }: { control: ItemControl<any, any> }) {
   );
 }
 
-export function FormGroup({ control }: { control: ItemControl<CustomHints> }) {
+export function FormGroup({ control }: { control: ItemControl<CustomHints, CustomExtras<FormConfig>> }) {
   return (
     <SemanticForm.Group>
       <Fields control={control}></Fields>
@@ -165,8 +179,26 @@ export function FormGroup({ control }: { control: ItemControl<CustomHints> }) {
   );
 }
 
-export function Button({ control }: { control: ItemControl<CustomHints> }) {
-  const { config, registry } = control.extras as any;
+export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<FormConfig>> }) {
+  const [{}, setState] = useState<typeof control["state"]>(control.state);
+  useEffect(() => {
+    control.state$.subscribe(setState);
+  }, []);
+
+  return (
+    <>
+      {control.children.map((c, i) => (
+        <FormGroup key={i} control={c}></FormGroup>
+      ))}
+      <button type="button" onClick={() => control.add()}>
+        Add
+      </button>
+    </>
+  );
+}
+
+export function Button({ control }: { control: ItemControl<CustomHints, CustomExtras<ButtonConfig>> }) {
+  const { config, registry } = control.extras;
   const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);

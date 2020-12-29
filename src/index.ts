@@ -1,10 +1,9 @@
 export { ComponentBuilder, ComponentRegistry, createComponentBuilder } from "./component";
 export { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
-export { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
+export { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } from "./controls";
 export {
   AbstractExtras,
   AbstractHints,
-  ArrayType,
   Disabler,
   Executor,
   Extraer,
@@ -60,5 +59,12 @@ export {
   notNullish,
   toObservable,
 } from "./utils";
-export { BasicVisitor, createConfigBuilder, Visitor, VisitorControls } from "./visitor";
+export {
+  BasicVisitor,
+  BasicVisitorExtras,
+  buildChildren,
+  createConfigBuilder,
+  Visitor,
+  VisitorControls,
+} from "./visitor";
 export { getRegistryMethod, getRegistryMethods, getRegistryValue, getRegistryValues } from "./visitor.utils";

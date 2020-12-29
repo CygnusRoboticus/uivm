@@ -1,4 +1,3 @@
-import { FieldControl, ItemControl } from "./controls";
 import { AbstractExtras, AbstractHints } from "./controls.types";
 import {
   ExtraDefinition,
@@ -15,10 +14,10 @@ export interface ItemConfig<
   TExtras = AbstractExtras
 > extends BaseItemConfig {
   hints?: {
-    [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, ItemControl<THints, TExtras>>[];
+    [hint in keyof THints]: readonly HinterDefinition<TRegistry, BaseItemConfig, any>[];
   };
-  extras?: ExtraDefinition<TRegistry, any, ItemControl<THints, TExtras>>;
-  messagers?: readonly ValidatorDefinition<TRegistry, any, ItemControl<THints, TExtras>>[];
+  extras?: ExtraDefinition<TRegistry, BaseItemConfig, any, TExtras>;
+  messagers?: readonly ValidatorDefinition<TRegistry, BaseItemConfig, any>[];
 }
 
 export interface FieldConfig<
@@ -27,9 +26,9 @@ export interface FieldConfig<
   TExtras = AbstractExtras
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
-  disablers?: readonly HinterDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
-  triggers?: readonly TriggerDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
-  validators?: readonly ValidatorDefinition<TRegistry, any, FieldControl<unknown, THints, TExtras>>[];
+  disablers?: readonly HinterDefinition<TRegistry, BaseFieldConfig, any>[];
+  triggers?: readonly TriggerDefinition<TRegistry, BaseFieldConfig, any>[];
+  validators?: readonly ValidatorDefinition<TRegistry, BaseFieldConfig, any>[];
 }
 
 export type GroupConfig<

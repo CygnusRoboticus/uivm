@@ -6,10 +6,10 @@ import { BasicRegistry } from "../src/executable";
 import { FormValue } from "../src/typing";
 import { BasicVisitor, createConfigBuilder } from "../src/visitor";
 import { BasicBuilder } from "./react.basic";
-import { CustomConfigs, CustomConfigsTypes } from "./react.configs";
+import { CustomConfigs, CustomConfigsTypes, CustomExtras, CustomHints } from "./react.configs";
 import { SemanticBuilder } from "./react.semantic";
 
-const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry>();
+const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras>();
 const controlBuilder = createConfigBuilder<CustomConfigs, typeof BasicRegistry, typeof visitor>(BasicRegistry, visitor);
 
 function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any> }) {
@@ -25,7 +25,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
         },
       },
       {
-        type: "formGroup",
+        type: "container",
         fields: [
           {
             label: "First Name",
@@ -45,7 +45,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
           hidden: [{ name: "field", params: { field: "lastName", value: "Wick" } }],
         },
         fields: {
-          type: "formGroup",
+          type: "container",
           fields: [
             { label: "Film", type: "text", name: "film", disablers: [{ name: "static", params: { value: true } }] },
           ],
