@@ -14,6 +14,5 @@ export interface BaseGroupConfig<TConfigs extends BaseItemConfig> extends BaseIt
 }
 
 export interface BaseArrayConfig<TConfigs extends BaseItemConfig> extends BaseFieldConfig {
-  array: true;
   fields: BaseGroupConfig<TConfigs> & TConfigs;
 }

@@ -51,10 +51,12 @@ export {
 export { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormValue } from "./typing";
 export {
   isArrayConfig,
+  isArrayControl,
   isFieldConfig,
   isFieldControl,
   isGroupConfig,
   isGroupControl,
+  isItemControl,
   isPromise,
   notNullish,
   toObservable,

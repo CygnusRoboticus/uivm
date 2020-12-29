@@ -339,12 +339,12 @@ function bundleConfig2<
   >
 >(config: TConfig, registry: TRegistry, visitor: TVisitor) {
   if (isGroupConfig<TConfig>(config)) {
-    if (isArrayConfig<TConfig>(config)) {
-      return visitor.arrayInit(config, registry);
-    } else if (isFieldConfig<TConfig>(config)) {
+    if (isFieldConfig<TConfig>(config)) {
       return visitor.groupInit(config, registry);
     }
     return visitor.containerInit(config, registry);
+  } else if (isArrayConfig<TConfig>(config)) {
+    return visitor.arrayInit(config, registry);
   } else if (isFieldConfig<TConfig>(config)) {
     return visitor.fieldInit(config, registry);
   }

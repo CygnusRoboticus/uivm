@@ -1,4 +1,5 @@
-import { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormValue } from "./typing";
+import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
+import { FieldDataType, FieldTypeMap, FormValue } from "./typing";
 
 describe("typings", () => {
   test("compiler safety", () => {
@@ -41,22 +42,25 @@ describe("typings", () => {
       {
         name: "repeatable",
         type: "repeatable",
-        array: true,
-        fields: [
-          { name: "repeatableText", type: "text" },
-          { name: "repeatableNumber", type: "number" },
-          {
-            type: "fieldset",
-            fields: [
-              { type: "divider" },
-              {
-                name: "repeatableFieldsetGroup",
-                type: "group",
-                fields: [{ name: "repeatableFieldsetGroupText", type: "text" }],
-              },
-            ],
-          },
-        ],
+        fields: {
+          type: "group",
+          name: "",
+          fields: [
+            { name: "repeatableText", type: "text" },
+            { name: "repeatableNumber", type: "number" },
+            {
+              type: "fieldset",
+              fields: [
+                { type: "divider" },
+                {
+                  name: "repeatableFieldsetGroup",
+                  type: "group",
+                  fields: [{ name: "repeatableFieldsetGroupText", type: "text" }],
+                },
+              ],
+            },
+          ],
+        },
       },
       { name: "number", type: "number" },
       { name: "numberType", type: "number", dataType: { type: ("integer" as unknown) as number } },
@@ -83,38 +87,23 @@ describe("typings", () => {
       { type: "text" }
     >;
 
+    type TabConfig = { type: "tab" } & BaseGroupConfig<CustomConfigs>;
     type CustomConfigs =
-      | { dataType?: FieldDataTypeDefinition; type: "text"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "code"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "radiobutton"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "number"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "date"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "checkbox"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "select"; name: string }
-      | { dataType?: FieldDataTypeDefinition; type: "slider"; name: string }
-      | {
-          dataType?: FieldDataTypeDefinition;
-          type: "repeatable";
-          name: string;
-          array: true;
-          fields: readonly CustomConfigs[];
-        }
-      | {
-          dataType?: FieldDataTypeDefinition;
-          type: "group";
-          array?: never;
-          name: string;
-          fields: readonly CustomConfigs[];
-        }
-      | { dataType?: FieldDataTypeDefinition; type: "divider" }
-      | { dataType?: FieldDataTypeDefinition; type: "row"; fields: readonly CustomConfigs[] }
-      | { dataType?: FieldDataTypeDefinition; type: "fieldset"; fields: readonly CustomConfigs[] }
-      | { dataType?: FieldDataTypeDefinition; type: "tab"; fields: readonly CustomConfigs[] }
-      | {
-          dataType?: FieldDataTypeDefinition;
-          type: "tabs";
-          fields: readonly { type: "tab"; fields: readonly CustomConfigs[] }[];
-        };
+      | ({ type: "text" } & BaseFieldConfig)
+      | ({ type: "code" } & BaseFieldConfig)
+      | ({ type: "radiobutton" } & BaseFieldConfig)
+      | ({ type: "number" } & BaseFieldConfig)
+      | ({ type: "date" } & BaseFieldConfig)
+      | ({ type: "checkbox" } & BaseFieldConfig)
+      | ({ type: "select" } & BaseFieldConfig)
+      | ({ type: "slider" } & BaseFieldConfig)
+      | ({ type: "repeatable" } & BaseArrayConfig<CustomConfigs>)
+      | ({ type: "group" } & BaseGroupConfig<CustomConfigs> & BaseFieldConfig)
+      | ({ type: "divider" } & BaseItemConfig)
+      | ({ type: "row" } & BaseGroupConfig<CustomConfigs>)
+      | ({ type: "fieldset" } & BaseGroupConfig<CustomConfigs>)
+      | TabConfig
+      | ({ type: "tabs" } & BaseGroupConfig<TabConfig>);
 
     const testValue: FormValue<typeof testConfig, CustomConfigs, CustomTypes> = {
       checkbox: true,

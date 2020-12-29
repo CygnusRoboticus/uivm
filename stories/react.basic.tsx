@@ -163,7 +163,9 @@ export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, C
   return (
     <>
       <Fields control={control}></Fields>
-      <button onClick={() => control.add()}>Add</button>
+      <button type="button" onClick={() => control.add()}>
+        Add
+      </button>
     </>
   );
 }

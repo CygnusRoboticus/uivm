@@ -40,7 +40,6 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
       {
         type: "repeater",
         name: "films",
-        array: true,
         hints: {
           hidden: [{ name: "field", params: { field: "lastName", value: "Wick" } }],
         },

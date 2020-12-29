@@ -8,7 +8,7 @@ import { BasicVisitorExtras } from "../src/visitor";
 
 export interface FormConfig
   extends GroupConfig<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras>,
-    FieldConfig<typeof BasicRegistry, CustomHints, CustomConfigs> {
+    FieldConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
   type: "form";
 }
 
