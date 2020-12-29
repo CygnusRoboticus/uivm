@@ -35,17 +35,19 @@ viewModel.state$.subscribe(console.log);
 Sample config usage, this produces a view model identical to the above. [Sandbox](https://codesandbox.io/s/jolly-bogdan-y1kvz?file=/src/index.ts)
 
 ```ts
-import { BasicVisitor, createConfigBuilder, FieldConfig, GroupConfig, GroupControl, ItemControl } from "uivm";
+import { BasicVisitor, BasicRegistry, createConfigBuilder, FieldConfig, GroupConfig, GroupControl } from "uivm";
 
-interface CustomGroupConfig extends GroupConfig<CustomConfigs, typeof registry>, FieldConfig<typeof registry> {
+interface CustomGroupConfig
+  extends GroupConfig<CustomConfigs, typeof BasicRegistry>,
+    FieldConfig<typeof BasicRegistry> {
   type: "group";
 }
 
-interface TextConfig extends FieldConfig<typeof registry> {
+interface TextConfig extends FieldConfig<typeof BasicRegistry> {
   type: "text";
 }
 
-interface CheckboxConfig extends FieldConfig<typeof registry> {
+interface CheckboxConfig extends FieldConfig<typeof BasicRegistry> {
   type: "checkbox";
 }
 
@@ -75,16 +77,8 @@ const config: CustomConfigs = {
   ],
 };
 
-const registry = {
-  hints: {
-    static(config: CustomConfigs, control: ItemControl, { value }: { value: boolean }) {
-      return (c: ItemControl) => value;
-    },
-  },
-};
-
-const visitor = new BasicVisitor<CustomConfigs, typeof registry>();
-const bundler = createConfigBuilder<CustomConfigs, typeof registry, typeof visitor>(registry, visitor);
+const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry>();
+const bundler = createConfigBuilder<CustomConfigs, typeof BasicRegistry, typeof visitor>(BasicRegistry, visitor);
 
 const control = bundler<
   GroupControl<{
