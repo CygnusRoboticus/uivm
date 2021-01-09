@@ -33,29 +33,29 @@ export interface FieldTypeMap<
 
 // value utilities
 type FieldTypeType<
-  T extends TConfig,
-  TConfig extends BaseItemConfig,
-  TTypes extends FieldTypeMap<TConfig, TString, TNumber, TBoolean, TArray, TNull, TUndefined>,
+  TConfig extends TConfigs,
+  TConfigs extends BaseItemConfig,
+  TTypes extends FieldTypeMap<TConfigs, TString, TNumber, TBoolean, TArray, TNull, TUndefined>,
   TString = unknown,
   TNumber = unknown,
   TBoolean = unknown,
   TArray = unknown,
   TNull = unknown,
   TUndefined = unknown
-> = T extends BaseArrayConfig<TConfig>
-  ? FormValue<T[FK][FK], TConfig, TTypes>[]
-  : T extends BaseGroupConfig<TConfig>
-  ? FormValue<T[FK], TConfig, TTypes>
-  : T extends ExtractOther<T, TTypes["string"] | TTypes["number"] | TTypes["boolean"], any>
+> = TConfig extends BaseArrayConfig<TConfigs>
+  ? FormValue<TConfig[FK], TConfigs, TTypes>[]
+  : TConfig extends BaseGroupConfig<TConfigs>
+  ? FormValue<TConfig, TConfigs, TTypes>
+  : TConfig extends ExtractOther<TConfig, TTypes["string"] | TTypes["number"] | TTypes["boolean"], any>
   ?
-      | ExtractOther<T, TTypes["null"], null>
-      | ExtractOther<T, TTypes["undefined"], undefined>
+      | ExtractOther<TConfig, TTypes["null"], null>
+      | ExtractOther<TConfig, TTypes["undefined"], undefined>
       | FieldTypeArrayable<
-          T,
+          TConfig,
           TTypes["array"],
-          | ExtractOther<T, TTypes["string"], string>
-          | ExtractOther<T, TTypes["number"], number>
-          | ExtractOther<T, TTypes["boolean"], boolean>
+          | ExtractOther<TConfig, TTypes["string"], string>
+          | ExtractOther<TConfig, TTypes["number"], number>
+          | ExtractOther<TConfig, TTypes["boolean"], boolean>
         >
   : unknown;
 
@@ -104,7 +104,7 @@ type MappedValues<
 >;
 
 export type FormValue<
-  TConfig extends readonly TConfigs[],
+  TConfig extends BaseGroupConfig<TConfigs> & TConfigs,
   TConfigs extends BaseItemConfig,
   TTypes extends FieldTypeMap<TConfigs, TString, TNumber, TBoolean, TArray, TNull, TUndefined>,
   TString = unknown,
@@ -114,6 +114,6 @@ export type FormValue<
   TNull = unknown,
   TUndefined = unknown
 > = UnionToIntersection<
-  | Exclude<MappedValues<TConfig, TConfigs, TTypes>[number], { [k in EK]: unknown }>
-  | DeepEmptyFlatten<MappedValues<TConfig, TConfigs, TTypes>[number]>
+  | Exclude<MappedValues<TConfig["fields"], TConfigs, TTypes>[number], { [k in EK]: unknown }>
+  | DeepEmptyFlatten<MappedValues<TConfig["fields"], TConfigs, TTypes>[number]>
 >;

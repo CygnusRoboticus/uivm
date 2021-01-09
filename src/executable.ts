@@ -25,35 +25,38 @@ export type HinterDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any
-> = ExecutableDefinition<TRegistry["hints"], Executor<TControl, boolean>, TConfig, TControl>;
+> =
+  | ExecutableDefinition<TRegistry["hints"], Executor<TControl, boolean>, TConfig, TControl>
+  | Executor<TControl, boolean>;
 export type ExtraDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any,
   TExtras = AbstractExtras
 > = {
-  [key in keyof TExtras]?: ExecutableDefinition<
-    TRegistry["extras"],
-    Executor<TControl, TExtras[key]>,
-    TConfig,
-    TControl
-  >;
+  [key in keyof TExtras]?:
+    | ExecutableDefinition<TRegistry["extras"], Executor<TControl, TExtras[key]>, TConfig, TControl>
+    | Executor<TControl, TExtras[key]>;
 };
 export type MessagerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any
-> = ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>;
+> =
+  | ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>
+  | Executor<TControl, Messages | null>;
 export type TriggerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any
-> = ExecutableDefinition<TRegistry["triggers"], Trigger<TControl>, TConfig, TControl>;
+> = ExecutableDefinition<TRegistry["triggers"], Trigger<TControl>, TConfig, TControl> | Trigger<TControl>;
 export type ValidatorDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any
-> = ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>;
+> =
+  | ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>
+  | Executor<TControl, Messages | null>;
 export type SearchDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TOption,
@@ -61,7 +64,9 @@ export type SearchDefinition<
   TParams extends object,
   TConfig extends BaseItemConfig = any,
   TControl = any
-> = ExecutableDefinition<TRegistry["search"], SearchResolver<TControl, TOption, TValue, TParams>, TConfig, TControl>;
+> =
+  | ExecutableDefinition<TRegistry["search"], SearchResolver<TControl, TOption, TValue, TParams>, TConfig, TControl>
+  | SearchResolver<TControl, TOption, TValue, TParams>;
 
 // The executable format services are expected to return
 export type Executable<TConfig extends BaseItemConfig, TControl, TParams, TValue = unknown> = (
@@ -114,20 +119,26 @@ export type FuzzyExecutableService<TService = {}, TValue = unknown> =
     }
   | {};
 
-export const BasicRegistry = {
-  extras: {
+export function isExecutableDefinitionObject<TValue>(
+  def: ExecutableDefinitionDefault | TValue,
+): def is ExecutableDefinitionDefault {
+  return typeof def === "object" && typeof (def as any).name === "string";
+}
+
+export class BasicRegistry {
+  extras = {
     static(config: BaseItemConfig, control: ItemControl, { value }: { value: unknown }) {
       return (c: ItemControl) => of(value);
     },
-  },
-  triggers: {
+  };
+  triggers = {
     autofill(
       config: BaseItemConfig,
       control: ItemControl,
       { field, pattern, replace }: { field: string; pattern?: RegExp | string; replace?: string },
     ) {
       const regex = pattern && replace ? (typeof pattern === "string" ? new RegExp(pattern) : pattern) : undefined;
-      return (c: FieldControl<unknown>) => {
+      return (c: FieldControl<any>) => {
         return combineLatest([c.root$.pipe(filter(isGroupControl)), c.value$]).pipe(
           tap(([root]) => {
             const dependent = root.get(field);
@@ -143,8 +154,8 @@ export const BasicRegistry = {
     alert(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
       return (c: ItemControl) => alert(message);
     },
-  },
-  hints: {
+  };
+  hints = {
     static(config: BaseItemConfig, control: ItemControl, { value }: { value: boolean }) {
       return (c: ItemControl) => of(value);
     },
@@ -170,26 +181,26 @@ export const BasicRegistry = {
         );
       };
     },
-  },
-  validators: {
+  };
+  validators = {
     static(config: BaseItemConfig, control: ItemControl, { message }: { message: string }) {
       return (c: ItemControl) => of({ static: { message } });
     },
     required(config: BaseItemConfig, control: ItemControl, params?: { message?: string }) {
-      return (c: FieldControl<unknown>) => {
+      return (c: FieldControl<any>) => {
         if (c.value === undefined || c.value === null || c.value === "" || (Array.isArray(c.value) && c.value.length)) {
           return { required: { message: params?.message || "Field is required." } };
         }
         return null;
       };
     },
-  },
-  search: {
+  };
+  search = {
     static(config: BaseItemConfig, control: ItemControl, params: { options: readonly Option[] }) {
       return {
         search: (q: string, c: ItemControl, p: object) => params.options,
         resolve: (v: any[], c: ItemControl, p: object) => params.options.filter(o => v.includes(o.value)),
       };
     },
-  },
-};
+  };
+}

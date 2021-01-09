@@ -9,8 +9,9 @@ import { BasicBuilder } from "./react.basic";
 import { CustomConfigs, CustomConfigsTypes, CustomExtras, CustomHints } from "./react.configs";
 import { SemanticBuilder } from "./react.semantic";
 
-const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras>();
-const controlBuilder = createConfigBuilder<CustomConfigs, typeof BasicRegistry, typeof visitor>(BasicRegistry, visitor);
+const registry = new BasicRegistry();
+const visitor = new BasicVisitor<CustomConfigs, BasicRegistry, CustomHints, CustomExtras>();
+const controlBuilder = createConfigBuilder<CustomConfigs, BasicRegistry, typeof visitor>(registry, visitor);
 
 function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any> }) {
   const config = {
@@ -74,7 +75,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
   } as const;
 
   const [control] = useState(() => {
-    const c = controlBuilder<GroupControl<FormValue<typeof config["fields"], CustomConfigs, CustomConfigsTypes>>>(
+    const c = controlBuilder<typeof config, GroupControl<FormValue<typeof config, CustomConfigs, CustomConfigsTypes>>>(
       config,
     );
     c.reset({

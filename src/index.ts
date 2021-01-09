@@ -42,6 +42,8 @@ export { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } fro
 export {
   createResolveObservable,
   createSearchObservable,
+  isOptionMulti,
+  isOptionSingle,
   mergeSearchResolvers,
   Option,
   OptionMulti,

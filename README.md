@@ -37,17 +37,15 @@ Sample config usage, this produces a view model identical to the above. [Sandbox
 ```ts
 import { BasicVisitor, BasicRegistry, createConfigBuilder, FieldConfig, GroupConfig, GroupControl } from "uivm";
 
-interface CustomGroupConfig
-  extends GroupConfig<CustomConfigs, typeof BasicRegistry>,
-    FieldConfig<typeof BasicRegistry> {
+interface CustomGroupConfig extends GroupConfig<CustomConfigs, BasicRegistry>, FieldConfig<BasicRegistry> {
   type: "group";
 }
 
-interface TextConfig extends FieldConfig<typeof BasicRegistry> {
+interface TextConfig extends FieldConfig<BasicRegistry> {
   type: "text";
 }
 
-interface CheckboxConfig extends FieldConfig<typeof BasicRegistry> {
+interface CheckboxConfig extends FieldConfig<BasicRegistry> {
   type: "checkbox";
 }
 
@@ -77,10 +75,11 @@ const config: CustomConfigs = {
   ],
 };
 
-const visitor = new BasicVisitor<CustomConfigs, typeof BasicRegistry>();
-const bundler = createConfigBuilder<CustomConfigs, typeof BasicRegistry, typeof visitor>(BasicRegistry, visitor);
+const visitor = new BasicVisitor<CustomConfigs, BasicRegistry>();
+const bundler = createConfigBuilder<CustomConfigs, BasicRegistry, typeof visitor>(new BasicRegistry(), visitor);
 
 const control = bundler<
+  typeof config,
   GroupControl<{
     firstName: string;
     lastName: string;

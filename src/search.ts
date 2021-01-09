@@ -39,6 +39,14 @@ export interface SearchResolver<TControl, TOption, TValue, TParams extends objec
   resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;
 }
 
+export function isOptionSingle<TValue>(opt: Option<TValue>): opt is OptionSingle<TValue> {
+  return !opt.options || !Array.isArray(opt.options);
+}
+
+export function isOptionMulti<TValue>(opt: Option<TValue>): opt is OptionMulti<TValue> {
+  return Array.isArray(opt.options);
+}
+
 export function mergeSearchResolvers<TControl, TOption, TValue, TParams extends object>(
   searchResolvers: SearchResolver<TControl, TOption, TValue, TParams>[],
 ): SearchResolver<TControl, TOption, TValue, TParams> {

@@ -3,7 +3,7 @@ import { of } from "rxjs";
 import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { ArrayControl, FieldControl, ItemControl } from "../src/controls";
 import { Messages, Trigger } from "../src/controls.types";
-import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
+import { createSearchObservable, isOptionSingle, Option, SearchResolver } from "../src/search";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
   ButtonConfig,
@@ -96,17 +96,21 @@ export function Checkbox({ control }: { control: FieldControl<boolean, CustomHin
   );
 }
 
-export function Select({ control }: { control: FieldControl<string, CustomHints, CustomExtras<SelectConfig>> }) {
+export function Select({
+  control,
+}: {
+  control: FieldControl<string, CustomHints, CustomExtras<SelectConfig<string>>>;
+}) {
   const { config, registry } = control.extras;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
-  const [options, setOptions] = useState<readonly OptionSingle<string>[]>([]);
+  const [options, setOptions] = useState<readonly Option<string>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
       typeof registry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, OptionSingle<string>, string>
+      SearchResolver<typeof control, Option<string>, string>
     >(registry, "search", config, control, config.options);
     createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers).subscribe(o =>
       setOptions(o.result),
@@ -123,7 +127,7 @@ export function Select({ control }: { control: FieldControl<string, CustomHints,
         onChange={e => control.setValue(e.currentTarget.value)}
         disabled={disabled}
       >
-        {options.map((o, i) => (
+        {options.filter(isOptionSingle).map((o, i) => (
           <option key={i} value={o.value}>
             {o.label}
           </option>

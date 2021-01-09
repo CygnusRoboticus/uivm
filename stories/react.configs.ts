@@ -7,28 +7,28 @@ import { FieldTypeMap } from "../src/typing";
 import { BasicVisitorExtras } from "../src/visitor";
 
 export interface FormConfig
-  extends GroupConfig<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras>,
-    FieldConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+  extends GroupConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras>,
+    FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "form";
 }
 
-export interface TextConfig extends FieldConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface TextConfig extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "text";
   label?: string;
   placeholder?: string;
 }
 
-export interface CheckboxConfig extends FieldConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface CheckboxConfig extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "checkbox";
   label: string;
 }
 
-export interface SelectConfig<T = unknown> extends FieldConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface SelectConfig<T = unknown> extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "select";
   label?: string;
   placeholder?: string;
   options: readonly SearchDefinition<
-    typeof BasicRegistry,
+    BasicRegistry,
     Option<T>,
     T,
     object,
@@ -37,22 +37,22 @@ export interface SelectConfig<T = unknown> extends FieldConfig<typeof BasicRegis
   >[];
 }
 
-export interface ContainerConfig extends GroupConfig<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface ContainerConfig extends GroupConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras> {
   type: "container";
 }
 
-export interface RepeaterConfig extends ArrayConfig<CustomConfigs, typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface RepeaterConfig extends ArrayConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras> {
   type: "repeater";
 }
 
-export interface ButtonConfig extends ItemConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface ButtonConfig extends ItemConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: TriggerDefinition<typeof BasicRegistry, CustomConfigs, ItemControl<CustomHints>>;
+  trigger: TriggerDefinition<BasicRegistry, CustomConfigs, ItemControl<CustomHints>>;
 }
 
-export interface MessageConfig extends ItemConfig<typeof BasicRegistry, CustomHints, CustomExtras> {
+export interface MessageConfig extends ItemConfig<BasicRegistry, CustomHints, CustomExtras> {
   type: "message";
   title?: string;
   chrome?: "info" | "warning" | "success" | "error";
@@ -74,7 +74,7 @@ export type CustomHints = {
 
 export type CustomExtras<TConfigs extends CustomConfigs = CustomConfigs> = BasicVisitorExtras<
   TConfigs,
-  typeof BasicRegistry,
+  BasicRegistry,
   CustomHints,
   AbstractExtras
 >;

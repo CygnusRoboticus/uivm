@@ -304,7 +304,24 @@ export function createConfigBuilder<
   TGroupControl = any,
   TArrayControl = any
 >(registry: TRegistry, visitor: TVisitor) {
-  return <TRootControl extends VisitorControls<TVisitor>>(config: TConfig, overrideRegistry?: TRegistry) => {
+  return <
+    T extends TConfig,
+    TRootControl extends VisitorControls<TVisitor> = T extends BaseArrayConfig<TConfig>
+      ? ReturnType<TVisitor["arrayInit"]>
+      : T extends BaseFieldConfig & BaseGroupConfig<TConfig>
+      ? ReturnType<TVisitor["groupInit"]>
+      : T extends BaseGroupConfig<TConfig>
+      ? ReturnType<TVisitor["containerInit"]>
+      : T extends BaseFieldConfig
+      ? ReturnType<TVisitor["fieldInit"]>
+      : T extends BaseItemConfig
+      ? ReturnType<TVisitor["itemInit"]>
+      : VisitorControls<TVisitor>,
+    TOverrideRegistry extends TRegistry = TRegistry
+  >(
+    config: T,
+    overrideRegistry?: TOverrideRegistry,
+  ) => {
     const control = bundleConfig2<
       TConfig,
       TRegistry,
@@ -315,7 +332,7 @@ export function createConfigBuilder<
       ReturnType<TVisitor["arrayInit"]>,
       any
     >(config, overrideRegistry ?? registry, visitor);
-    visitor.complete?.(control, registry);
+    visitor.complete?.(control, overrideRegistry ?? registry);
     return control as TRootControl;
   };
 }

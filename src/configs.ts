@@ -11,36 +11,40 @@ import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } fro
 export interface ItemConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
+  TControl = any
 > extends BaseItemConfig {
   hints?: {
-    [hint in keyof THints]: readonly HinterDefinition<TRegistry, BaseItemConfig, any>[];
+    [hint in keyof THints]: readonly HinterDefinition<TRegistry, BaseItemConfig, TControl>[];
   };
-  extras?: ExtraDefinition<TRegistry, BaseItemConfig, any, TExtras>;
-  messagers?: readonly ValidatorDefinition<TRegistry, BaseItemConfig, any>[];
+  extras?: ExtraDefinition<TRegistry, BaseItemConfig, TControl, TExtras>;
+  messagers?: readonly ValidatorDefinition<TRegistry, BaseItemConfig, TControl>[];
 }
 
 export interface FieldConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
+  TControl = any
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
-  disablers?: readonly HinterDefinition<TRegistry, BaseFieldConfig, any>[];
-  triggers?: readonly TriggerDefinition<TRegistry, BaseFieldConfig, any>[];
-  validators?: readonly ValidatorDefinition<TRegistry, BaseFieldConfig, any>[];
+  disablers?: readonly HinterDefinition<TRegistry, BaseFieldConfig, TControl>[];
+  triggers?: readonly TriggerDefinition<TRegistry, BaseFieldConfig, TControl>[];
+  validators?: readonly ValidatorDefinition<TRegistry, BaseFieldConfig, TControl>[];
 }
 
 export type GroupConfig<
   TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
-> = BaseGroupConfig<TConfigs> & ItemConfig<TRegistry, THints, TExtras>;
+  TExtras = AbstractExtras,
+  TControl = any
+> = ItemConfig<TRegistry, THints, TExtras, TControl> & BaseGroupConfig<TConfigs>;
 
 export type ArrayConfig<
   TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
-> = FieldConfig<TRegistry, THints, TExtras> & BaseArrayConfig<TConfigs>;
+  TExtras = AbstractExtras,
+  TControl = any
+> = FieldConfig<TRegistry, THints, TExtras, TControl> & BaseArrayConfig<TConfigs>;

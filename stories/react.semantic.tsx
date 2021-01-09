@@ -7,7 +7,7 @@ import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { ArrayControl, FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Trigger } from "../src/controls.types";
 import { BasicRegistry } from "../src/executable";
-import { createSearchObservable, OptionSingle, SearchResolver } from "../src/search";
+import { createSearchObservable, isOptionSingle, Option, SearchResolver } from "../src/search";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
   ButtonConfig,
@@ -107,17 +107,17 @@ export function Select({
 }: {
   control: FieldControl<string | string[], CustomHints, CustomExtras<SelectConfig>>;
 }) {
-  const config = control.extras.config;
+  const { config, registry } = control.extras;
   const [{ value, errors, disabled, hints }, setState] = useState(control.state);
-  const [options, setOptions] = useState<readonly OptionSingle<unknown>[]>([]);
+  const [options, setOptions] = useState<readonly Option<unknown>[]>([]);
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
-      typeof BasicRegistry,
+      BasicRegistry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, OptionSingle<unknown>, unknown>
-    >(BasicRegistry, "search", config, control, config.options);
+      SearchResolver<typeof control, Option<unknown>, unknown>
+    >(registry, "search", config, control, config.options);
     createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers)
       .pipe(map(o => o.result))
       .subscribe(setOptions);
@@ -130,7 +130,7 @@ export function Select({
       value={value as string | string[]}
       onChange={(_, e) => control.setValue(e.value as string | string[])}
       disabled={disabled}
-      options={options.map(o => ({
+      options={options.filter(isOptionSingle).map(o => ({
         description: o.sublabel,
         disabled: o.disabled,
         icon: o.icon?.name,
