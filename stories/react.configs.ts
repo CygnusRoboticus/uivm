@@ -1,58 +1,70 @@
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
 import { FieldControl, ItemControl } from "../src/controls";
-import { AbstractExtras, AbstractHints } from "../src/controls.types";
-import { BasicRegistry, SearchDefinition, TriggerDefinition } from "../src/executable";
+import { AbstractExtras, AbstractHints, Validator } from "../src/controls.types";
+import { BasicRegistry, BasicValidatorsService, SearchDefinition, TriggerDefinition } from "../src/executable";
 import { Option } from "../src/search";
 import { FieldTypeMap } from "../src/typing";
 import { BasicVisitorExtras } from "../src/visitor";
 
+export class CustomRegistry<
+  TConfigs extends CustomConfigs = CustomConfigs,
+  TControl extends ItemControl = ItemControl
+> extends BasicRegistry<TConfigs> {
+  validators = new (class extends BasicValidatorsService<TConfigs> {
+    demoMessage(config: TConfigs, control: TControl, params?: {}): Validator<any> {
+      return (c: TControl) => ({ demoMessage: { message: "Demo Example Message" } });
+    }
+  })();
+}
+
 export interface FormConfig
-  extends GroupConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras>,
-    FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
+  extends GroupConfig<CustomConfigs, CustomRegistry, CustomHints, CustomExtras>,
+    FieldConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "form";
 }
 
-export interface TextConfig extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
+export interface TextConfig extends FieldConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "text";
   label?: string;
   placeholder?: string;
 }
 
-export interface CheckboxConfig extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
+export interface CheckboxConfig extends FieldConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "checkbox";
   label: string;
 }
 
-export interface SelectConfig<T = unknown> extends FieldConfig<BasicRegistry, CustomHints, CustomExtras> {
+export interface SelectConfig<T = unknown> extends FieldConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "select";
   label?: string;
   placeholder?: string;
   options: readonly SearchDefinition<
-    BasicRegistry,
+    CustomRegistry,
     Option<T>,
     T,
     object,
     CustomConfigs,
-    FieldControl<unknown, CustomHints>
+    FieldControl<any, CustomHints>
   >[];
 }
 
-export interface ContainerConfig extends GroupConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras> {
+export interface ContainerConfig extends GroupConfig<CustomConfigs, CustomRegistry, CustomHints, CustomExtras> {
   type: "container";
 }
 
-export interface RepeaterConfig extends ArrayConfig<CustomConfigs, BasicRegistry, CustomHints, CustomExtras> {
+export interface RepeaterConfig extends ArrayConfig<CustomConfigs, CustomRegistry, CustomHints, CustomExtras> {
+  label?: string;
   type: "repeater";
 }
 
-export interface ButtonConfig extends ItemConfig<BasicRegistry, CustomHints, CustomExtras> {
+export interface ButtonConfig extends ItemConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: TriggerDefinition<BasicRegistry, CustomConfigs, ItemControl<CustomHints>>;
+  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints>>;
 }
 
-export interface MessageConfig extends ItemConfig<BasicRegistry, CustomHints, CustomExtras> {
+export interface MessageConfig extends ItemConfig<CustomRegistry, CustomHints, CustomExtras> {
   type: "message";
   title?: string;
   chrome?: "info" | "warning" | "success" | "error";
@@ -74,7 +86,7 @@ export type CustomHints = {
 
 export type CustomExtras<TConfigs extends CustomConfigs = CustomConfigs> = BasicVisitorExtras<
   TConfigs,
-  BasicRegistry,
+  CustomRegistry,
   CustomHints,
   AbstractExtras
 >;

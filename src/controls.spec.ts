@@ -26,10 +26,12 @@ describe("controls", () => {
 
   let form: ReturnType<typeof createForm>;
   let field1: ReturnType<typeof createForm>["controls"]["field1"];
+  let array1: ReturnType<typeof createForm>["controls"]["array1"];
 
   beforeEach(() => {
     form = createForm();
     field1 = form.controls.field1;
+    array1 = form.controls.array1;
   });
 
   afterEach(() => {
@@ -156,6 +158,42 @@ describe("controls", () => {
     await tick();
     field1.setValue("skirts");
     await tick();
+    form.dispose();
+  });
+
+  test("array methods", async done => {
+    combineLatest([array1.value$])
+      .pipe(toArray())
+      .subscribe(v => {
+        expect(v).toEqual([
+          [[{ groupField1: "shirts" }]],
+          [[{ groupField1: "shirts" }, { groupField1: "pants" }, { groupField1: "skirts" }]],
+          [[{ groupField1: null }, { groupField1: "shirts" }, { groupField1: "pants" }, { groupField1: "skirts" }]],
+          [
+            [
+              { groupField1: null },
+              { groupField1: "shirts" },
+              { groupField1: "pants" },
+              { groupField1: "skirts" },
+              { groupField1: "shorts" },
+            ],
+          ],
+          [[{ groupField1: null }, { groupField1: "shirts" }, { groupField1: "pants" }, { groupField1: "skirts" }]],
+          [[{ groupField1: null }, { groupField1: "pants" }, { groupField1: "skirts" }]],
+        ]);
+        done();
+      });
+    array1.pushValue({ groupField1: "pants" }, { groupField1: "skirts" });
+    await tick();
+    array1.unshiftValue();
+    await tick();
+    array1.pushValue({ groupField1: "shorts" });
+    await tick();
+    array1.pop();
+    await tick();
+    array1.removeAt(1);
+    await tick();
+
     form.dispose();
   });
 });

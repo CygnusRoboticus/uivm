@@ -22,7 +22,12 @@ export {
 } from "./controls.types";
 export { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
 export {
+  BasicExtrasService,
+  BasicHintsService,
   BasicRegistry,
+  BasicSearchService,
+  BasicTriggersService,
+  BasicValidatorsService,
   Executable,
   ExecutableDefinition,
   ExecutableDefinitionDefault,

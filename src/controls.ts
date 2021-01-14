@@ -25,14 +25,15 @@ import { notNullish } from "./utils";
 export abstract class BaseControl {
   protected _parent$ = new BehaviorSubject<BaseControl | null>(null);
   protected _children$ = new BehaviorSubject<BaseControl[]>([]);
-  protected _root$ = this._parent$.pipe(map(() => this.root));
-  protected _parents$ = this._parent$.pipe(map(() => this.parents));
+  protected _parentChange$ = new BehaviorSubject(null);
+  protected _parents$ = combineLatest([this._parent$, this._parentChange$]).pipe(map(() => this.parents));
+  protected _root$ = this._parents$.pipe(map(() => this.root));
 
   get parent$() {
     return this._parent$.asObservable();
   }
   get parents$() {
-    return this._parent$;
+    return this._parents$;
   }
   get root$() {
     return this._root$;
@@ -68,6 +69,7 @@ export abstract class BaseControl {
     if (!curr.includes(this)) {
       parent?._children$.next([...curr, this]);
     }
+    this.children.forEach(c => c._parentChange$.next(null));
   }
 
   addChild(child: BaseControl) {
@@ -779,31 +781,50 @@ export class ArrayControl<
   }
 
   at(index: number) {
-    return this.controls[index];
+    const c = this.controls[index];
+    return c as typeof c | undefined;
   }
 
   push = (...items: ReturnType<this["itemFactory"]>[]) => {
-    this.controls.push(...items);
-    items.map(control => this.registerControl(control));
-    this.update();
+    this.insertAt(this.controls.length, ...items);
   };
 
-  add = (...value: TValue[]) => {
+  pop = () => {
+    this.removeAt(this.controls.length - 1);
+  };
+
+  unshift = (...items: ReturnType<this["itemFactory"]>[]) => {
+    this.insertAt(0, ...items);
+  };
+
+  pushValue = (...value: TValue[]) => {
     const controls = (value.length ? value.map(v => this.itemFactory(v)) : [this.itemFactory(null)]) as ReturnType<
       this["itemFactory"]
     >[];
     this.push(...controls);
   };
 
-  insert = (index: number, item: ReturnType<this["itemFactory"]>) => {
-    this.controls.splice(index, 0, item);
-    this.registerControl(item);
-    this.update();
+  unshiftValue = (...value: TValue[]) => {
+    const controls = (value.length ? value.map(v => this.itemFactory(v)) : [this.itemFactory(null)]) as ReturnType<
+      this["itemFactory"]
+    >[];
+    this.unshift(...controls);
+  };
+
+  insertAt = (index: number, ...items: ReturnType<this["itemFactory"]>[]) => {
+    if (index >= 0 || index <= this.controls.length) {
+      this.controls.splice(index, 0, ...items);
+      items.forEach(item => this.registerControl(item));
+      this.update();
+    }
   };
 
   removeAt = (index: number) => {
-    this.controls.splice(index, 1);
-    this.update();
+    if (index >= 0 && index < this.controls.length) {
+      const control = this.controls.splice(index, 1);
+      control.forEach(c => c.dispose());
+      this.update();
+    }
   };
 
   setValue = (value: TValue[]) => {
@@ -844,6 +865,7 @@ export class ArrayControl<
   }
 
   clear() {
+    this.controls.forEach(c => c.dispose());
     this.controls.splice(0);
     this._dirty$.next(true);
     this._touched$.next(true);

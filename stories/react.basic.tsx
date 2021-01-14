@@ -13,6 +13,7 @@ import {
   CustomHints,
   FormConfig,
   MessageConfig,
+  RepeaterConfig,
   SelectConfig,
   TextConfig,
 } from "./react.configs";
@@ -33,7 +34,7 @@ export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Eleme
   c => c.extras.config.type,
 );
 
-export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras> }) {
+export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras<any>> }) {
   return <>{control.children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
 }
 
@@ -53,17 +54,17 @@ export function Text({ control }: { control: FieldControl<string, CustomHints, C
   }, []);
 
   return (
-    <div>
+    <div style={{ marginBottom: "0.5rem" }}>
       {config.label ? <label>{config.label}</label> : null}
-      <br />
-      <input
-        name={config.name}
-        placeholder={config.placeholder}
-        value={value ?? ""}
-        onChange={e => control.setValue(e.currentTarget.value)}
-        disabled={disabled}
-      />
-      <br />
+      <div>
+        <input
+          name={config.name}
+          placeholder={config.placeholder}
+          value={value ?? ""}
+          onChange={e => control.setValue(e.currentTarget.value)}
+          disabled={disabled}
+        />
+      </div>
       {errors ? JSON.stringify(errors) : null}
     </div>
   );
@@ -82,15 +83,16 @@ export function Checkbox({ control }: { control: FieldControl<boolean, CustomHin
   }, []);
 
   return (
-    <div>
+    <div style={{ marginBottom: "0.5rem" }}>
       <input
         type="checkbox"
         name={config.name}
         checked={value}
         onChange={e => control.setValue(e.currentTarget.checked)}
         disabled={disabled}
+        style={{ marginRight: "0.25rem" }}
       />
-      <label>{config.label}</label>
+      {config.label ? <label>{config.label}</label> : null}
       {errors ? JSON.stringify(errors) : null}
     </div>
   );
@@ -118,21 +120,22 @@ export function Select({
   }, []);
 
   return hints.hidden ? null : (
-    <div>
+    <div style={{ marginBottom: "0.5rem" }}>
       {config.label ? <label>{config.label}</label> : null}
-      <br />
-      <select
-        name={config.name}
-        value={value ?? ""}
-        onChange={e => control.setValue(e.currentTarget.value)}
-        disabled={disabled}
-      >
-        {options.filter(isOptionSingle).map((o, i) => (
-          <option key={i} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div>
+        <select
+          name={config.name}
+          value={value ?? ""}
+          onChange={e => control.setValue(e.currentTarget.value)}
+          disabled={disabled}
+        >
+          {options.filter(isOptionSingle).map((o, i) => (
+            <option key={i} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
       {errors ? JSON.stringify(errors) : null}
     </div>
   );
@@ -145,32 +148,34 @@ export function Message({ control }: { control: ItemControl<CustomHints, CustomE
   }, []);
 
   return (
-    <>
-      <fieldset>
-        {Object.values(messages ?? {}).map((m, i) => (
-          <span key={i}>
-            {m.message}
-            <br />
-          </span>
-        ))}
-      </fieldset>
-    </>
+    <fieldset>
+      {Object.values(messages ?? {}).map((m, i) => (
+        <div key={i}>{m.message}</div>
+      ))}
+    </fieldset>
   );
 }
 
-export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<FormConfig>> }) {
-  const [{}, setState] = useState<typeof control["state"]>(control.state);
+export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<RepeaterConfig>> }) {
+  const { config } = control.extras;
+  const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
   }, []);
 
-  return (
-    <>
+  return hints.hidden ? null : (
+    <div style={{ marginBottom: "0.5rem" }}>
+      {config.label ? <label>{config.label}</label> : null}
       <Fields control={control}></Fields>
-      <button type="button" onClick={() => control.add()}>
-        Add
-      </button>
-    </>
+      <div style={{ margin: "0.5rem 0" }}>
+        <button type="button" onClick={() => control.add()}>
+          Add
+        </button>
+        <button type="button" onClick={() => control.pop()}>
+          Remove
+        </button>
+      </div>
+    </div>
   );
 }
 

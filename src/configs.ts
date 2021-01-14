@@ -15,10 +15,10 @@ export interface ItemConfig<
   TControl = any
 > extends BaseItemConfig {
   hints?: {
-    [hint in keyof THints]: readonly HinterDefinition<TRegistry, BaseItemConfig, TControl>[];
+    [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, TControl>[];
   };
-  extras?: ExtraDefinition<TRegistry, BaseItemConfig, TControl, TExtras>;
-  messagers?: readonly ValidatorDefinition<TRegistry, BaseItemConfig, TControl>[];
+  extras?: ExtraDefinition<TRegistry, any, TControl, TExtras>;
+  messagers?: readonly ValidatorDefinition<TRegistry, any, TControl>[];
 }
 
 export interface FieldConfig<
@@ -28,9 +28,9 @@ export interface FieldConfig<
   TControl = any
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
-  disablers?: readonly HinterDefinition<TRegistry, BaseFieldConfig, TControl>[];
-  triggers?: readonly TriggerDefinition<TRegistry, BaseFieldConfig, TControl>[];
-  validators?: readonly ValidatorDefinition<TRegistry, BaseFieldConfig, TControl>[];
+  disablers?: readonly HinterDefinition<TRegistry, any, TControl>[];
+  triggers?: readonly TriggerDefinition<TRegistry, any, TControl>[];
+  validators?: readonly ValidatorDefinition<TRegistry, any, TControl>[];
 }
 
 export type GroupConfig<

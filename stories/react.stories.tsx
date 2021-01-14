@@ -2,16 +2,15 @@ import { Meta, Story } from "@storybook/react";
 import React, { useEffect, useState } from "react";
 import { ComponentBuilder } from "../src/component";
 import { GroupControl } from "../src/controls";
-import { BasicRegistry } from "../src/executable";
 import { FormValue } from "../src/typing";
 import { BasicVisitor, createConfigBuilder } from "../src/visitor";
 import { BasicBuilder } from "./react.basic";
-import { CustomConfigs, CustomConfigsTypes, CustomExtras, CustomHints } from "./react.configs";
+import { CustomConfigs, CustomConfigsTypes, CustomExtras, CustomHints, CustomRegistry } from "./react.configs";
 import { SemanticBuilder } from "./react.semantic";
 
-const registry = new BasicRegistry();
-const visitor = new BasicVisitor<CustomConfigs, BasicRegistry, CustomHints, CustomExtras>();
-const controlBuilder = createConfigBuilder<CustomConfigs, BasicRegistry, typeof visitor>(registry, visitor);
+const registry = new CustomRegistry();
+const visitor = new BasicVisitor<CustomConfigs, CustomRegistry, CustomHints, CustomExtras>();
+const controlBuilder = createConfigBuilder<CustomConfigs, CustomRegistry, typeof visitor>(registry, visitor);
 
 function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, any> }) {
   const config = {
@@ -20,7 +19,10 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
     fields: [
       {
         type: "message",
-        messagers: [{ name: "static", params: { message: "You should enter 'John Wick'" } }],
+        messagers: [
+          { name: "demoMessage", params: {} },
+          { name: "static", params: { message: "You should enter 'John Wick'" } },
+        ],
         extras: {
           chrome: { name: "static", params: { value: "info" } },
         },
@@ -39,16 +41,20 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
         ],
       },
       {
-        type: "repeater",
-        name: "films",
+        label: "Hidden Field",
+        type: "text",
+        name: "hiddenField",
         hints: {
           hidden: [{ name: "field", params: { field: "lastName", value: "Wick" } }],
         },
+      },
+      {
+        label: "Films",
+        type: "repeater",
+        name: "films",
         fields: {
           type: "container",
-          fields: [
-            { label: "Film", type: "text", name: "film", disablers: [{ name: "static", params: { value: true } }] },
-          ],
+          fields: [{ type: "text", name: "film" }],
         },
       },
       { label: "Autofill", type: "text", name: "autofill", disablers: [{ name: "static", params: { value: true } }] },
@@ -81,8 +87,9 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
     c.reset({
       firstName: "John",
       lastName: "Wick",
+      hiddenField: "Hidden when Wick",
       films: [{ film: "John Wick" }, { film: "Takes Manhatten" }, { film: "Parabellum" }],
-      autofill: "",
+      autofill: null,
       checkbox: false,
       select: 2,
     });

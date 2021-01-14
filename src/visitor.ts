@@ -170,7 +170,11 @@ export class BasicVisitor<
     registry: TRegistry,
   ): ArrayControl<any, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>> {
     return new ArrayControl<any, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>(
-      () => this.groupInit({ ...config.fields, name: "group" }, registry),
+      () => {
+        const control = this.groupInit({ ...config.fields, name: "group" }, registry);
+        this.complete(control, registry);
+        return control;
+      },
       undefined,
       { extras: [() => ({ config, registry })] },
     );
@@ -316,11 +320,9 @@ export function createConfigBuilder<
       ? ReturnType<TVisitor["fieldInit"]>
       : T extends BaseItemConfig
       ? ReturnType<TVisitor["itemInit"]>
-      : VisitorControls<TVisitor>,
-    TOverrideRegistry extends TRegistry = TRegistry
+      : VisitorControls<TVisitor>
   >(
     config: T,
-    overrideRegistry?: TOverrideRegistry,
   ) => {
     const control = bundleConfig2<
       TConfig,
@@ -331,8 +333,8 @@ export function createConfigBuilder<
       ReturnType<TVisitor["groupInit"]>,
       ReturnType<TVisitor["arrayInit"]>,
       any
-    >(config, overrideRegistry ?? registry, visitor);
-    visitor.complete?.(control, overrideRegistry ?? registry);
+    >(config, registry, visitor);
+    visitor.complete?.(control, registry);
     return control as TRootControl;
   };
 }

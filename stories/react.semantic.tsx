@@ -6,7 +6,6 @@ import { Button as SemanticButton, Form as SemanticForm, Input, Message as Seman
 import { ComponentRegistry, createComponentBuilder } from "../src/component";
 import { ArrayControl, FieldControl, GroupControl, ItemControl } from "../src/controls";
 import { Trigger } from "../src/controls.types";
-import { BasicRegistry } from "../src/executable";
 import { createSearchObservable, isOptionSingle, Option, SearchResolver } from "../src/search";
 import { getRegistryValue, getRegistryValues } from "../src/visitor.utils";
 import {
@@ -15,8 +14,10 @@ import {
   CustomConfigs,
   CustomExtras,
   CustomHints,
+  CustomRegistry,
   FormConfig,
   MessageConfig,
+  RepeaterConfig,
   SelectConfig,
   TextConfig,
 } from "./react.configs";
@@ -37,7 +38,7 @@ export const SemanticBuilder = createComponentBuilder<CustomConfigs, any, JSX.El
   c => c.extras.config.type,
 );
 
-export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras> }) {
+export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras<any>> }) {
   return <>{control.children.map((c, i) => SemanticBuilder(c, { index: i }))}</>;
 }
 
@@ -113,7 +114,7 @@ export function Select({
   useEffect(() => {
     control.state$.subscribe(setState);
     const searchers = getRegistryValues<
-      BasicRegistry,
+      CustomRegistry,
       typeof config,
       typeof control,
       SearchResolver<typeof control, Option<unknown>, unknown>
@@ -171,7 +172,7 @@ export function Message({ control }: { control: ItemControl<CustomHints, CustomE
   );
 }
 
-export function FormGroup({ control }: { control: ItemControl<CustomHints, CustomExtras<FormConfig>> }) {
+export function FormGroup({ control }: { control: ItemControl<CustomHints, CustomExtras<any>> }) {
   return (
     <SemanticForm.Group>
       <Fields control={control}></Fields>
@@ -179,21 +180,30 @@ export function FormGroup({ control }: { control: ItemControl<CustomHints, Custo
   );
 }
 
-export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<FormConfig>> }) {
-  const [{}, setState] = useState<typeof control["state"]>(control.state);
+export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, CustomExtras<RepeaterConfig>> }) {
+  const { config } = control.extras;
+  const [{ hints }, setState] = useState<typeof control["state"]>(control.state);
   useEffect(() => {
     control.state$.subscribe(setState);
   }, []);
 
-  return (
-    <>
-      {control.children.map((c, i) => (
-        <FormGroup key={i} control={c}></FormGroup>
-      ))}
-      <button type="button" onClick={() => control.add()}>
-        Add
-      </button>
-    </>
+  return hints.hidden ? null : (
+    <SemanticForm.Field>
+      {config.label ? <label>{config.label}</label> : null}
+      <>
+        {control.children.map((c, i) => (
+          <FormGroup key={i} control={c}></FormGroup>
+        ))}
+        <div style={{ margin: "1rem 0" }}>
+          <SemanticButton type="button" onClick={() => control.add()}>
+            Add
+          </SemanticButton>
+          <SemanticButton type="button" onClick={() => control.pop()}>
+            Remove
+          </SemanticButton>
+        </div>
+      </>
+    </SemanticForm.Field>
   );
 }
 
