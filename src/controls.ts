@@ -1,6 +1,6 @@
 import { array as AR, readonlyArray as RAR } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
-import { BehaviorSubject, combineLatest, Observable, of, Subscription } from "rxjs";
+import { BehaviorSubject, combineLatest, Observable, of, Subject, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
 import {
   AbstractExtras,
@@ -28,6 +28,7 @@ export abstract class BaseControl {
   protected _parentChange$ = new BehaviorSubject(null);
   protected _parents$ = combineLatest([this._parent$, this._parentChange$]).pipe(map(() => this.parents));
   protected _root$ = this._parents$.pipe(map(() => this.root));
+  protected _dispose$ = new Subject();
 
   get parent$() {
     return this._parent$.asObservable();
@@ -87,6 +88,8 @@ export abstract class BaseControl {
     this._children$.complete();
 
     this.children.forEach(c => c.dispose());
+    this._dispose$.next();
+    this._dispose$.complete();
   }
 
   toJSON() {
