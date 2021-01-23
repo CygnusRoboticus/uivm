@@ -42,6 +42,9 @@ export abstract class BaseControl {
   get children$() {
     return this._children$.asObservable();
   }
+  get dispose$() {
+    return this._dispose$.asObservable();
+  }
 
   get parent() {
     return this._parent$.value;
