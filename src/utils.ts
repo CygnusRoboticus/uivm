@@ -42,21 +42,21 @@ export function isItemControl<THints extends AbstractHints = AbstractHints, TExt
 export function isFieldControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 >(control: BaseControl): control is FieldControl<TValue, THints, TExtras> {
   return control instanceof FieldControl;
 }
 export function isGroupControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 >(control: BaseControl): control is GroupControl<TValue, THints, TExtras> {
   return control instanceof GroupControl;
 }
 export function isArrayControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 >(control: BaseControl): control is ArrayControl<TValue, THints, TExtras> {
   return control instanceof ArrayControl;
 }

@@ -12,7 +12,7 @@ export interface ItemConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControl = any
+  TControl = any,
 > extends BaseItemConfig {
   hints?: {
     [hint in keyof THints]: readonly HinterDefinition<TRegistry, any, TControl>[];
@@ -25,7 +25,7 @@ export interface FieldConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControl = any
+  TControl = any,
 > extends ItemConfig<TRegistry, THints, TExtras>,
     BaseFieldConfig {
   disablers?: readonly HinterDefinition<TRegistry, any, TControl>[];
@@ -38,7 +38,7 @@ export type GroupConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControl = any
+  TControl = any,
 > = ItemConfig<TRegistry, THints, TExtras, TControl> & BaseGroupConfig<TConfigs>;
 
 export type ArrayConfig<
@@ -46,5 +46,5 @@ export type ArrayConfig<
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControl = any
+  TControl = any,
 > = FieldConfig<TRegistry, THints, TExtras, TControl> & BaseArrayConfig<TConfigs>;

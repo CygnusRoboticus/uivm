@@ -6,7 +6,7 @@ export type ComponentBuilder<
   TComponent extends TComponents,
   TControls,
   TComponents,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 > = (control: TControl, extras?: TExtras) => TComponent;
 
 export type ComponentRegistry<TConfigs extends BaseItemConfig, TControls, TComponents, TExtras = AbstractExtras> = {
@@ -23,7 +23,7 @@ export function createComponentBuilder<
     TControls,
     TComponents,
     TExtras
-  >
+  >,
 >(
   registry: TComponentRegistry,
   typeFn: (c: TControls) => TConfigs["type"],
@@ -63,7 +63,7 @@ function getComponentRegistryMethod<
     TControls,
     TComponents,
     TExtras
-  >
+  >,
 >(
   control: TControls,
   registry: TComponentRegistry,

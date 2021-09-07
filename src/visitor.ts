@@ -32,7 +32,7 @@ export abstract class Visitor<
   TFieldControl,
   TContainerControl,
   TGroupControl,
-  TArrayControl
+  TArrayControl,
 > {
   abstract itemInit: (config: BaseItemConfig & TConfigs, registry: TRegistry) => TItemControl;
   abstract fieldInit: (config: BaseFieldConfig & TConfigs, registry: TRegistry) => TFieldControl;
@@ -65,7 +65,7 @@ export function buildChildren<
   TFieldControl = any,
   TContainerControl = any,
   TGroupControl = any,
-  TArrayControl = any
+  TArrayControl = any,
 >(config: BaseGroupConfig<TConfig> & TConfig, registry: TRegistry, visitor: TVisitor) {
   return config.fields.map(f => {
     return bundleConfig2<
@@ -85,7 +85,7 @@ export interface BasicVisitorExtras<
   TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 > extends AbstractExtras {
   config: TConfigs;
   registry: TRegistry;
@@ -95,7 +95,7 @@ export class BasicVisitor<
   TConfigs extends ItemConfig<TRegistry, THints, TExtras>,
   TRegistry extends FuzzyExecutableRegistry = FuzzyExecutableRegistry,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 > implements
     Visitor<
       TConfigs,
@@ -105,7 +105,8 @@ export class BasicVisitor<
       ItemControl<THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>,
       GroupControl<any, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>,
       ArrayControl<any, THints, BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>>
-    > {
+    >
+{
   itemInit(
     config: ItemConfig<TRegistry, THints, TExtras> & TConfigs,
     registry: TRegistry,
@@ -210,8 +211,8 @@ export class BasicVisitor<
         typeof config,
         typeof control,
         Executor<typeof control, boolean>
-      >(registry, "hints", config, control, value as any).map(s => (c: ItemControl<THints, TBVExtras>) =>
-        toObservable(s(c)).pipe(map(v => tuple(key, v))),
+      >(registry, "hints", config, control, value as any).map(
+        s => (c: ItemControl<THints, TBVExtras>) => toObservable(s(c)).pipe(map(v => tuple(key, v))),
       );
       acc.push(...sources);
       return acc;
@@ -223,8 +224,9 @@ export class BasicVisitor<
         typeof config,
         typeof control,
         Executor<typeof control, TExtras[keyof TExtras]>
-      >(registry, "extras", config, control, [value as any]).map(s => (c: ItemControl<THints, TBVExtras>) =>
-        toObservable(s(c)).pipe(map(v => ({ [key]: v } as Partial<TExtras>))),
+      >(registry, "extras", config, control, [value as any]).map(
+        s => (c: ItemControl<THints, TBVExtras>) =>
+          toObservable(s(c)).pipe(map(v => ({ [key]: v } as Partial<TExtras>))),
       );
       acc.push(...sources);
       return acc;
@@ -251,7 +253,7 @@ export class BasicVisitor<
   ) {
     type TBVExtras = BasicVisitorExtras<TConfigs, TRegistry, THints, TExtras>;
 
-    const config = (control.extras.config as unknown) as FieldConfig<TRegistry, THints, TBVExtras>;
+    const config = control.extras.config as unknown as FieldConfig<TRegistry, THints, TBVExtras>;
     this.initItem(control, registry);
 
     const disablers = config.disablers
@@ -306,7 +308,7 @@ export function createConfigBuilder<
   TFieldControl = any,
   TContainerControl = any,
   TGroupControl = any,
-  TArrayControl = any
+  TArrayControl = any,
 >(registry: TRegistry, visitor: TVisitor) {
   return <
     T extends TConfig,
@@ -320,7 +322,7 @@ export function createConfigBuilder<
       ? ReturnType<TVisitor["fieldInit"]>
       : T extends BaseItemConfig
       ? ReturnType<TVisitor["itemInit"]>
-      : VisitorControls<TVisitor>
+      : VisitorControls<TVisitor>,
   >(
     config: T,
   ) => {
@@ -355,7 +357,7 @@ function bundleConfig2<
     TContainerControl,
     TGroupControl,
     TArrayControl
-  >
+  >,
 >(config: TConfig, registry: TRegistry, visitor: TVisitor) {
   if (isGroupConfig<TConfig>(config)) {
     if (isFieldConfig<TConfig>(config)) {

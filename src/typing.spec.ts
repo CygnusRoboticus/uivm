@@ -92,7 +92,7 @@ describe("typings", () => {
           },
         },
         { name: "number", type: "number" },
-        { name: "numberType", type: "number", dataType: { type: ("integer" as unknown) as number } },
+        { name: "numberType", type: "number", dataType: { type: "integer" as unknown as number } },
         { name: "radiobutton", type: "radiobutton", dataType: { type: FieldDataType.StringType } },
         { name: "select", type: "select", dataType: { type: FieldDataType.StringType, array: true } },
         { name: "slider", type: "slider", dataType: { type: [0, 1] as number[] } },

@@ -72,7 +72,7 @@ export function createSearchObservable<
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { search: string; control: TControl; params: TParams; key: string }
+  TInput extends { search: string; control: TControl; params: TParams; key: string },
 >(
   search$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
@@ -105,7 +105,7 @@ export function createResolveObservable<
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { values: TValue[]; control: TControl; params: TParams; key: string }
+  TInput extends { values: TValue[]; control: TControl; params: TParams; key: string },
 >(
   resolve$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],

@@ -24,7 +24,7 @@ export interface ExecutableDefinitionDefault {
 export type HinterDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
-  TControl = any
+  TControl = any,
 > =
   | ExecutableDefinition<TRegistry["hints"], Executor<TControl, boolean>, TConfig, TControl>
   | Executor<TControl, boolean>;
@@ -32,7 +32,7 @@ export type ExtraDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
   TControl = any,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 > = {
   [key in keyof TExtras]?:
     | ExecutableDefinition<TRegistry["extras"], Executor<TControl, TExtras[key]>, TConfig, TControl>
@@ -41,19 +41,19 @@ export type ExtraDefinition<
 export type MessagerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
-  TControl = any
+  TControl = any,
 > =
   | ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>
   | Executor<TControl, Messages | null>;
 export type TriggerDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
-  TControl = any
+  TControl = any,
 > = ExecutableDefinition<TRegistry["triggers"], Trigger<TControl>, TConfig, TControl> | Trigger<TControl>;
 export type ValidatorDefinition<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig = any,
-  TControl = any
+  TControl = any,
 > =
   | ExecutableDefinition<TRegistry["validators"], Executor<TControl, Messages | null>, TConfig, TControl>
   | Executor<TControl, Messages | null>;
@@ -63,7 +63,7 @@ export type SearchDefinition<
   TValue,
   TParams extends object,
   TConfig extends BaseItemConfig = any,
-  TControl = any
+  TControl = any,
 > =
   | ExecutableDefinition<TRegistry["search"], SearchResolver<TControl, TOption, TValue, TParams>, TConfig, TControl>
   | SearchResolver<TControl, TOption, TValue, TParams>;
@@ -90,7 +90,7 @@ export interface FuzzyExecutableRegistry<
   TTriggers = {},
   TMessagers = {},
   TValidators = {},
-  TSearches = {}
+  TSearches = {},
 > {
   hints?: FuzzyExecutableService<THints, Executor<any, boolean>>;
   extras?: FuzzyExecutableService<TMessagers, Executor<any, any>>;
@@ -102,7 +102,7 @@ export interface FuzzyExecutableRegistry<
 // Convenience type for partially overriding a registry
 export type ExecutableRegistryOverride<
   TRegistry extends FuzzyExecutableRegistry,
-  TCustom extends Partial<FuzzyExecutableRegistry>
+  TCustom extends Partial<FuzzyExecutableRegistry>,
 > = Spread<TRegistry, TCustom>;
 
 export interface ExecutableService<TConfig extends BaseItemConfig, TControl, TValue> {
@@ -127,7 +127,7 @@ export function isExecutableDefinitionObject<TValue>(
 
 export class BasicExtrasService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   static(config: TConfig, control: TControl, { value }: { value: unknown }) {
     return (c: TControl) => of(value);
@@ -136,7 +136,7 @@ export class BasicExtrasService<
 
 export class BasicTriggersService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   autofill(
     config: TConfig,
@@ -168,7 +168,7 @@ export class BasicTriggersService<
 
 export class BasicHintsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   static(config: TConfig, control: TControl, { value }: { value: boolean }) {
     return (c: TControl) => of(value);
@@ -199,7 +199,7 @@ export class BasicHintsService<
 
 export class BasicValidatorsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   static(config: TConfig, control: TControl, { message }: { message: string }) {
     return (c: TControl) => of({ static: { message } });
@@ -219,7 +219,7 @@ export class BasicValidatorsService<
 
 export class BasicSearchService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   static(config: TConfig, control: TControl, params: { options: readonly Option[] }) {
     return {
@@ -231,7 +231,7 @@ export class BasicSearchService<
 
 export class BasicRegistry<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl
+  TControl extends ItemControl = ItemControl,
 > {
   extras = new BasicExtrasService<TConfig, TControl>();
   triggers = new BasicTriggersService<TConfig, TControl>();

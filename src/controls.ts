@@ -284,7 +284,7 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
 export class FieldControl<
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras
+  TExtras = AbstractExtras,
 > extends ItemControl<THints, TExtras> {
   protected initialValue: TValue;
   protected _parent: FieldControl<unknown, THints, TExtras> | null = null;
@@ -604,7 +604,7 @@ export class GroupControl<
   TValue extends KeyControlsValue<TControls>,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
 > extends FieldControl<TValue, THints, TExtras> {
   protected _validChildren$ = new BehaviorSubject(true);
   protected _childrenDirty$ = new BehaviorSubject(false);
@@ -756,7 +756,7 @@ export class ArrayControl<
   TValue extends KeyControlsValue<TControls>,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
 > extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 

@@ -21,7 +21,7 @@ export interface FieldTypeMap<
   TBoolean extends Partial<TConfig>,
   TArray extends Partial<TConfig>,
   TNull extends Partial<TConfig>,
-  TUndefined extends Partial<TConfig>
+  TUndefined extends Partial<TConfig>,
 > {
   string: TString;
   number: TNumber;
@@ -41,7 +41,7 @@ type FieldTypeType<
   TBoolean = unknown,
   TArray = unknown,
   TNull = unknown,
-  TUndefined = unknown
+  TUndefined = unknown,
 > = TConfig extends BaseArrayConfig<TConfigs>
   ? FormValue<TConfig[FK], TConfigs, TTypes>[]
   : TConfig extends BaseGroupConfig<TConfigs>
@@ -92,7 +92,7 @@ type MappedValues<
   TB = unknown,
   TArray = unknown,
   TNull = unknown,
-  TUndefined = unknown
+  TUndefined = unknown,
 > = Mutable<
   {
     [i in keyof T]: {
@@ -112,7 +112,7 @@ export type FormValue<
   TBoolean = unknown,
   TArray = unknown,
   TNull = unknown,
-  TUndefined = unknown
+  TUndefined = unknown,
 > = UnionToIntersection<
   | Exclude<MappedValues<TConfig["fields"], TConfigs, TTypes>[number], { [k in EK]: unknown }>
   | DeepEmptyFlatten<MappedValues<TConfig["fields"], TConfigs, TTypes>[number]>

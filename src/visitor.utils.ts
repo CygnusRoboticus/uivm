@@ -45,7 +45,7 @@ export function getRegistryValues<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig,
   TControl,
-  TValue
+  TValue,
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
@@ -65,7 +65,7 @@ export function getRegistryValue<
   TRegistry extends FuzzyExecutableRegistry,
   TConfig extends BaseItemConfig,
   TControl,
-  TValue
+  TValue,
 >(
   registry: TRegistry,
   kind: keyof TRegistry,
