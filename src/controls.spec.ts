@@ -73,7 +73,7 @@ describe("controls", () => {
     });
   });
 
-  test("status bubbles upwards", async done => {
+  test("status bubbles upwards", async () => {
     combineLatest([
       form.dirty$,
       field1.dirty$,
@@ -91,7 +91,6 @@ describe("controls", () => {
           [true, true, false, false, true, false],
           [true, true, false, true, true, false],
         ]);
-        done();
       });
     expect(field1.dirty).toEqual(false);
     expect(field1.touched).toEqual(false);
@@ -100,9 +99,10 @@ describe("controls", () => {
     expect(field1.touched).toEqual(true);
     await tick();
     form.dispose();
+    expect.assertions(5);
   });
 
-  test("hints are set from executors", async done => {
+  test("hints are set from executors", async () => {
     combineLatest([field1.hints$, form.hints$])
       .pipe(toArray())
       .subscribe(v => {
@@ -111,7 +111,6 @@ describe("controls", () => {
           [{ hidden: true }, {}],
           [{ hidden: false }, {}],
         ]);
-        done();
       });
     const obs = new BehaviorSubject<[string, boolean]>(["hidden", true]);
     expect(field1.hints).toEqual({});
@@ -122,17 +121,18 @@ describe("controls", () => {
     obs.next(["hidden", false]);
     await tick();
     form.dispose();
+    expect.assertions(3);
   });
 
-  test("messages are set from executors", async done => {
+  test("messages are set from executors", async () => {
     field1.messages$.pipe(toArray()).subscribe(v => {
       expect(v).toEqual([null, { pants: { message: "skirts" } }, null]);
-      done();
     });
     field1.setMessagers([() => ({ pants: { message: "skirts" } })]);
     field1.setMessagers([]);
     await tick();
     form.dispose();
+    expect.assertions(1);
   });
 
   test("triggers are fired on update", () => {
@@ -141,7 +141,7 @@ describe("controls", () => {
     expect.assertions(2);
   });
 
-  test("errors are set from validators", async done => {
+  test("errors are set from validators", async () => {
     combineLatest([field1.errors$, field1.valid$])
       .pipe(toArray())
       .subscribe(v => {
@@ -152,16 +152,16 @@ describe("controls", () => {
           [null, false],
           [null, true],
         ]);
-        done();
       });
     field1.setValidators([c => (c.value === "pants" ? { pants: { message: "skirts" } } : null)]);
     await tick();
     field1.setValue("skirts");
     await tick();
     form.dispose();
+    expect.assertions(1);
   });
 
-  test("array methods", async done => {
+  test("array methods", async () => {
     combineLatest([array1.value$])
       .pipe(toArray())
       .subscribe(v => {
@@ -181,7 +181,6 @@ describe("controls", () => {
           [[{ groupField1: null }, { groupField1: "shirts" }, { groupField1: "pants" }, { groupField1: "skirts" }]],
           [[{ groupField1: null }, { groupField1: "pants" }, { groupField1: "skirts" }]],
         ]);
-        done();
       });
     array1.pushValue({ groupField1: "pants" }, { groupField1: "skirts" });
     await tick();
@@ -193,7 +192,7 @@ describe("controls", () => {
     await tick();
     array1.removeAt(1);
     await tick();
-
     form.dispose();
+    expect.assertions(1);
   });
 });

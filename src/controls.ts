@@ -91,7 +91,7 @@ export abstract class BaseControl {
     this._children$.complete();
 
     this.children.forEach(c => c.dispose());
-    this._dispose$.next();
+    this._dispose$.next(null);
     this._dispose$.complete();
   }
 

@@ -1,5 +1,5 @@
-import { Subject } from "rxjs";
 import { readonlyArray as RAR } from "fp-ts";
+import { Subject } from "rxjs";
 import { map, toArray } from "rxjs/operators";
 import { createResolveObservable, createSearchObservable } from "./search";
 
@@ -8,18 +8,12 @@ function tick(delay = 0) {
 }
 
 describe("createSearchObservable", () => {
-  let obs: Subject<{ search: string; control: any; params: object; key: string }>;
-
-  beforeEach(() => {
-    obs = new Subject();
-  });
-
-  test("delays correctly", async done => {
+  test("delays correctly", async () => {
+    const obs = new Subject<{ search: string; control: any; params: object; key: string }>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
     const searchObs = createSearchObservable(obs, () => resolvers, 500);
     searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
       expect(v).toEqual([["pants3"], ["pants4"]]);
-      done();
     });
     obs.next({ search: "pants1", control: {}, params: {}, key: "pants" });
     await tick(200);
@@ -30,14 +24,15 @@ describe("createSearchObservable", () => {
     obs.next({ search: "pants4", control: {}, params: {}, key: "pants" });
     await tick(501);
     obs.complete();
+    expect.assertions(1);
   });
 
-  test("groups identical search operations", async done => {
+  test("groups identical search operations", async () => {
+    const obs = new Subject<{ search: string; control: any; params: object; key: string }>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
     const searchObs = createSearchObservable(obs, () => resolvers);
     searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
-      expect(v).toEqual([["skirts2"], ["pants4"]]);
-      done();
+      expect(v).toEqual([["pants4"], ["skirts2"]]);
     });
     obs.next({ search: "pants1", control: {}, params: {}, key: "pants" });
     obs.next({ search: "skirts1", control: {}, params: {}, key: "skirts" });
@@ -48,22 +43,17 @@ describe("createSearchObservable", () => {
     obs.next({ search: "pants4", control: {}, params: {}, key: "pants" });
     await tick(501);
     obs.complete();
+    expect.assertions(1);
   });
 });
 
 describe("createResolveObservable", () => {
-  let obs: Subject<{ values: string[]; control: any; params: object; key: string }>;
-
-  beforeEach(() => {
-    obs = new Subject();
-  });
-
-  test("groups identical resolve operations", async done => {
+  test("groups identical resolve operations", async () => {
+    const obs = new Subject<{ values: string[]; control: any; params: object; key: string }>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
     const searchObs = createResolveObservable(obs, () => resolvers);
     searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
       expect(v).toEqual([["pants", "skirts", "shorts"], ["skirts"], ["pants"]]);
-      done();
     });
     obs.next({ values: ["pants"], control: {}, params: {}, key: "pants" });
     obs.next({ values: ["skirts"], control: {}, params: {}, key: "pants" });
@@ -73,5 +63,6 @@ describe("createResolveObservable", () => {
     await tick(501);
     obs.next({ values: ["pants"], control: {}, params: {}, key: "pants" });
     obs.complete();
+    expect.assertions(1);
   });
 });
