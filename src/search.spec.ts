@@ -20,9 +20,9 @@ describe("createSearchObservable", () => {
     obs.next({ search: "pants2", control: {}, params: {}, key: "pants" });
     await tick(400);
     obs.next({ search: "pants3", control: {}, params: {}, key: "pants" });
-    await tick(501);
+    await tick(550);
     obs.next({ search: "pants4", control: {}, params: {}, key: "pants" });
-    await tick(501);
+    await tick(550);
     obs.complete();
     expect.assertions(1);
   });
@@ -41,7 +41,7 @@ describe("createSearchObservable", () => {
     await tick();
     obs.next({ search: "pants3", control: {}, params: {}, key: "pants" });
     obs.next({ search: "pants4", control: {}, params: {}, key: "pants" });
-    await tick(501);
+    await tick(550);
     obs.complete();
     expect.assertions(1);
   });
@@ -60,7 +60,7 @@ describe("createResolveObservable", () => {
     obs.next({ values: ["skirts"], control: {}, params: {}, key: "skirts" });
     await tick();
     obs.next({ values: ["shorts"], control: {}, params: {}, key: "pants" });
-    await tick(501);
+    await tick(550);
     obs.next({ values: ["pants"], control: {}, params: {}, key: "pants" });
     obs.complete();
     expect.assertions(1);

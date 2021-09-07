@@ -1,4 +1,4 @@
-import { array as AR, readonlyArray as RAR } from "fp-ts";
+import { array as AR } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import { BehaviorSubject, combineLatest, Observable, of, Subject, Subscription } from "rxjs";
 import { catchError, distinctUntilChanged, filter, finalize, first, map, switchMap, tap } from "rxjs/operators";
@@ -284,7 +284,7 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
 export class FieldControl<
   TValue,
   THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras,
+  TExtras = AbstractExtras
 > extends ItemControl<THints, TExtras> {
   protected initialValue: TValue;
   protected _parent: FieldControl<unknown, THints, TExtras> | null = null;
@@ -604,7 +604,7 @@ export class GroupControl<
   TValue extends KeyControlsValue<TControls>,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
 > extends FieldControl<TValue, THints, TExtras> {
   protected _validChildren$ = new BehaviorSubject(true);
   protected _childrenDirty$ = new BehaviorSubject(false);
@@ -756,7 +756,7 @@ export class ArrayControl<
   TValue extends KeyControlsValue<TControls>,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>
 > extends FieldControl<TValue[], THints, TExtras> {
   controls: ReturnType<this["itemFactory"]>[];
 
@@ -889,9 +889,9 @@ export class ArrayControl<
 
   protected resize(length: number) {
     this.clear();
-    const controls = RAR.range(0, length - 1).map(
-      (_, i) => this.itemFactory(this.value[i] ?? null) as ReturnType<this["itemFactory"]>,
-    );
+    const controls = new Array(length)
+      .fill(null)
+      .map((_, i) => this.itemFactory(this.value[i] ?? null) as ReturnType<this["itemFactory"]>);
     this.push(...controls);
   }
 
