@@ -168,7 +168,7 @@ export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, C
       {config.label ? <label>{config.label}</label> : null}
       <Fields control={control}></Fields>
       <div style={{ margin: "0.5rem 0" }}>
-        <button type="button" onClick={() => control.add()}>
+        <button type="button" onClick={() => control.pushValue({})}>
           Add
         </button>
         <button type="button" onClick={() => control.pop()}>

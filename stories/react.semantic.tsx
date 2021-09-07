@@ -195,7 +195,7 @@ export function Repeater({ control }: { control: ArrayControl<{}, CustomHints, C
           <FormGroup key={i} control={c}></FormGroup>
         ))}
         <div style={{ margin: "1rem 0" }}>
-          <SemanticButton type="button" onClick={() => control.add()}>
+          <SemanticButton type="button" onClick={() => control.pushValue({})}>
             Add
           </SemanticButton>
           <SemanticButton type="button" onClick={() => control.pop()}>
