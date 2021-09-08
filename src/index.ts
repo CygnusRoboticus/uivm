@@ -17,7 +17,7 @@ export {
   Messages,
   Observableish,
   Trigger,
-  Validator
+  Validator,
 } from "./controls.types";
 export { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
 export {
@@ -40,7 +40,7 @@ export {
   MessagerDefinition,
   SearchDefinition,
   TriggerDefinition,
-  ValidatorDefinition
+  ValidatorDefinition,
 } from "./executable";
 export { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 export {
@@ -52,7 +52,7 @@ export {
   Option,
   OptionMulti,
   OptionSingle,
-  SearchResolver
+  SearchResolver,
 } from "./search";
 export { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormValue } from "./typing";
 export {
@@ -65,7 +65,7 @@ export {
   isItemControl,
   isPromise,
   notNullish,
-  toObservable
+  toObservable,
 } from "./utils";
 export {
   BasicVisitor,
@@ -73,7 +73,6 @@ export {
   buildChildren,
   createConfigBuilder,
   Visitor,
-  VisitorControls
+  VisitorControls,
 } from "./visitor";
 export { getRegistryMethod, getRegistryMethods, getRegistryValue, getRegistryValues } from "./visitor.utils";
-

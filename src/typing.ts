@@ -61,9 +61,7 @@ type FieldTypeType<
 
 type FieldDataTypeType<T extends BaseFieldConfig> = T extends Extract<
   T,
-  | { dataType: { type: "string" } }
-  | { dataType: { type: "number" } }
-  | { dataType: { type: "boolean" } }
+  { dataType: { type: "string" } } | { dataType: { type: "number" } } | { dataType: { type: "boolean" } }
 >
   ?
       | ExtractOther<T, { dataType: { null: true } }, null>

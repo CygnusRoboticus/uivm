@@ -223,7 +223,8 @@ export class BasicSearchService<
 > {
   static<T>(config: TConfig, c: TControl, params: { options: readonly Option<T>[] }) {
     return {
-      search: (q: string, c: TControl, p: object) => params.options.filter(o => o.label.search(q) || o.sublabel?.search(q)),
+      search: (q: string, c: TControl, p: object) =>
+        params.options.filter(o => o.label.search(q) || o.sublabel?.search(q)),
       resolve: (v: any[], c: TControl, p: object) => params.options.filter(o => v.includes(o.value)),
     };
   }
