@@ -26,6 +26,7 @@ export interface OptionMulti<T = unknown, U = unknown> {
    * Unique identifer for group.
    */
   key: string;
+  sublabel?: string;
   icon?: { name: string; color?: string; tooltip?: string };
   options: Option<T>[];
 

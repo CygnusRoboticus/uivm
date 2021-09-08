@@ -1,5 +1,5 @@
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
-import { FieldControl, ItemControl } from "../src/controls";
+import { ItemControl } from "../src/controls";
 import { AbstractExtras, AbstractHints, Validator } from "../src/controls.types";
 import { BasicRegistry, BasicValidatorsService, SearchDefinition, TriggerDefinition } from "../src/executable";
 import { Option } from "../src/search";
@@ -8,8 +8,8 @@ import { BasicVisitorExtras } from "../src/visitor";
 
 export class CustomRegistry<
   TConfigs extends CustomConfigs = CustomConfigs,
-  TControl extends ItemControl = ItemControl
-> extends BasicRegistry<TConfigs> {
+  TControl extends ItemControl<CustomHints, CustomExtras> = ItemControl<CustomHints, CustomExtras>
+> extends BasicRegistry<TConfigs, TControl> {
   validators = new (class extends BasicValidatorsService<TConfigs> {
     demoMessage(config: TConfigs, control: TControl, params?: {}): Validator<any> {
       return (c: TControl) => ({ demoMessage: { message: "Demo Example Message" } });
@@ -44,7 +44,7 @@ export interface SelectConfig<T = unknown> extends FieldConfig<CustomRegistry, C
     T,
     object,
     CustomConfigs,
-    FieldControl<any, CustomHints>
+    ItemControl<CustomHints, CustomExtras>
   >[];
 }
 
@@ -61,7 +61,7 @@ export interface ButtonConfig extends ItemConfig<CustomRegistry, CustomHints, Cu
   type: "button";
   label: string;
   submit?: boolean;
-  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints>>;
+  trigger: TriggerDefinition<CustomRegistry, CustomConfigs, ItemControl<CustomHints, CustomExtras>>;
 }
 
 export interface MessageConfig extends ItemConfig<CustomRegistry, CustomHints, CustomExtras> {
@@ -78,7 +78,7 @@ export type CustomConfigs =
   | ContainerConfig
   | RepeaterConfig
   | CheckboxConfig
-  | SelectConfig<unknown>;
+  | SelectConfig;
 
 export type CustomHints = {
   hidden: boolean;

@@ -127,7 +127,7 @@ export function isExecutableDefinitionObject<TValue>(
 
 export class BasicExtrasService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { value }: { value: unknown }) {
     return (c: TControl) => of(value);
@@ -136,7 +136,7 @@ export class BasicExtrasService<
 
 export class BasicTriggersService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
   autofill(
     config: TConfig,
@@ -168,7 +168,7 @@ export class BasicTriggersService<
 
 export class BasicHintsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { value }: { value: boolean }) {
     return (c: TControl) => of(value);
@@ -199,7 +199,7 @@ export class BasicHintsService<
 
 export class BasicValidatorsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { message }: { message: string }) {
     return (c: TControl) => of({ static: { message } });
@@ -219,11 +219,11 @@ export class BasicValidatorsService<
 
 export class BasicSearchService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
-  static(config: TConfig, control: TControl, params: { options: readonly Option[] }) {
+  static<T>(config: TConfig, c: TControl, params: { options: readonly Option<T>[] }) {
     return {
-      search: (q: string, c: TControl, p: object) => params.options,
+      search: (q: string, c: TControl, p: object) => params.options.filter(o => o.label.search(q) || o.sublabel?.search(q)),
       resolve: (v: any[], c: TControl, p: object) => params.options.filter(o => v.includes(o.value)),
     };
   }
@@ -231,7 +231,7 @@ export class BasicSearchService<
 
 export class BasicRegistry<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl = ItemControl,
+  TControl extends ItemControl<any, any> = ItemControl<any, any>,
 > {
   extras = new BasicExtrasService<TConfig, TControl>();
   triggers = new BasicTriggersService<TConfig, TControl>();

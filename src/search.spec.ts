@@ -32,7 +32,8 @@ describe("createSearchObservable", () => {
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];
     const searchObs = createSearchObservable(obs, () => resolvers);
     searchObs.pipe(toArray(), map(RAR.map(v => v.result))).subscribe(v => {
-      expect(v).toEqual([["pants4"], ["skirts2"]]);
+      expect(v.length).toEqual(2);
+      expect(v).toEqual(expect.arrayContaining([["skirts2"], ["pants4"]]))
     });
     obs.next({ search: "pants1", control: {}, params: {}, key: "pants" });
     obs.next({ search: "skirts1", control: {}, params: {}, key: "skirts" });
@@ -43,7 +44,7 @@ describe("createSearchObservable", () => {
     obs.next({ search: "pants4", control: {}, params: {}, key: "pants" });
     await tick(550);
     obs.complete();
-    expect.assertions(1);
+    expect.assertions(2);
   });
 });
 

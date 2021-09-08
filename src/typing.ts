@@ -61,9 +61,9 @@ type FieldTypeType<
 
 type FieldDataTypeType<T extends BaseFieldConfig> = T extends Extract<
   T,
-  | { dataType: { type: FieldDataType.StringType } }
-  | { dataType: { type: FieldDataType.NumberType } }
-  | { dataType: { type: FieldDataType.BooleanType } }
+  | { dataType: { type: "string" } }
+  | { dataType: { type: "number" } }
+  | { dataType: { type: "boolean" } }
 >
   ?
       | ExtractOther<T, { dataType: { null: true } }, null>
@@ -71,9 +71,9 @@ type FieldDataTypeType<T extends BaseFieldConfig> = T extends Extract<
       | FieldTypeArrayable<
           T,
           { dataType: { array: true } },
-          | ExtractOther<T, { dataType: { type: FieldDataType.StringType } }, string>
-          | ExtractOther<T, { dataType: { type: FieldDataType.NumberType } }, number>
-          | ExtractOther<T, { dataType: { type: FieldDataType.BooleanType } }, boolean>
+          | ExtractOther<T, { dataType: { type: "string" } }, string>
+          | ExtractOther<T, { dataType: { type: "number" } }, number>
+          | ExtractOther<T, { dataType: { type: "boolean" } }, boolean>
         >
   : Extract<T, { dataType: { type: unknown } }>[DTK][TK];
 

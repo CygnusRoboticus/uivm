@@ -62,6 +62,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
         label: "Select",
         type: "select",
         name: "select",
+        dataType: { type: "number" },
         options: [
           {
             name: "static",
@@ -81,7 +82,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
   } as const;
 
   const [control] = useState(() => {
-    const c = controlBuilder<typeof config, GroupControl<FormValue<typeof config, CustomConfigs, CustomConfigsTypes>>>(
+    const c = controlBuilder<typeof config, GroupControl<FormValue<typeof config, CustomConfigs, CustomConfigsTypes>, CustomHints, CustomExtras>>(
       config,
     );
     c.reset({
@@ -91,7 +92,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
       films: [{ film: "John Wick" }, { film: "Takes Manhatten" }, { film: "Parabellum" }],
       autofill: null,
       checkbox: false,
-      select: 2,
+      select: 2
     });
     return c;
   });
