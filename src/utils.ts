@@ -1,6 +1,6 @@
 import { from, isObservable, Observable, of } from "rxjs";
-import { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } from "./controls";
-import { AbstractExtras, AbstractHints } from "./controls.types";
+import { IArrayControl, IBaseControl, IFieldControl, IGroupControl, IItemControl } from "./controls";
+import { AbstractExtras, AbstractHints, KeyControlsValue, KeyValueControls } from "./controls.types";
 import { BaseArrayConfig, BaseFieldConfig, BaseGroupConfig, BaseItemConfig } from "./primitives";
 
 export function notNullish<T>(value: T | null | undefined): value is T {
@@ -35,28 +35,30 @@ export function isArrayConfig<TConfig extends BaseItemConfig>(
 }
 
 export function isItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>(
-  control: BaseControl,
-): control is ItemControl<THints, TExtras> {
-  return control instanceof ItemControl;
+  control: IBaseControl,
+): control is IItemControl<THints, TExtras> {
+  return (control as IItemControl<THints, TExtras>)?.isItemControl === true;
 }
 export function isFieldControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
->(control: BaseControl): control is FieldControl<TValue, THints, TExtras> {
-  return control instanceof FieldControl;
+>(control: IBaseControl): control is IFieldControl<TValue, THints, TExtras> {
+  return (control as IFieldControl<TValue, THints, TExtras>)?.isFieldControl === true;
 }
 export function isGroupControl<
-  TValue = unknown,
+  TValue extends KeyControlsValue<TControls> = any,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
->(control: BaseControl): control is GroupControl<TValue, THints, TExtras> {
-  return control instanceof GroupControl;
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+>(control: IBaseControl): control is IGroupControl<TValue, THints, TExtras, TControls> {
+  return (control as IGroupControl<TValue, THints, TExtras, TControls>)?.isGroupControl === true;
 }
 export function isArrayControl<
-  TValue = unknown,
+  TValue extends KeyControlsValue<TControls> = any,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
->(control: BaseControl): control is ArrayControl<TValue, THints, TExtras> {
-  return control instanceof ArrayControl;
+  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+>(control: IBaseControl): control is IArrayControl<TValue, THints, TExtras, TControls> {
+  return (control as IArrayControl<TValue, THints, TExtras, TControls>)?.isArrayControl === true;
 }

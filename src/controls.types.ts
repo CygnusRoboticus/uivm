@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { FieldControl, ItemControl } from "./controls";
+import { IFieldControl, IItemControl } from "./controls";
 
 export interface Messages {
   [key: string]: {
@@ -12,7 +12,7 @@ export interface Obj {
   [key: string]: any;
 }
 export type KeyValueControls<TValue extends Obj, THints extends AbstractHints, TExtras> = {
-  [k in keyof TValue]: FieldControl<TValue[k], THints, TExtras>;
+  [k in keyof TValue]: IFieldControl<TValue[k], THints, TExtras>;
 };
 
 export type KeyControlsValue<TControls extends Obj> = {
@@ -27,14 +27,17 @@ export type Executor<TControl, TValue> = (control: TControl) => Observableish<TV
 
 export type Validator<TControl> = Executor<TControl, Messages | null>;
 export type Trigger<TControl> = Executor<TControl, void>;
-export type Hinter<TControl, THints = AbstractHints> = Executor<TControl, [keyof THints, boolean]>;
+export type Hinter<TControl, THints extends AbstractHints = AbstractHints> = Executor<
+  TControl,
+  [keyof THints, boolean]
+>;
 export type Disabler<TControl> = Executor<TControl, boolean>;
 export type Extraer<TControl, TExtras = AbstractExtras> = Executor<TControl, Partial<TExtras>>;
 
 export interface ItemControlOptions<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> {
-  hints?: Hinter<ItemControl<THints, TExtras>, THints>[];
-  extras?: Extraer<ItemControl<THints, TExtras>, TExtras>[];
-  messages?: Validator<ItemControl<THints, TExtras>>[];
+  hints?: Hinter<IItemControl<THints, TExtras>, THints>[];
+  extras?: Extraer<IItemControl<THints, TExtras>, TExtras>[];
+  messages?: Validator<IItemControl<THints, TExtras>>[];
 }
 
 export interface FieldControlOptions<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
@@ -43,18 +46,18 @@ export interface FieldControlOptions<TValue, THints extends AbstractHints = Abst
   touched?: boolean;
   disabled?: boolean;
 
-  triggers?: Trigger<FieldControl<TValue, THints, TExtras>>[];
-  disablers?: Disabler<FieldControl<TValue, THints, TExtras>>[];
-  validators?: Validator<FieldControl<TValue, THints, TExtras>>[];
+  triggers?: Trigger<IFieldControl<TValue, THints, TExtras>>[];
+  disablers?: Disabler<IFieldControl<TValue, THints, TExtras>>[];
+  validators?: Validator<IFieldControl<TValue, THints, TExtras>>[];
 }
 
-export interface ItemControlState<THints = AbstractHints, TExtras = AbstractExtras> {
+export interface ItemControlState<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> {
   hints: Partial<THints>;
   extras: Partial<TExtras>;
   messages: Messages | null;
 }
 
-export interface FieldControlState<TValue, THints = AbstractHints, TExtras = AbstractExtras>
+export interface FieldControlState<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
   extends ItemControlState<THints, TExtras> {
   value: TValue;
   errors: Messages | null;

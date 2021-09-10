@@ -1,5 +1,5 @@
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
-import { ItemControl } from "../src/controls";
+import { IItemControl, ItemControl } from "../src/controls";
 import { AbstractExtras, AbstractHints, Validator } from "../src/controls.types";
 import { BasicRegistry, BasicValidatorsService, SearchDefinition, TriggerDefinition } from "../src/executable";
 import { Option } from "../src/search";
@@ -8,7 +8,7 @@ import { BasicVisitorExtras } from "../src/visitor";
 
 export class CustomRegistry<
   TConfigs extends CustomConfigs = CustomConfigs,
-  TControl extends ItemControl<CustomHints, CustomExtras> = ItemControl<CustomHints, CustomExtras>
+  TControl extends IItemControl<CustomHints, CustomExtras> = IItemControl<CustomHints, CustomExtras>,
 > extends BasicRegistry<TConfigs, TControl> {
   validators = new (class extends BasicValidatorsService<TConfigs> {
     demoMessage(config: TConfigs, control: TControl, params?: {}): Validator<any> {

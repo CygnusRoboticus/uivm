@@ -1,11 +1,12 @@
 import { combineLatest, of } from "rxjs";
 import { delay, filter, map, switchMap, tap } from "rxjs/operators";
-import { ItemControl } from "./controls";
+import { IItemControl } from "./controls";
 import { AbstractExtras, Executor, Messages, Trigger, Validator } from "./controls.types";
+import { findControl } from "./controls.utils";
 import { BaseItemConfig } from "./primitives";
 import { Option, SearchResolver } from "./search";
 import { Spread, WithOptional } from "./typing.utils";
-import { isFieldControl, isGroupControl } from "./utils";
+import { isFieldControl, isGroupControl, notNullish } from "./utils";
 
 // Executable definitions, these are the objects placed on configs
 export type ExecutableDefinition<TService, TValue, TConfig extends BaseItemConfig, TControl> = {
@@ -127,7 +128,7 @@ export function isExecutableDefinitionObject<TValue>(
 
 export class BasicExtrasService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { value }: { value: unknown }) {
     return (c: TControl) => of(value);
@@ -136,7 +137,7 @@ export class BasicExtrasService<
 
 export class BasicTriggersService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   autofill(
     config: TConfig,
@@ -146,10 +147,10 @@ export class BasicTriggersService<
     const regex = pattern && replace ? (typeof pattern === "string" ? new RegExp(pattern) : pattern) : undefined;
     return (c: TControl) => {
       if (isFieldControl(c)) {
-        return combineLatest([c.root$.pipe(filter(isGroupControl)), c.value$]).pipe(
+        return combineLatest([c.root$.pipe(filter(notNullish), filter(isGroupControl)), c.value$]).pipe(
           delay(0),
           tap(([root, v]) => {
-            const dependent = root.get(field);
+            const dependent = findControl(root, field);
             if (dependent && v) {
               const value = typeof v === "string" ? v : "";
               dependent.reset(regex && replace ? value.replace(regex, replace) : value);
@@ -168,7 +169,7 @@ export class BasicTriggersService<
 
 export class BasicHintsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { value }: { value: boolean }) {
     return (c: TControl) => of(value);
@@ -176,9 +177,10 @@ export class BasicHintsService<
   field(config: TConfig, control: TControl, { field, value }: { field: string; value: unknown }) {
     return (c: TControl) => {
       return c.root$.pipe(
+        filter(notNullish),
         filter(isGroupControl),
         switchMap(root => {
-          const dependent = root.get(field);
+          const dependent = findControl(root, field);
           if (dependent) {
             return dependent.value$.pipe(
               map(v =>
@@ -199,7 +201,7 @@ export class BasicHintsService<
 
 export class BasicValidatorsService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   static(config: TConfig, control: TControl, { message }: { message: string }) {
     return (c: TControl) => of({ static: { message } });
@@ -219,7 +221,7 @@ export class BasicValidatorsService<
 
 export class BasicSearchService<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   static<T>(config: TConfig, c: TControl, params: { options: readonly Option<T>[] }) {
     return {
@@ -232,7 +234,7 @@ export class BasicSearchService<
 
 export class BasicRegistry<
   TConfig extends BaseItemConfig = BaseItemConfig,
-  TControl extends ItemControl<any, any> = ItemControl<any, any>,
+  TControl extends IItemControl<any, any> = IItemControl<any, any>,
 > {
   extras = new BasicExtrasService<TConfig, TControl>();
   triggers = new BasicTriggersService<TConfig, TControl>();
