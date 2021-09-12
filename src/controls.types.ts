@@ -86,10 +86,21 @@ export interface IFieldControl<TValue, THints extends AbstractHints, TExtras> ex
   value$: Observable<TValue>;
   value: TValue;
 
+  disabled: boolean;
   dirty: boolean;
   pending: boolean;
   touched: boolean;
   valid: boolean;
+
+  disabled$: Observable<boolean>;
+  dirty$: Observable<boolean>;
+  pending$: Observable<boolean>;
+  touched$: Observable<boolean>;
+  valid$: Observable<boolean>;
+
+  setDisabled(disabled: boolean): void;
+  setDirty(dirty: boolean): void;
+  setTouched(touched: boolean): void;
 
   setValue(value: TValue): void;
   patchValue(value: TValue): void;
@@ -115,5 +126,7 @@ export interface IArrayControl<
   TControls extends KeyValueControls<TValue, THints, TExtras>,
 > extends IFieldControl<TValue[], THints, TExtras> {
   controls: TControls[];
+  pushValue(...values: TValue[]): void;
+  removeAt(index: number): void;
   isArrayControl: true;
 }

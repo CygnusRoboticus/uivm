@@ -1,14 +1,14 @@
 import { readonlyArray as RAR } from "fp-ts";
 import { Subject } from "rxjs";
 import { map, toArray } from "rxjs/operators";
-import { createResolveObservable, createSearchObservable, SearchResolverPagination } from "./search";
+import { createResolveObservable, createSearchObservable, SearchResolverPaging } from "./search";
 
 function tick(delay = 0) {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
 describe("createSearchObservable", () => {
-  type ObsInput = { search: string; control: any; params: object; paging: SearchResolverPagination; key: string };
+  type ObsInput = { search: string; control: any; params: object; paging: SearchResolverPaging; key: string };
   test("delays correctly", async () => {
     const obs = new Subject<ObsInput>();
     const resolvers = [{ search: (q: string) => [q], resolve: (v: string[]) => v }];

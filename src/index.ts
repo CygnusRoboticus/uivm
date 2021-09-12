@@ -57,6 +57,7 @@ export {
   OptionMulti,
   OptionSingle,
   SearchResolver,
+  SearchResolverPaging,
 } from "./search";
 export { FieldDataType, FieldDataTypeDefinition, FieldTypeMap, FormValue } from "./typing";
 export {

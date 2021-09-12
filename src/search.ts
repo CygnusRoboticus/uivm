@@ -35,7 +35,7 @@ export interface OptionMulti<T = unknown> {
 
 export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;
 
-export interface SearchResolverPagination {
+export interface SearchResolverPaging {
   take: number;
   skip: number;
 }
@@ -45,7 +45,7 @@ export interface SearchResolver<TControl, TOption, TValue, TParams extends objec
     search: string,
     control: TControl,
     params: TParams,
-    paging: SearchResolverPagination,
+    paging: SearchResolverPaging,
   ): Observableish<readonly TOption[]>;
   resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;
 }
@@ -83,7 +83,7 @@ export function createSearchObservable<
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { search: string; control: TControl; params: TParams; paging: SearchResolverPagination; key: string },
+  TInput extends { search: string; control: TControl; params: TParams; paging: SearchResolverPaging; key: string },
 >(
   search$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
