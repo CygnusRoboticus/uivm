@@ -1,10 +1,17 @@
 import { combineLatest, of } from "rxjs";
-import { ArrayControl, BaseControl, FieldControl, GroupControl } from "./controls";
-import { AbstractExtras, AbstractHints, Executor, KeyValueControls, Obj } from "./controls.types";
-import { toObservable } from "./utils";
+import {
+  AbstractExtras,
+  AbstractHints,
+  Executor,
+  IFieldControl,
+  IItemControl,
+  KeyValueControls,
+  Obj,
+} from "./controls.types";
+import { isArrayControl, isGroupControl, toObservable } from "./utils";
 
 export function findControl<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>(
-  control: FieldControl<any, THints, TExtras>,
+  control: IFieldControl<any, THints, TExtras>,
   path: (string | number)[] | string,
   delimiter = ".",
 ) {
@@ -17,19 +24,19 @@ export function findControl<TValue, THints extends AbstractHints = AbstractHints
   } else if (path.length === 0) {
     return null;
   }
-  let found: FieldControl<unknown, THints, TExtras> | null = control;
+  let found: IFieldControl<unknown, THints, TExtras> | null = control;
   path.forEach((name: string | number) => {
-    if (found instanceof GroupControl) {
+    if (found && isGroupControl(found)) {
       found = found.controls.hasOwnProperty(name)
-        ? (found.controls[name] as FieldControl<unknown, THints, TExtras>)
+        ? (found.controls[name] as IFieldControl<unknown, THints, TExtras>)
         : null;
-    } else if (found instanceof ArrayControl) {
-      found = (found.at(<number>name) as FieldControl<unknown, THints, TExtras>) ?? null;
+    } else if (found && isArrayControl(found)) {
+      found = (found.controls[parseInt(<string>name)] as unknown as IFieldControl<unknown, THints, TExtras>) ?? null;
     } else {
       found = null;
     }
   });
-  return found as FieldControl<TValue, THints, TExtras>;
+  return found as IFieldControl<TValue, THints, TExtras>;
 }
 
 export function reduceControls<TValue, THints extends AbstractHints, TExtras>(
@@ -38,7 +45,7 @@ export function reduceControls<TValue, THints extends AbstractHints, TExtras>(
   return reduceChildren<TValue, TValue, THints, TExtras>(
     controls,
     {} as TValue,
-    (acc: TValue, control: FieldControl<TValue[keyof TValue], THints, TExtras>, name: keyof TValue) => {
+    (acc: TValue, control: IFieldControl<TValue[keyof TValue], THints, TExtras>, name: keyof TValue) => {
       acc[name] = control.value;
       return acc;
     },
@@ -66,11 +73,12 @@ function forEachChild<TValue extends Obj, THints extends AbstractHints, TExtras>
   });
 }
 
-export function traverseParents<TControl extends BaseControl>(control: TControl) {
-  const parents: BaseControl[] = [];
-  while (control.parent) {
-    parents.push(control.parent);
-    control = control.parent as TControl;
+export function traverseParents<TControl extends IItemControl<any, any>>(control: TControl) {
+  let current: TControl = control;
+  const parents: TControl[] = [];
+  while (current.parent) {
+    parents.push(current.parent as TControl);
+    current = current.parent as TControl;
   }
   return parents;
 }

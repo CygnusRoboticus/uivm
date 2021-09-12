@@ -29,10 +29,12 @@ export const BasicComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Elemen
   repeater: (control, { index: i } = { index: 0 }) => <Repeater key={i} control={control} />,
 };
 
-export const BasicBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
-  BasicComponentMap,
-  c => c.extras.config.type,
-);
+export const BasicBuilder = createComponentBuilder<
+  CustomConfigs,
+  ItemControl<CustomHints, CustomExtras>,
+  JSX.Element,
+  { index: number }
+>(BasicComponentMap, c => c.extras.config.type);
 
 export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras<any>> }) {
   return <>{control.children.map((c, i) => BasicBuilder(c, { index: i }))}</>;
@@ -112,11 +114,12 @@ export function Select({
       typeof registry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, Option<string>, string>
+      SearchResolver<any, Option<string>, string>
     >(registry, "search", config, control, config.options);
-    createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers).subscribe(o =>
-      setOptions(o.result),
-    );
+    createSearchObservable(
+      of({ key: "", search: "", control, params: {}, paging: { take: 10, skip: 0 } }),
+      () => searchers,
+    ).subscribe(o => setOptions(o.result));
   }, []);
 
   return hints.hidden ? null : (

@@ -10,6 +10,10 @@ import {
   FieldControlOptions,
   FieldControlState,
   Hinter,
+  IArrayControl,
+  IFieldControl,
+  IGroupControl,
+  IItemControl,
   ItemControlOptions,
   ItemControlState,
   KeyControlsValue,
@@ -22,88 +26,9 @@ import { extractSources, findControl, reduceControls, traverseParents } from "./
 import { DeepPartial } from "./typing.utils";
 import { notNullish } from "./utils";
 
-export abstract class BaseControl {
-  protected _parent$ = new BehaviorSubject<BaseControl | null>(null);
-  protected _children$ = new BehaviorSubject<BaseControl[]>([]);
-  protected _parentChange$ = new BehaviorSubject(null);
-  protected _parents$ = combineLatest([this._parent$, this._parentChange$]).pipe(map(() => this.parents));
-  protected _root$ = this._parents$.pipe(map(() => this.root));
-  protected _dispose$ = new Subject();
-
-  get parent$() {
-    return this._parent$.asObservable();
-  }
-  get parents$() {
-    return this._parents$;
-  }
-  get root$() {
-    return this._root$;
-  }
-  get children$() {
-    return this._children$.asObservable();
-  }
-  get dispose$() {
-    return this._dispose$.asObservable();
-  }
-
-  get parent() {
-    return this._parent$.value;
-  }
-  get parents() {
-    return traverseParents(this);
-  }
-  get root() {
-    return pipe(traverseParents(this), a => a[a.length - 1] ?? this);
-  }
-  get children() {
-    return this._children$.value;
-  }
-
-  constructor(parent?: BaseControl) {
-    this._parent$.next(parent ?? null);
-  }
-
-  setParent(parent: BaseControl | null) {
-    if (parent === this) {
-      return;
-    }
-
-    this._parent$.next(parent);
-    const curr = parent?.children ?? [];
-    if (!curr.includes(this)) {
-      parent?._children$.next([...curr, this]);
-    }
-    this.children.forEach(c => c._parentChange$.next(null));
-  }
-
-  addChild(child: BaseControl) {
-    child.setParent(this);
-  }
-
-  removeChild(child: BaseControl) {
-    child?.setParent(null);
-  }
-
-  abstract update(): void;
-
-  dispose() {
-    this._parent$.complete();
-    this._children$.complete();
-
-    this.children.forEach(c => c.dispose());
-    this._dispose$.next(null);
-    this._dispose$.complete();
-  }
-
-  toJSON() {
-    return {
-      parent: this.parent,
-      name: "BaseControl",
-    };
-  }
-}
-
-export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras> extends BaseControl {
+export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
+  implements IItemControl<THints, TExtras>
+{
   protected _hints$ = new BehaviorSubject<Partial<THints>>({});
   protected _extras$ = new BehaviorSubject<Partial<TExtras>>({});
   protected _messages$ = new BehaviorSubject<Messages | null>(null);
@@ -115,6 +40,15 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
   protected hintsSub?: Subscription;
   protected messagesSub?: Subscription;
   protected extrasSub?: Subscription;
+
+  protected _parent$ = new BehaviorSubject<ItemControl<THints, TExtras> | null>(null);
+  protected _children$ = new BehaviorSubject<ItemControl<THints, TExtras>[]>([]);
+  protected _parentChange$ = new BehaviorSubject(null);
+  protected _parents$ = combineLatest([this._parent$, this._parentChange$]).pipe(map(() => this.parents));
+  protected _root$ = this._parents$.pipe(map(() => this.root));
+  protected _dispose$ = new Subject();
+
+  isItemControl = true as const;
 
   get hints() {
     return this._hints$.value;
@@ -132,6 +66,18 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
       extras: this.extras,
     };
   }
+  get parent() {
+    return this._parent$.value;
+  }
+  get parents(): ItemControl<THints, TExtras>[] {
+    return traverseParents(this);
+  }
+  get root(): ItemControl<THints, TExtras> | null {
+    return pipe(traverseParents(this), a => a[a.length - 1] ?? this);
+  }
+  get children() {
+    return this._children$.value;
+  }
 
   get hints$() {
     return this._hints$.asObservable();
@@ -144,6 +90,21 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
   }
   get state$() {
     return this._state$;
+  }
+  get parent$() {
+    return this._parent$.asObservable();
+  }
+  get parents$() {
+    return this._parents$;
+  }
+  get root$() {
+    return this._root$;
+  }
+  get children$() {
+    return this._children$.asObservable();
+  }
+  get dispose$() {
+    return this._dispose$.asObservable();
   }
 
   protected __messages$ = this._messages$.pipe(distinctUntilChanged());
@@ -197,7 +158,8 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
   }
 
   constructor(opts: ItemControlOptions<THints, TExtras> = {}, parent?: ItemControl<THints, TExtras>) {
-    super(parent);
+    this._parent$.next(parent ?? null);
+
     if (opts.hints) {
       this.setHinters(opts.hints);
     }
@@ -252,8 +214,25 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     }
   }
 
-  clone() {
-    return new ItemControl({ hints: this.hinters, extras: this.extraers ?? undefined, messages: this.messagers });
+  setParent(parent: ItemControl<THints, TExtras> | null) {
+    if (parent === this) {
+      return;
+    }
+
+    this._parent$.next(parent);
+    const curr = parent?.children ?? [];
+    if (!curr.includes(this)) {
+      parent?._children$.next([...curr, this]);
+    }
+    this.children.forEach(c => c._parentChange$.next(null));
+  }
+
+  addChild(child: ItemControl<THints, TExtras>) {
+    child.setParent(this);
+  }
+
+  removeChild(child: ItemControl<THints, TExtras>) {
+    child?.setParent(null);
   }
 
   dispose() {
@@ -261,12 +240,16 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
     this.extrasSub?.unsubscribe();
     this.messagesSub?.unsubscribe();
 
+    this._parent$.complete();
+    this._children$.complete();
     this._hints$.complete();
     this._extras$.complete();
     this._messages$.complete();
     this._initializer$.complete();
 
-    super.dispose();
+    this.children.forEach(c => c.dispose());
+    this._dispose$.next(null);
+    this._dispose$.complete();
   }
 
   protected itemReady() {
@@ -275,17 +258,19 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
 
   toJSON() {
     return {
-      ...super.toJSON(),
+      parent: this.parent,
+      hints: this.hints,
+      messages: this.messages,
+      extras: this.extras,
       name: "ItemControl",
     };
   }
 }
 
-export class FieldControl<
-  TValue,
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras,
-> extends ItemControl<THints, TExtras> {
+export class FieldControl<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
+  extends ItemControl<THints, TExtras>
+  implements IFieldControl<TValue, THints, TExtras>
+{
   protected initialValue: TValue;
   protected _parent: FieldControl<unknown, THints, TExtras> | null = null;
 
@@ -306,6 +291,8 @@ export class FieldControl<
   protected triggerSub?: Subscription;
   protected disablerSub?: Subscription;
   protected validatorSub?: Subscription;
+
+  isFieldControl = true as const;
 
   get value() {
     return this._value$.value;
@@ -556,10 +543,8 @@ export class FieldControl<
       });
   }
 
-  get<TControlValue = unknown>(
-    path: Array<string | number> | string,
-  ): FieldControl<TControlValue, THints, TExtras> | null {
-    return findControl(this, path, ".");
+  get<TControlValue = unknown>(path: Array<string | number> | string) {
+    return findControl(this, path) as FieldControl<TControlValue, THints, TExtras> | null;
   }
 
   update() {
@@ -601,15 +586,20 @@ export class FieldControl<
 }
 
 export class GroupControl<
-  TValue extends KeyControlsValue<TControls>,
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
-> extends FieldControl<TValue, THints, TExtras> {
+    TValue extends KeyControlsValue<TControls>,
+    THints extends AbstractHints = AbstractHints,
+    TExtras = AbstractExtras,
+    TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+  >
+  extends FieldControl<TValue, THints, TExtras>
+  implements IGroupControl<TValue, THints, TExtras, TControls>
+{
   protected _validChildren$ = new BehaviorSubject(true);
   protected _childrenDirty$ = new BehaviorSubject(false);
   protected _childrenPending$ = new BehaviorSubject(false);
   protected _childrenTouched$ = new BehaviorSubject(false);
+
+  isGroupControl = true as const;
 
   get valid() {
     return !this._errors$.value && this._validChildren$.value;
@@ -649,7 +639,13 @@ export class GroupControl<
   constructor(public controls: TControls, opts: FieldControlOptions<TValue, THints, TExtras> = {}) {
     super(reduceControls<TValue, THints, TExtras>(controls), opts);
     this.controls = controls;
-    this.controlList.forEach(c => this.registerControl(c));
+    this.controlList.forEach(c => {
+      if (c instanceof FieldControl) {
+        this.registerControl(c);
+      } else {
+        throw new Error("GroupControl is intended to be used with FieldControls");
+      }
+    });
 
     this.groupReady();
   }
@@ -730,7 +726,13 @@ export class GroupControl<
     this._childrenPending$.complete();
     this._childrenTouched$.complete();
     this._validChildren$.complete();
-    this.controlList.forEach(c => c.dispose());
+    this.controlList.forEach(c => {
+      if (c instanceof FieldControl) {
+        c.dispose();
+      } else {
+        throw new Error("GroupControl is intended to be used with ItemControls");
+      }
+    });
 
     super.dispose();
   }
@@ -753,12 +755,18 @@ export class GroupControl<
 }
 
 export class ArrayControl<
-  TValue extends KeyControlsValue<TControls>,
-  THints extends AbstractHints = AbstractHints,
-  TExtras = AbstractExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
-> extends FieldControl<TValue[], THints, TExtras> {
+    TValue extends KeyControlsValue<TControls>,
+    THints extends AbstractHints = AbstractHints,
+    TExtras = AbstractExtras,
+    TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
+  >
+  extends FieldControl<TValue[], THints, TExtras>
+  implements IArrayControl<TValue, THints, TExtras, TControls>
+{
+  // @ts-ignore
   controls: ReturnType<this["itemFactory"]>[];
+
+  isArrayControl = true as const;
 
   protected _itemFactory: (value: TValue | null) => GroupControl<TValue, THints, TExtras, TControls>;
   get itemFactory() {
@@ -865,9 +873,7 @@ export class ArrayControl<
   };
 
   getRawValue(): TValue[] {
-    return this.controls.map(control => {
-      return control instanceof FieldControl ? control.value : (<any>control).getRawValue();
-    });
+    return this.controls.map(control => control.value);
   }
 
   clear() {

@@ -19,10 +19,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
     fields: [
       {
         type: "message",
-        messagers: [
-          { name: "demoMessage", params: {} },
-          { name: "static", params: { message: "You should enter 'John Wick'" } },
-        ],
+        messagers: [{ name: "demoMessage" }, { name: "static", params: { message: "You should enter 'John Wick'" } }],
         extras: {
           chrome: { name: "static", params: { value: "info" } },
         },
@@ -35,7 +32,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
             type: "text",
             name: "firstName",
             triggers: [{ name: "autofill", params: { field: "autofill", pattern: "^(.*)", replace: "$1 - autofill" } }],
-            validators: [{ name: "required", params: {} }],
+            validators: [{ name: "required" }],
           },
           { label: "Last Name", type: "text", name: "lastName", validators: [{ name: "required", params: {} }] },
         ],
@@ -82,9 +79,10 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
   } as const;
 
   const [control] = useState(() => {
-    const c = controlBuilder<typeof config, GroupControl<FormValue<typeof config, CustomConfigs, CustomConfigsTypes>, CustomHints, CustomExtras>>(
-      config,
-    );
+    const c = controlBuilder<
+      typeof config,
+      GroupControl<FormValue<typeof config, CustomConfigs, CustomConfigsTypes>, CustomHints, CustomExtras>
+    >(config);
     c.reset({
       firstName: "John",
       lastName: "Wick",
@@ -92,7 +90,7 @@ function ReactForm({ builder }: { builder: ComponentBuilder<any, any, any, any, 
       films: [{ film: "John Wick" }, { film: "Takes Manhatten" }, { film: "Parabellum" }],
       autofill: null,
       checkbox: false,
-      select: 2
+      select: 2,
     });
     return c;
   });

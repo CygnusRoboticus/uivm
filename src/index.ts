@@ -1,6 +1,6 @@
 export { ComponentBuilder, ComponentRegistry, createComponentBuilder } from "./component";
 export { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "./configs";
-export { ArrayControl, BaseControl, FieldControl, GroupControl, ItemControl } from "./controls";
+export { ArrayControl, FieldControl, GroupControl, ItemControl } from "./controls";
 export {
   AbstractExtras,
   AbstractHints,
@@ -10,6 +10,10 @@ export {
   FieldControlOptions,
   FieldControlState,
   Hinter,
+  IArrayControl,
+  IFieldControl,
+  IGroupControl,
+  IItemControl,
   ItemControlOptions,
   ItemControlState,
   KeyControlsValue,
