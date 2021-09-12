@@ -76,9 +76,9 @@ function forEachChild<TValue extends Obj, THints extends AbstractHints, TExtras>
 export function traverseParents<TControl extends IItemControl<any, any>>(control: TControl) {
   let current: TControl = control;
   const parents: TControl[] = [];
-  while (control.parent) {
-    parents.push(control.parent as TControl);
-    current = control.parent as TControl;
+  while (current.parent) {
+    parents.push(current.parent as TControl);
+    current = current.parent as TControl;
   }
   return parents;
 }
