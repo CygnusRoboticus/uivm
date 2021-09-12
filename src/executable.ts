@@ -4,16 +4,28 @@ import { AbstractExtras, Executor, IItemControl, Messages, Trigger, Validator } 
 import { findControl } from "./controls.utils";
 import { BaseItemConfig } from "./primitives";
 import { Option, SearchResolver } from "./search";
-import { Spread, WithOptional } from "./typing.utils";
+import { Spread } from "./typing.utils";
 import { isFieldControl, isGroupControl, notNullish } from "./utils";
 
 // Executable definitions, these are the objects placed on configs
 export type ExecutableDefinition<TService, TValue, TConfig extends BaseItemConfig, TControl> = {
   [k in keyof TService]: {
     name: TService[k] extends (config: TConfig, control: TControl, params: any) => TValue ? k : never;
-  } & WithOptional<{
-    params: TService[k] extends (config: TConfig, control: TControl, params: infer TParams) => TValue ? TParams : never;
-  }>;
+  } & {
+    params?: TService[k] extends (config: TConfig, control: TControl, params: infer TParams) => TValue
+      ? TParams
+      : never;
+  };
+}[keyof TService];
+export type SearchExecutableDefinition<TService, TValue, TConfig extends BaseItemConfig, TControl> = {
+  [k in keyof TService]: {
+    name: TService[k] extends (config: TConfig, control: TControl, params: any) => TValue ? k : never;
+  } & {
+    paging?: { take: number };
+    params?: TService[k] extends (config: TConfig, control: TControl, params: infer TParams) => TValue
+      ? TParams
+      : never;
+  };
 }[keyof TService];
 
 export interface ExecutableDefinitionDefault {
@@ -65,7 +77,12 @@ export type SearchDefinition<
   TConfig extends BaseItemConfig = any,
   TControl = any,
 > =
-  | ExecutableDefinition<TRegistry["search"], SearchResolver<TControl, TOption, TValue, TParams>, TConfig, TControl>
+  | SearchExecutableDefinition<
+      TRegistry["search"],
+      SearchResolver<TControl, TOption, TValue, TParams>,
+      TConfig,
+      TControl
+    >
   | SearchResolver<TControl, TOption, TValue, TParams>;
 
 // The executable format services are expected to return

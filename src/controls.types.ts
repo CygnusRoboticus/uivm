@@ -67,20 +67,18 @@ export interface FieldControlState<TValue, THints extends AbstractHints = Abstra
   touched: boolean;
 }
 
-export interface IBaseControl {
-  parent$: Observable<IBaseControl | null>;
-  children$: Observable<IBaseControl[]>;
-  parents$: Observable<IBaseControl[]>;
-  root$: Observable<IBaseControl | null>;
+export interface IItemControl<THints extends AbstractHints, TExtras> {
+  parent$: Observable<IItemControl<THints, TExtras> | null>;
+  children$: Observable<IItemControl<THints, TExtras>[]>;
+  parents$: Observable<IItemControl<THints, TExtras>[]>;
+  root$: Observable<IItemControl<THints, TExtras> | null>;
   dispose$: Observable<unknown>;
 
-  parent: IBaseControl | null;
-  parents: IBaseControl[];
-  children: IBaseControl[];
-  root: IBaseControl | null;
-}
+  parent: IItemControl<THints, TExtras> | null;
+  parents: IItemControl<THints, TExtras>[];
+  children: IItemControl<THints, TExtras>[];
+  root: IItemControl<THints, TExtras> | null;
 
-export interface IItemControl<THints extends AbstractHints, TExtras> extends IBaseControl {
   isItemControl: true;
 }
 

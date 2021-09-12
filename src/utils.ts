@@ -3,7 +3,6 @@ import {
   AbstractExtras,
   AbstractHints,
   IArrayControl,
-  IBaseControl,
   IFieldControl,
   IGroupControl,
   IItemControl,
@@ -16,8 +15,8 @@ export function notNullish<T>(value: T | null | undefined): value is T {
   return !!value;
 }
 
-export function isPromise<T>(value: any): value is Promise<T> {
-  return value && typeof value.then === "function";
+export function isPromise<T>(value: unknown): value is Promise<T> {
+  return !!value && (value instanceof Promise || typeof (value as any).then === "function");
 }
 
 export function toObservable<T>(source: T | Promise<T> | Observable<T>) {
@@ -44,7 +43,7 @@ export function isArrayConfig<TConfig extends BaseItemConfig>(
 }
 
 export function isItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>(
-  control: IBaseControl,
+  control: unknown,
 ): control is IItemControl<THints, TExtras> {
   return (control as IItemControl<THints, TExtras>)?.isItemControl === true;
 }
@@ -52,7 +51,7 @@ export function isFieldControl<
   TValue = unknown,
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
->(control: IBaseControl): control is IFieldControl<TValue, THints, TExtras> {
+>(control: unknown): control is IFieldControl<TValue, THints, TExtras> {
   return (control as IFieldControl<TValue, THints, TExtras>)?.isFieldControl === true;
 }
 export function isGroupControl<
@@ -60,7 +59,7 @@ export function isGroupControl<
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
   TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
->(control: IBaseControl): control is IGroupControl<TValue, THints, TExtras, TControls> {
+>(control: unknown): control is IGroupControl<TValue, THints, TExtras, TControls> {
   return (control as IGroupControl<TValue, THints, TExtras, TControls>)?.isGroupControl === true;
 }
 export function isArrayControl<
@@ -68,6 +67,6 @@ export function isArrayControl<
   THints extends AbstractHints = AbstractHints,
   TExtras = AbstractExtras,
   TControls extends KeyValueControls<TValue, THints, TExtras> = KeyValueControls<TValue, THints, TExtras>,
->(control: IBaseControl): control is IArrayControl<TValue, THints, TExtras, TControls> {
+>(control: unknown): control is IArrayControl<TValue, THints, TExtras, TControls> {
   return (control as IArrayControl<TValue, THints, TExtras, TControls>)?.isArrayControl === true;
 }
