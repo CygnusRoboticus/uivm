@@ -1,6 +1,6 @@
 import { ArrayConfig, FieldConfig, GroupConfig, ItemConfig } from "../src/configs";
-import { IItemControl, ItemControl } from "../src/controls";
-import { AbstractExtras, AbstractHints, Validator } from "../src/controls.types";
+import { ItemControl } from "../src/controls";
+import { AbstractExtras, AbstractHints, IItemControl, Validator } from "../src/controls.types";
 import { BasicRegistry, BasicValidatorsService, SearchDefinition, TriggerDefinition } from "../src/executable";
 import { Option } from "../src/search";
 import { FieldTypeMap } from "../src/typing";

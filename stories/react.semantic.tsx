@@ -33,10 +33,12 @@ export const SemanticComponentMap: ComponentRegistry<CustomConfigs, any, JSX.Ele
   repeater: (control, { index: i } = { index: 0 }) => <Repeater key={i} control={control} />,
 };
 
-export const SemanticBuilder = createComponentBuilder<CustomConfigs, any, JSX.Element, { index: number }>(
-  SemanticComponentMap,
-  c => c.extras.config.type,
-);
+export const SemanticBuilder = createComponentBuilder<
+  CustomConfigs,
+  ItemControl<CustomHints, CustomExtras>,
+  JSX.Element,
+  { index: number }
+>(SemanticComponentMap, c => c.extras.config?.type);
 
 export function Fields({ control }: { control: ItemControl<CustomHints, CustomExtras<any>> }) {
   return <>{control.children.map((c, i) => SemanticBuilder(c, { index: i }))}</>;
@@ -117,9 +119,12 @@ export function Select({
       CustomRegistry,
       typeof config,
       typeof control,
-      SearchResolver<typeof control, Option<unknown>, unknown>
+      SearchResolver<any, Option<unknown>, unknown>
     >(registry, "search", config, control, config.options);
-    createSearchObservable(of({ key: "", search: "", params: {}, control }), () => searchers)
+    createSearchObservable(
+      of({ key: "", search: "", control, params: {}, paging: { take: 10, skip: 0 } }),
+      () => searchers,
+    )
       .pipe(map(o => o.result))
       .subscribe(setOptions);
   }, []);
@@ -138,13 +143,7 @@ export function Select({
         text: o.label,
         value: o.value as string,
       }))}
-      error={
-        errors
-          ? {
-              content: Object.values(errors)[0].message,
-            }
-          : errors
-      }
+      error={errors ? { content: Object.values(errors)[0].message } : errors}
     />
   );
 }

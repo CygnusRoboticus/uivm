@@ -20,7 +20,7 @@ export interface OptionSingle<T = unknown> {
   [key: string]: unknown;
 }
 
-export interface OptionMulti<T = unknown, U = unknown> {
+export interface OptionMulti<T = unknown> {
   label: string;
   /**
    * Unique identifer for group.
@@ -35,8 +35,18 @@ export interface OptionMulti<T = unknown, U = unknown> {
 
 export type Option<T = unknown> = OptionSingle<T> | OptionMulti<T>;
 
+export interface SearchResolverPagination {
+  take: number;
+  skip: number;
+}
+
 export interface SearchResolver<TControl, TOption, TValue, TParams extends object = any> {
-  search(search: string, control: TControl, params: TParams): Observableish<readonly TOption[]>;
+  search(
+    search: string,
+    control: TControl,
+    params: TParams,
+    paging: SearchResolverPagination,
+  ): Observableish<readonly TOption[]>;
   resolve(value: TValue[], control: TControl, params: TParams): Observableish<readonly TOption[]>;
 }
 
@@ -52,9 +62,9 @@ export function mergeSearchResolvers<TControl, TOption, TValue, TParams extends 
   searchResolvers: SearchResolver<TControl, TOption, TValue, TParams>[],
 ): SearchResolver<TControl, TOption, TValue, TParams> {
   return {
-    search: (s, c, p) =>
+    search: (s, c, p, p2) =>
       searchResolvers.length
-        ? combineLatest(searchResolvers.map(sr => toObservable(sr.search(s, c, p)))).pipe(map(RAR.flatten))
+        ? combineLatest(searchResolvers.map(sr => toObservable(sr.search(s, c, p, p2)))).pipe(map(RAR.flatten))
         : of([]),
     resolve: (v, c, p) =>
       searchResolvers.length
@@ -73,7 +83,7 @@ export function createSearchObservable<
   TOption,
   TValue,
   TParams extends object,
-  TInput extends { search: string; control: TControl; params: TParams; key: string },
+  TInput extends { search: string; control: TControl; params: TParams; paging: SearchResolverPagination; key: string },
 >(
   search$: Observable<TInput>,
   resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
@@ -84,9 +94,10 @@ export function createSearchObservable<
     map(group =>
       group.pipe(
         debounceTime(delay),
-        switchMap(params => {
-          const merged = mergeSearchResolvers(resolversFn(params));
-          return toObservable(merged.search(params.search, params.control, params.params)).pipe(
+        switchMap(args => {
+          const merged = mergeSearchResolvers(resolversFn(args));
+          const { search, control, params, paging } = args;
+          return toObservable(merged.search(search, control, params, paging)).pipe(
             map(result => ({ result, ...params })),
           );
         }),
@@ -109,29 +120,27 @@ export function createResolveObservable<
   TInput extends { values: TValue[]; control: TControl; params: TParams; key: string },
 >(
   resolve$: Observable<TInput>,
-  resolversFn: (params: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
+  resolversFn: (args: TInput) => SearchResolver<TControl, TOption, TValue, TParams>[],
   delay = 500,
 ) {
   return resolve$.pipe(
-    groupBy(params => params.key),
+    groupBy(args => args.key),
     map(group =>
       group.pipe(
         bufferTime(delay),
-        filter(params => !!params.length),
-        map(params =>
-          params.reduce((acc, p) => ({
+        filter(args => !!args.length),
+        map(args =>
+          args.reduce((acc, p) => ({
             ...p,
             values: acc.values.concat(p.values),
-            control: p.control,
             params: p.params,
             key: p.key,
           })),
         ),
-        switchMap(params => {
-          const merged = mergeSearchResolvers(resolversFn(params));
-          return toObservable(merged.resolve(params.values, params.control, params.params)).pipe(
-            map(result => ({ result, ...params })),
-          );
+        switchMap(args => {
+          const merged = mergeSearchResolvers(resolversFn(args));
+          const { values, control, params } = args;
+          return toObservable(merged.resolve(values, control, params)).pipe(map(result => ({ result, ...params })));
         }),
       ),
     ),

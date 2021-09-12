@@ -1,7 +1,6 @@
 import { combineLatest, of } from "rxjs";
 import { delay, filter, map, switchMap, tap } from "rxjs/operators";
-import { IItemControl } from "./controls";
-import { AbstractExtras, Executor, Messages, Trigger, Validator } from "./controls.types";
+import { AbstractExtras, Executor, IItemControl, Messages, Trigger, Validator } from "./controls.types";
 import { findControl } from "./controls.utils";
 import { BaseItemConfig } from "./primitives";
 import { Option, SearchResolver } from "./search";

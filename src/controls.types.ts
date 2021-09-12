@@ -1,5 +1,4 @@
 import { Observable } from "rxjs";
-import { IFieldControl, IItemControl } from "./controls";
 
 export interface Messages {
   [key: string]: {
@@ -66,4 +65,57 @@ export interface FieldControlState<TValue, THints extends AbstractHints = Abstra
   pending: boolean;
   dirty: boolean;
   touched: boolean;
+}
+
+export interface IBaseControl {
+  parent$: Observable<IBaseControl | null>;
+  children$: Observable<IBaseControl[]>;
+  parents$: Observable<IBaseControl[]>;
+  root$: Observable<IBaseControl | null>;
+  dispose$: Observable<unknown>;
+
+  parent: IBaseControl | null;
+  parents: IBaseControl[];
+  children: IBaseControl[];
+  root: IBaseControl | null;
+}
+
+export interface IItemControl<THints extends AbstractHints, TExtras> extends IBaseControl {
+  isItemControl: true;
+}
+
+export interface IFieldControl<TValue, THints extends AbstractHints, TExtras> extends IItemControl<THints, TExtras> {
+  value$: Observable<TValue>;
+  value: TValue;
+
+  dirty: boolean;
+  pending: boolean;
+  touched: boolean;
+  valid: boolean;
+
+  setValue(value: TValue): void;
+  patchValue(value: TValue): void;
+  reset(value?: TValue): void;
+
+  isFieldControl: true;
+}
+
+export interface IGroupControl<
+  TValue extends KeyControlsValue<TControls>,
+  THints extends AbstractHints,
+  TExtras,
+  TControls extends KeyValueControls<TValue, THints, TExtras>,
+> extends IFieldControl<TValue, THints, TExtras> {
+  controls: TControls;
+  isGroupControl: true;
+}
+
+export interface IArrayControl<
+  TValue extends KeyControlsValue<TControls>,
+  THints extends AbstractHints,
+  TExtras,
+  TControls extends KeyValueControls<TValue, THints, TExtras>,
+> extends IFieldControl<TValue[], THints, TExtras> {
+  controls: TControls[];
+  isArrayControl: true;
 }

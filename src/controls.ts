@@ -10,6 +10,11 @@ import {
   FieldControlOptions,
   FieldControlState,
   Hinter,
+  IArrayControl,
+  IBaseControl,
+  IFieldControl,
+  IGroupControl,
+  IItemControl,
   ItemControlOptions,
   ItemControlState,
   KeyControlsValue,
@@ -21,19 +26,6 @@ import {
 import { extractSources, findControl, reduceControls, traverseParents } from "./controls.utils";
 import { DeepPartial } from "./typing.utils";
 import { notNullish } from "./utils";
-
-export interface IBaseControl {
-  parent$: Observable<IBaseControl | null>;
-  children$: Observable<IBaseControl[]>;
-  parents$: Observable<IBaseControl[]>;
-  root$: Observable<IBaseControl | null>;
-  dispose$: Observable<unknown>;
-
-  parent: IBaseControl | null;
-  parents: IBaseControl[];
-  children: IBaseControl[];
-  root: IBaseControl | null;
-}
 
 export abstract class BaseControl implements IBaseControl {
   protected _parent$ = new BehaviorSubject<BaseControl | null>(null);
@@ -114,10 +106,6 @@ export abstract class BaseControl implements IBaseControl {
       name: "BaseControl",
     };
   }
-}
-
-export interface IItemControl<THints extends AbstractHints, TExtras> extends IBaseControl {
-  isItemControl: true;
 }
 
 export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
@@ -297,22 +285,6 @@ export class ItemControl<THints extends AbstractHints = AbstractHints, TExtras =
       name: "ItemControl",
     };
   }
-}
-
-export interface IFieldControl<TValue, THints extends AbstractHints, TExtras> extends IItemControl<THints, TExtras> {
-  value$: Observable<TValue>;
-  value: TValue;
-
-  dirty: boolean;
-  pending: boolean;
-  touched: boolean;
-  valid: boolean;
-
-  setValue(value: TValue): void;
-  patchValue(value: TValue): void;
-  reset(value?: TValue): void;
-
-  isFieldControl: true;
 }
 
 export class FieldControl<TValue, THints extends AbstractHints = AbstractHints, TExtras = AbstractExtras>
@@ -633,16 +605,6 @@ export class FieldControl<TValue, THints extends AbstractHints = AbstractHints, 
   }
 }
 
-export interface IGroupControl<
-  TValue extends KeyControlsValue<TControls>,
-  THints extends AbstractHints,
-  TExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras>,
-> extends IFieldControl<TValue, THints, TExtras> {
-  controls: TControls;
-  isGroupControl: true;
-}
-
 export class GroupControl<
     TValue extends KeyControlsValue<TControls>,
     THints extends AbstractHints = AbstractHints,
@@ -812,16 +774,6 @@ export class GroupControl<
   }
 }
 
-export interface IArrayControl<
-  TValue extends KeyControlsValue<TControls>,
-  THints extends AbstractHints,
-  TExtras,
-  TControls extends KeyValueControls<TValue, THints, TExtras>,
-> extends IFieldControl<TValue[], THints, TExtras> {
-  controls: TControls[];
-  isArrayControl: true;
-}
-
 export class ArrayControl<
     TValue extends KeyControlsValue<TControls>,
     THints extends AbstractHints = AbstractHints,
@@ -941,9 +893,7 @@ export class ArrayControl<
   };
 
   getRawValue(): TValue[] {
-    return this.controls.map(control => {
-      return control instanceof FieldControl ? control.value : (<any>control).getRawValue();
-    });
+    return this.controls.map(control => control.value);
   }
 
   clear() {
